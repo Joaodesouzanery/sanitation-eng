@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engine Rede - Dimensionamento de Redes de Saneamento</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-orange: #f97316;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --border-color: #475569;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h2 .icon {
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .file-upload {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-upload:hover {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .file-upload.has-file {
+            border-color: var(--accent-green);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .file-upload .icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .file-upload p {
+            color: var(--text-secondary);
+        }
+
+        .file-upload .filename {
+            color: var(--accent-green);
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--accent-green), #059669);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        /* Results Section */
+        #results {
+            display: none;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .summary-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .summary-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .summary-card .label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .summary-card.blue { border-top: 4px solid var(--accent-blue); }
+        .summary-card.green { border-top: 4px solid var(--accent-green); }
+        .summary-card.orange { border-top: 4px solid var(--accent-orange); }
+        .summary-card.red { border-top: 4px solid var(--accent-red); }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--bg-card);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-blue {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-blue);
+        }
+
+        .badge-orange {
+            background: rgba(249, 115, 22, 0.2);
+            color: var(--accent-orange);
+        }
+
+        .badge-green {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+        }
+
+        .badge-red {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+        }
+
+        /* Chart */
+        .chart-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+            border: 1px solid var(--border-color);
+        }
+
+        .chart-container h3 {
+            margin-bottom: 20px;
+        }
+
+        /* Construction Summary */
+        .construction-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .construction-item {
+            background: var(--bg-card);
+            padding: 16px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .construction-item .label {
+            color: var(--text-secondary);
+        }
+
+        .construction-item .value {
+            font-weight: bold;
+        }
+
+        /* Preview */
+        .preview-table {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .preview-table table {
+            font-size: 0.8rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .summary-card .value {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-warning {
+            background: rgba(249, 115, 22, 0.1);
+            border: 1px solid var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ENGINE REDE</h1>
+            <p>Pre-Dimensionamento e Orcamento de Redes de Saneamento</p>
+        </header>
+
+        <!-- Input Section -->
+        <section id="input-section">
+            <div class="grid">
+                <!-- File Uploads -->
+                <div class="card">
+                    <h2><span class="icon">📂</span> Arquivo de Topografia</h2>
+                    <div class="file-upload" id="topo-upload" onclick="document.getElementById('topo-file').click()">
+                        <input type="file" id="topo-file" accept=".txt,.csv,.xlsx,.xls" onchange="handleTopoFile(this)">
+                        <div class="icon">📄</div>
+                        <p>Clique ou arraste o arquivo</p>
+                        <p style="font-size: 0.8rem; margin-top: 5px;">.txt, .csv, .xlsx</p>
+                        <p class="filename" id="topo-filename"></p>
+                    </div>
+                    <div class="preview-table" id="topo-preview"></div>
+                </div>
+
+                <div class="card">
+                    <h2><span class="icon">💰</span> Base de Custos</h2>
+                    <div class="file-upload" id="cost-upload" onclick="document.getElementById('cost-file').click()">
+                        <input type="file" id="cost-file" accept=".txt,.csv,.xlsx,.xls" onchange="handleCostFile(this)">
+                        <div class="icon">📊</div>
+                        <p>Clique ou arraste o arquivo</p>
+                        <p style="font-size: 0.8rem; margin-top: 5px;">.csv, .xlsx</p>
+                        <p class="filename" id="cost-filename"></p>
+                    </div>
+                    <div class="preview-table" id="cost-preview"></div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <!-- Construction Parameters -->
+                <div class="card">
+                    <h2><span class="icon">🔧</span> Parametros de Construcao</h2>
+
+                    <div class="form-group">
+                        <label>Tipo de Solo</label>
+                        <select id="tipo-solo">
+                            <option value="normal">Normal - Solo comum</option>
+                            <option value="saturado">Saturado - Com agua (requer drenagem)</option>
+                            <option value="rochoso">Rochoso - Requer colchao de areia</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tipo de Escavacao</label>
+                        <select id="tipo-escavacao">
+                            <option value="manual">Manual</option>
+                            <option value="mecanizada" selected>Mecanizada</option>
+                            <option value="mista">Mista</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tipo de Pavimento (Recomposicao)</label>
+                        <select id="tipo-pavimento">
+                            <option value="terra">Terra - Nao pavimentado</option>
+                            <option value="paralelepipedo">Paralelepipedo</option>
+                            <option value="asfalto" selected>Asfalto - Subbase + Base + BGS + CBUQ</option>
+                            <option value="concreto">Concreto</option>
+                            <option value="bloquete">Bloquete</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2><span class="icon">📏</span> Parametros da Rede</h2>
+
+                    <div class="form-group">
+                        <label>Profundidade Media da Vala (m)</label>
+                        <input type="number" id="profundidade" value="1.5" min="0.5" max="10" step="0.1">
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 5px;">
+                            Ate 1,25m: sem escoramento | Acima: com escoramento
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Diametro Padrao (mm)</label>
+                        <select id="diametro">
+                            <option value="150">150 mm</option>
+                            <option value="200" selected>200 mm</option>
+                            <option value="250">250 mm</option>
+                            <option value="300">300 mm</option>
+                            <option value="400">400 mm</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Material</label>
+                        <select id="material">
+                            <option value="PVC" selected>PVC - Padrao</option>
+                            <option value="PEAD">PEAD - Requer termofusao</option>
+                            <option value="Concreto">Concreto - Equipamento pesado</option>
+                            <option value="Ferro Fundido">Ferro Fundido - Equipamento pesado</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" id="btn-process" onclick="processData()" disabled>
+                    <span>⚙️</span> Processar Rede
+                </button>
+            </div>
+        </section>
+
+        <!-- Loading -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processando dados...</p>
+        </div>
+
+        <!-- Results Section -->
+        <section id="results">
+            <h2 style="text-align: center; margin-bottom: 30px; font-size: 1.8rem;">
+                📊 Resultados do Dimensionamento
+            </h2>
+
+            <!-- Summary Cards -->
+            <div class="summary-cards">
+                <div class="summary-card blue">
+                    <div class="icon">🔗</div>
+                    <div class="value" id="total-trechos">0</div>
+                    <div class="label">Total de Trechos</div>
+                </div>
+                <div class="summary-card green">
+                    <div class="icon">📏</div>
+                    <div class="value" id="total-comprimento">0</div>
+                    <div class="label">Comprimento Total (m)</div>
+                </div>
+                <div class="summary-card orange">
+                    <div class="icon">💰</div>
+                    <div class="value" id="total-custo">R$ 0</div>
+                    <div class="label">Custo Total</div>
+                </div>
+                <div class="summary-card red">
+                    <div class="icon">👷</div>
+                    <div class="value" id="total-equipe">0</div>
+                    <div class="label">Equipe Maxima</div>
+                </div>
+            </div>
+
+            <!-- Alerts -->
+            <div id="alerts-container"></div>
+
+            <!-- Charts -->
+            <div class="grid">
+                <div class="chart-container">
+                    <h3>📈 Perfil Topografico</h3>
+                    <canvas id="profile-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>📊 Distribuicao por Tipo de Rede</h3>
+                    <canvas id="type-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Construction Summary -->
+            <div class="card" style="margin: 20px 0;">
+                <h2><span class="icon">🏗️</span> Resumo da Construcao</h2>
+                <div class="construction-grid" id="construction-summary"></div>
+            </div>
+
+            <!-- Results Table -->
+            <div class="card">
+                <h2><span class="icon">📋</span> Tabela de Trechos</h2>
+                <div class="table-container">
+                    <table id="results-table">
+                        <thead>
+                            <tr>
+                                <th>ID Inicio</th>
+                                <th>ID Fim</th>
+                                <th>Comp. (m)</th>
+                                <th>Decliv. (%)</th>
+                                <th>Tipo Rede</th>
+                                <th>Diam. (mm)</th>
+                                <th>Material</th>
+                                <th>Escoramento</th>
+                                <th>Equipe</th>
+                                <th>Custo Unit.</th>
+                                <th>Custo Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Export Actions -->
+            <div class="actions">
+                <button class="btn btn-success" onclick="exportToExcel()">
+                    <span>📥</span> Exportar Excel
+                </button>
+                <button class="btn btn-primary" onclick="location.reload()">
+                    <span>🔄</span> Novo Calculo
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // ============================================
+        // CONSTANTS
+        // ============================================
+        const DECLIVIDADE_MIN = 0.005; // 0.5%
+        const PROFUNDIDADE_ESCORAMENTO = 1.25; // meters
+
+        // ============================================
+        // GLOBAL STATE
+        // ============================================
+        let topoData = null;
+        let costData = null;
+        let processedResults = null;
+        let profileChart = null;
+        let typeChart = null;
+
+        // ============================================
+        // FILE PARSING
+        // ============================================
+        function parseCSV(text) {
+            // Detect delimiter
+            const firstLine = text.split('\n')[0];
+            let delimiter = ',';
+            if (firstLine.includes('\t')) delimiter = '\t';
+            else if (firstLine.includes(';')) delimiter = ';';
+
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(delimiter);
+                if (values.length >= headers.length) {
+                    const row = {};
+                    headers.forEach((h, idx) => {
+                        row[h] = values[idx]?.trim() || '';
+                    });
+                    data.push(row);
+                }
+            }
+            return data;
+        }
+
+        function handleTopoFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            document.getElementById('topo-filename').textContent = file.name;
+            document.getElementById('topo-upload').classList.add('has-file');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                    const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                    // Normalize column names
+                    topoData = data.map(row => {
+                        const normalized = {};
+                        Object.keys(row).forEach(k => {
+                            normalized[k.toLowerCase().trim()] = row[k];
+                        });
+                        return normalized;
+                    });
+                } else {
+                    topoData = parseCSV(e.target.result);
+                }
+
+                // Show preview
+                showPreview('topo-preview', topoData.slice(0, 5));
+                checkReadyToProcess();
+            };
+
+            if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                reader.readAsBinaryString(file);
+            } else {
+                reader.readAsText(file);
+            }
+        }
+
+        function handleCostFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            document.getElementById('cost-filename').textContent = file.name;
+            document.getElementById('cost-upload').classList.add('has-file');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                    const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                    costData = data.map(row => {
+                        const normalized = {};
+                        Object.keys(row).forEach(k => {
+                            normalized[k.toLowerCase().trim()] = row[k];
+                        });
+                        return normalized;
+                    });
+                } else {
+                    costData = parseCSV(e.target.result);
+                }
+
+                showPreview('cost-preview', costData.slice(0, 5));
+                checkReadyToProcess();
+            };
+
+            if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                reader.readAsBinaryString(file);
+            } else {
+                reader.readAsText(file);
+            }
+        }
+
+        function showPreview(elementId, data) {
+            if (!data || data.length === 0) return;
+
+            const headers = Object.keys(data[0]);
+            let html = '<table><thead><tr>';
+            headers.forEach(h => html += `<th>${h}</th>`);
+            html += '</tr></thead><tbody>';
+
+            data.forEach(row => {
+                html += '<tr>';
+                headers.forEach(h => html += `<td>${row[h]}</td>`);
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            document.getElementById(elementId).innerHTML = html;
+        }
+
+        function checkReadyToProcess() {
+            const btn = document.getElementById('btn-process');
+            btn.disabled = !(topoData && costData);
+        }
+
+        // ============================================
+        // ENGINEERING CALCULATIONS
+        // ============================================
+        function calculateDistance(x1, y1, x2, y2) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function calculateSlope(cota1, cota2, distance) {
+            if (distance <= 0) return 0;
+            return (cota1 - cota2) / distance;
+        }
+
+        function classifyNetworkType(slope) {
+            return slope >= DECLIVIDADE_MIN ? 'Esgoto por Gravidade' : 'Elevatoria / Booster';
+        }
+
+        function getCostUnit(tipoRede, diametro) {
+            if (!costData) return 0;
+
+            const found = costData.find(c => {
+                const tipo = (c.tipo_rede || '').toLowerCase();
+                const diam = parseInt(c.diametro_mm) || 0;
+                return tipo.includes(tipoRede.toLowerCase().substring(0, 10)) && diam === diametro;
+            });
+
+            return found ? parseFloat(found.custo_unitario) || 0 : 0;
+        }
+
+        // ============================================
+        // CONSTRUCTION PARAMETERS
+        // ============================================
+        function calculateConstructionParams(profundidade, tipoSolo, tipoEscavacao, tipoPavimento, material) {
+            const params = {
+                escoramento: {
+                    necessario: profundidade > PROFUNDIDADE_ESCORAMENTO,
+                    tipo: profundidade > 3.0 ? 'Estacas-prancha' : 'Pontaleteamento'
+                },
+                embasamento: {
+                    necessario: tipoSolo === 'saturado' || tipoSolo === 'rochoso',
+                    lastroAreia: tipoSolo === 'saturado' || tipoSolo === 'rochoso',
+                    lastroBrita: tipoSolo === 'saturado',
+                    dreno: tipoSolo === 'saturado'
+                },
+                assentamento: {
+                    termofusao: material === 'PEAD',
+                    equipamentoPesado: material === 'Concreto' || material === 'Ferro Fundido'
+                },
+                recomposicao: {
+                    subbase: tipoPavimento === 'asfalto' || tipoPavimento === 'concreto',
+                    base: tipoPavimento !== 'terra',
+                    bgs: tipoPavimento === 'asfalto',
+                    cbuq: tipoPavimento === 'asfalto'
+                },
+                equipe: { total: 3 } // Base: 1 encarregado + 2 serventes
+            };
+
+            // Calculate crew
+            let equipe = 3;
+            if (tipoEscavacao === 'mecanizada' || tipoEscavacao === 'mista') equipe += 1;
+            if (params.escoramento.necessario) equipe += 2;
+            if (params.embasamento.necessario && tipoSolo === 'saturado') equipe += 2;
+            if (params.assentamento.termofusao) equipe += 2;
+            if (params.assentamento.equipamentoPesado) equipe += 1;
+
+            params.equipe.total = equipe;
+
+            return params;
+        }
+
+        // ============================================
+        // MAIN PROCESSING
+        // ============================================
+        function processData() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('input-section').style.display = 'none';
+
+            setTimeout(() => {
+                try {
+                    const tipoSolo = document.getElementById('tipo-solo').value;
+                    const tipoEscavacao = document.getElementById('tipo-escavacao').value;
+                    const tipoPavimento = document.getElementById('tipo-pavimento').value;
+                    const profundidade = parseFloat(document.getElementById('profundidade').value);
+                    const diametro = parseInt(document.getElementById('diametro').value);
+                    const material = document.getElementById('material').value;
+
+                    const trechos = [];
+                    let totalComprimento = 0;
+                    let totalCusto = 0;
+                    let maxEquipe = 0;
+                    let trechosGravidade = 0;
+                    let trechosElevatoria = 0;
+                    let trechosComEscoramento = 0;
+
+                    // Process each segment
+                    for (let i = 0; i < topoData.length - 1; i++) {
+                        const p1 = topoData[i];
+                        const p2 = topoData[i + 1];
+
+                        const x1 = parseFloat(p1.x);
+                        const y1 = parseFloat(p1.y);
+                        const cota1 = parseFloat(p1.cota);
+                        const x2 = parseFloat(p2.x);
+                        const y2 = parseFloat(p2.y);
+                        const cota2 = parseFloat(p2.cota);
+
+                        const comprimento = calculateDistance(x1, y1, x2, y2);
+                        const declividade = calculateSlope(cota1, cota2, comprimento);
+                        const tipoRede = classifyNetworkType(declividade);
+                        const custoUnit = getCostUnit(tipoRede, diametro);
+                        const custoTotal = comprimento * custoUnit;
+
+                        const params = calculateConstructionParams(
+                            profundidade, tipoSolo, tipoEscavacao, tipoPavimento, material
+                        );
+
+                        const trecho = {
+                            idInicio: p1.id,
+                            idFim: p2.id,
+                            comprimento: comprimento,
+                            declividade: declividade,
+                            declivPct: declividade * 100,
+                            tipoRede: tipoRede,
+                            diametro: diametro,
+                            material: material,
+                            custoUnit: custoUnit,
+                            custoTotal: custoTotal,
+                            params: params,
+                            cotaInicio: cota1,
+                            cotaFim: cota2,
+                            xInicio: x1,
+                            yInicio: y1,
+                            xFim: x2,
+                            yFim: y2
+                        };
+
+                        trechos.push(trecho);
+                        totalComprimento += comprimento;
+                        totalCusto += custoTotal;
+                        maxEquipe = Math.max(maxEquipe, params.equipe.total);
+
+                        if (tipoRede.includes('Gravidade')) trechosGravidade++;
+                        else trechosElevatoria++;
+
+                        if (params.escoramento.necessario) trechosComEscoramento++;
+                    }
+
+                    processedResults = {
+                        trechos: trechos,
+                        resumo: {
+                            totalTrechos: trechos.length,
+                            totalComprimento: totalComprimento,
+                            totalCusto: totalCusto,
+                            maxEquipe: maxEquipe,
+                            trechosGravidade: trechosGravidade,
+                            trechosElevatoria: trechosElevatoria,
+                            trechosComEscoramento: trechosComEscoramento,
+                            tipoSolo: tipoSolo,
+                            tipoEscavacao: tipoEscavacao,
+                            tipoPavimento: tipoPavimento,
+                            profundidade: profundidade,
+                            material: material
+                        }
+                    };
+
+                    displayResults();
+                } catch (error) {
+                    alert('Erro ao processar dados: ' + error.message);
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('input-section').style.display = 'block';
+                }
+            }, 500);
+        }
+
+        // ============================================
+        // DISPLAY RESULTS
+        // ============================================
+        function displayResults() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+
+            const r = processedResults.resumo;
+            const t = processedResults.trechos;
+
+            // Summary cards
+            document.getElementById('total-trechos').textContent = r.totalTrechos;
+            document.getElementById('total-comprimento').textContent = r.totalComprimento.toFixed(2);
+            document.getElementById('total-custo').textContent = 'R$ ' + r.totalCusto.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            document.getElementById('total-equipe').textContent = r.maxEquipe;
+
+            // Alerts
+            let alertsHtml = '';
+            if (r.trechosElevatoria > 0) {
+                alertsHtml += `
+                    <div class="alert alert-warning">
+                        <span style="font-size: 1.5rem;">⚠️</span>
+                        <span>${r.trechosElevatoria} trecho(s) requerem sistema de bombeamento (elevatoria)</span>
+                    </div>
+                `;
+            }
+            if (r.trechosComEscoramento > 0) {
+                alertsHtml += `
+                    <div class="alert alert-info">
+                        <span style="font-size: 1.5rem;">🏗️</span>
+                        <span>${r.trechosComEscoramento} trecho(s) necessitam de escoramento (prof. > 1,25m)</span>
+                    </div>
+                `;
+            }
+            document.getElementById('alerts-container').innerHTML = alertsHtml;
+
+            // Construction summary
+            const params = t[0]?.params || {};
+            document.getElementById('construction-summary').innerHTML = `
+                <div class="construction-item">
+                    <span class="label">Tipo de Solo</span>
+                    <span class="value">${r.tipoSolo}</span>
+                </div>
+                <div class="construction-item">
+                    <span class="label">Escavacao</span>
+                    <span class="value">${r.tipoEscavacao}</span>
+                </div>
+                <div class="construction-item">
+                    <span class="label">Pavimento</span>
+                    <span class="value">${r.tipoPavimento}</span>
+                </div>
+                <div class="construction-item">
+                    <span class="label">Profundidade</span>
+                    <span class="value">${r.profundidade} m</span>
+                </div>
+                <div class="construction-item">
+                    <span class="label">Escoramento</span>
+                    <span class="value">${params.escoramento?.necessario ? 'Sim - ' + params.escoramento.tipo : 'Nao'}</span>
+                </div>
+                <div class="construction-item">
+                    <span class="label">Embasamento Especial</span>
+                    <span class="value">${params.embasamento?.necessario ? 'Sim' : 'Nao'}</span>
+                </div>
+                <div class="construction-item">
+                    <span class="label">Lastro de Areia</span>
+                    <span class="value">${params.embasamento?.lastroAreia ? 'Sim' : 'Nao'}</span>
+                </div>
+                <div class="construction-item">
+                    <span class="label">Lastro de Brita</span>
+                    <span class="value">${params.embasamento?.lastroBrita ? 'Sim' : 'Nao'}</span>
+                </div>
+                <div class="construction-item">
+                    <span class="label">Dreno</span>
+                    <span class="value">${params.embasamento?.dreno ? 'Sim' : 'Nao'}</span>
+                </div>
+                <div class="construction-item">
+                    <span class="label">Termofusao (PEAD)</span>
+                    <span class="value">${params.assentamento?.termofusao ? 'Sim' : 'Nao'}</span>
+                </div>
+                <div class="construction-item">
+                    <span class="label">Recomposicao Subbase</span>
+                    <span class="value">${params.recomposicao?.subbase ? 'Sim' : 'Nao'}</span>
+                </div>
+                <div class="construction-item">
+                    <span class="label">Recomposicao BGS + CBUQ</span>
+                    <span class="value">${params.recomposicao?.bgs ? 'Sim' : 'Nao'}</span>
+                </div>
+            `;
+
+            // Table
+            let tbody = '';
+            t.forEach(trecho => {
+                const tipoClass = trecho.tipoRede.includes('Gravidade') ? 'badge-blue' : 'badge-orange';
+                const escorClass = trecho.params.escoramento.necessario ? 'badge-red' : 'badge-green';
+
+                tbody += `
+                    <tr>
+                        <td>${trecho.idInicio}</td>
+                        <td>${trecho.idFim}</td>
+                        <td>${trecho.comprimento.toFixed(2)}</td>
+                        <td>${trecho.declivPct.toFixed(2)}%</td>
+                        <td><span class="badge ${tipoClass}">${trecho.tipoRede.includes('Gravidade') ? 'Gravidade' : 'Elevatoria'}</span></td>
+                        <td>${trecho.diametro}</td>
+                        <td>${trecho.material}</td>
+                        <td><span class="badge ${escorClass}">${trecho.params.escoramento.necessario ? 'Sim' : 'Nao'}</span></td>
+                        <td>${trecho.params.equipe.total}</td>
+                        <td>R$ ${trecho.custoUnit.toFixed(2)}</td>
+                        <td>R$ ${trecho.custoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('results-tbody').innerHTML = tbody;
+
+            // Charts
+            createProfileChart();
+            createTypeChart();
+        }
+
+        function createProfileChart() {
+            const ctx = document.getElementById('profile-chart').getContext('2d');
+            const t = processedResults.trechos;
+
+            // Calculate cumulative distance
+            let distAcum = 0;
+            const labels = [t[0]?.idInicio || 'P0'];
+            const cotas = [t[0]?.cotaInicio || 0];
+            const distances = [0];
+
+            t.forEach(trecho => {
+                distAcum += trecho.comprimento;
+                labels.push(trecho.idFim);
+                cotas.push(trecho.cotaFim);
+                distances.push(distAcum);
+            });
+
+            if (profileChart) profileChart.destroy();
+
+            profileChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: distances.map(d => d.toFixed(0) + 'm'),
+                    datasets: [{
+                        label: 'Cota (m)',
+                        data: cotas,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.1,
+                        pointBackgroundColor: cotas.map((_, i) => {
+                            if (i === 0) return '#3b82f6';
+                            const trecho = t[i - 1];
+                            return trecho.tipoRede.includes('Gravidade') ? '#10b981' : '#f97316';
+                        }),
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => `Distancia: ${items[0].label}`,
+                                label: (item) => `Cota: ${item.raw.toFixed(2)} m`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            title: { display: true, text: 'Cota (m)', color: '#94a3b8' },
+                            grid: { color: '#334155' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Distancia Acumulada', color: '#94a3b8' },
+                            grid: { color: '#334155' },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createTypeChart() {
+            const ctx = document.getElementById('type-chart').getContext('2d');
+            const r = processedResults.resumo;
+
+            if (typeChart) typeChart.destroy();
+
+            typeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Esgoto por Gravidade', 'Elevatoria / Booster'],
+                    datasets: [{
+                        data: [r.trechosGravidade, r.trechosElevatoria],
+                        backgroundColor: ['#3b82f6', '#f97316'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#f8fafc' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================
+        // EXPORT TO EXCEL
+        // ============================================
+        function exportToExcel() {
+            const t = processedResults.trechos;
+            const r = processedResults.resumo;
+
+            // Main data sheet
+            const mainData = t.map(trecho => ({
+                'ID Inicio': trecho.idInicio,
+                'ID Fim': trecho.idFim,
+                'X Inicio': trecho.xInicio,
+                'Y Inicio': trecho.yInicio,
+                'Cota Inicio (m)': trecho.cotaInicio,
+                'X Fim': trecho.xFim,
+                'Y Fim': trecho.yFim,
+                'Cota Fim (m)': trecho.cotaFim,
+                'Comprimento (m)': trecho.comprimento.toFixed(2),
+                'Declividade (%)': trecho.declivPct.toFixed(2),
+                'Tipo Rede': trecho.tipoRede,
+                'Diametro (mm)': trecho.diametro,
+                'Material': trecho.material,
+                'Escoramento': trecho.params.escoramento.necessario ? 'Sim' : 'Nao',
+                'Tipo Escoramento': trecho.params.escoramento.necessario ? trecho.params.escoramento.tipo : '-',
+                'Embasamento': trecho.params.embasamento.necessario ? 'Sim' : 'Nao',
+                'Lastro Areia': trecho.params.embasamento.lastroAreia ? 'Sim' : 'Nao',
+                'Lastro Brita': trecho.params.embasamento.lastroBrita ? 'Sim' : 'Nao',
+                'Dreno': trecho.params.embasamento.dreno ? 'Sim' : 'Nao',
+                'Termofusao': trecho.params.assentamento.termofusao ? 'Sim' : 'Nao',
+                'Equipe': trecho.params.equipe.total,
+                'Custo Unitario (R$)': trecho.custoUnit.toFixed(2),
+                'Custo Total (R$)': trecho.custoTotal.toFixed(2)
+            }));
+
+            // Summary sheet
+            const summaryData = [
+                { 'Metrica': 'Total de Trechos', 'Valor': r.totalTrechos },
+                { 'Metrica': 'Comprimento Total (m)', 'Valor': r.totalComprimento.toFixed(2) },
+                { 'Metrica': 'Custo Total (R$)', 'Valor': r.totalCusto.toFixed(2) },
+                { 'Metrica': 'Trechos por Gravidade', 'Valor': r.trechosGravidade },
+                { 'Metrica': 'Trechos com Elevatoria', 'Valor': r.trechosElevatoria },
+                { 'Metrica': 'Trechos com Escoramento', 'Valor': r.trechosComEscoramento },
+                { 'Metrica': 'Equipe Maxima', 'Valor': r.maxEquipe },
+                { 'Metrica': 'Tipo de Solo', 'Valor': r.tipoSolo },
+                { 'Metrica': 'Tipo de Escavacao', 'Valor': r.tipoEscavacao },
+                { 'Metrica': 'Tipo de Pavimento', 'Valor': r.tipoPavimento },
+                { 'Metrica': 'Profundidade Media (m)', 'Valor': r.profundidade },
+                { 'Metrica': 'Material', 'Valor': r.material }
+            ];
+
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+
+            const ws1 = XLSX.utils.json_to_sheet(mainData);
+            XLSX.utils.book_append_sheet(wb, ws1, 'Trechos');
+
+            const ws2 = XLSX.utils.json_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, ws2, 'Resumo');
+
+            // Download
+            XLSX.writeFile(wb, 'orcamento_rede_saneamento.xlsx');
+        }
+    </script>
+</body>
+</html>

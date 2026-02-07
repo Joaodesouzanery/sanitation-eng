@@ -1,0 +1,11 @@
+tipo_rede,diametro_mm,custo_unitario
+Esgoto por Gravidade,150,85.50
+Esgoto por Gravidade,200,120.00
+Esgoto por Gravidade,250,165.00
+Esgoto por Gravidade,300,210.00
+Esgoto por Gravidade,400,320.00
+Elevatoria / Booster,150,250.00
+Elevatoria / Booster,200,320.00
+Elevatoria / Booster,250,410.00
+Elevatoria / Booster,300,520.00
+Elevatoria / Booster,400,680.00
