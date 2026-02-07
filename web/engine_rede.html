@@ -468,6 +468,122 @@ PV01,359284.525,7352735.514,1.65"
                 </div>
             </div>
 
+            <!-- Quantities and Costs Section -->
+            <div class="card" id="costs-card" style="display: none; margin-top: 20px;">
+                <h2><span class="icon">💰</span> Quantitativos e Custos</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Cálculo automático de quantitativos e custos baseado em SINAPI/SEINFRA.
+                </p>
+
+                <button class="btn btn-primary" onclick="calculateAndShowCosts()" style="margin-bottom: 20px;">
+                    <span>🧮</span> Calcular Quantitativos e Custos
+                </button>
+
+                <!-- Cost Summary Cards -->
+                <div id="cost-summary" style="display: none;">
+                    <div class="summary-cards" style="margin-bottom: 20px;">
+                        <div class="summary-card blue">
+                            <div class="icon">📏</div>
+                            <div class="value" id="cost-extensao">0 m</div>
+                            <div class="label">Extensão Total</div>
+                        </div>
+                        <div class="summary-card green">
+                            <div class="icon">⛏️</div>
+                            <div class="value" id="cost-escavacao">0 m³</div>
+                            <div class="label">Escavação</div>
+                        </div>
+                        <div class="summary-card orange">
+                            <div class="icon">🚛</div>
+                            <div class="value" id="cost-botafora">0 m³</div>
+                            <div class="label">Bota-fora</div>
+                        </div>
+                        <div class="summary-card purple">
+                            <div class="icon">🛣️</div>
+                            <div class="value" id="cost-pavimento">0 m²</div>
+                            <div class="label">Pavimento</div>
+                        </div>
+                        <div class="summary-card red">
+                            <div class="icon">💰</div>
+                            <div class="value" id="cost-total">R$ 0</div>
+                            <div class="label">CUSTO TOTAL</div>
+                        </div>
+                    </div>
+
+                    <!-- Cost Breakdown by Link -->
+                    <div style="margin-top: 20px;">
+                        <h3 style="margin-bottom: 15px; color: var(--accent-blue);">📊 Quantitativos por Trecho (PV a PV)</h3>
+                        <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                            <table id="costs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Trecho</th>
+                                        <th>De</th>
+                                        <th>Para</th>
+                                        <th>Comp (m)</th>
+                                        <th>DN (mm)</th>
+                                        <th>Prof (m)</th>
+                                        <th>Escav (m³)</th>
+                                        <th>Reat (m³)</th>
+                                        <th>Pav (m²)</th>
+                                        <th>Custo (R$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="costs-tbody"></tbody>
+                                <tfoot id="costs-tfoot"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Cost Items -->
+                    <div style="margin-top: 30px;">
+                        <h3 style="margin-bottom: 15px; color: var(--accent-green);">📋 Composição de Custos (Agregado)</h3>
+                        <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                            <table id="items-table">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Descrição</th>
+                                        <th>Un</th>
+                                        <th>Qtd Total</th>
+                                        <th>SINAPI</th>
+                                        <th>SEINFRA</th>
+                                        <th>Adotado</th>
+                                        <th>Custo Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="items-tbody"></tbody>
+                                <tfoot id="items-tfoot"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Reference Price Table -->
+                    <div style="margin-top: 30px;">
+                        <details>
+                            <summary style="cursor: pointer; color: var(--accent-purple); font-weight: bold; padding: 10px;">
+                                📖 Ver Tabela de Preços de Referência (SINAPI/SEINFRA)
+                            </summary>
+                            <div class="table-container" style="max-height: 300px; overflow-y: auto; margin-top: 10px;">
+                                <table id="prices-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Descrição</th>
+                                            <th>Un</th>
+                                            <th>SINAPI (R$)</th>
+                                            <th>SEINFRA (R$)</th>
+                                            <th>Mercado (R$)</th>
+                                            <th>Adotado (R$)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="prices-tbody"></tbody>
+                                </table>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+
             <!-- Export Options -->
             <div class="card" id="export-card" style="display: none; margin-top: 20px;">
                 <h2><span class="icon">📤</span> Exportação</h2>
@@ -1406,13 +1522,18 @@ PV02,359290.456,7352780.123,1.82</pre>
             if (importedNodes.length === 0) {
                 document.getElementById('preview-card').style.display = 'none';
                 document.getElementById('trace-card').style.display = 'none';
+                document.getElementById('costs-card').style.display = 'none';
                 document.getElementById('export-card').style.display = 'none';
                 return;
             }
 
             document.getElementById('preview-card').style.display = 'block';
             document.getElementById('trace-card').style.display = 'block';
+            document.getElementById('costs-card').style.display = 'block';
             document.getElementById('export-card').style.display = 'block';
+
+            // Render price reference table
+            renderPriceTable();
 
             let tbody = '';
             const maxPreview = Math.min(importedNodes.length, 20);
@@ -1618,6 +1739,191 @@ PV02,359290.456,7352780.123,1.82</pre>
                 minY: minY - padY,
                 maxY: maxY + padY
             };
+        }
+
+        // Render price reference table
+        function renderPriceTable() {
+            let tbody = '';
+            Object.entries(COST_TABLE).forEach(([key, item]) => {
+                tbody += `<tr>
+                    <td>${item.id}</td>
+                    <td>${item.descricao}</td>
+                    <td>${item.unidade}</td>
+                    <td>${item.sinapi.toFixed(2)}</td>
+                    <td>${item.seinfra.toFixed(2)}</td>
+                    <td>${item.mercado.toFixed(2)}</td>
+                    <td style="font-weight: bold; color: var(--accent-green);">${item.adotado.toFixed(2)}</td>
+                </tr>`;
+            });
+            document.getElementById('prices-tbody').innerHTML = tbody;
+        }
+
+        // Calculate and show costs in the interface
+        function calculateAndShowCosts() {
+            if (importedNodes.length < 2) {
+                alert('Importe pelo menos 2 pontos topográficos.');
+                return;
+            }
+
+            if (previewLinks.length === 0) {
+                generatePreviewLinks();
+            }
+
+            const networkType = document.getElementById('import-network-type').value;
+
+            // Create links with estimated data
+            const linksWithData = previewLinks.map((link, idx) => {
+                const fromNode = importedNodes.find(n => n.id === link.from);
+                const toNode = importedNodes.find(n => n.id === link.to);
+                const dz = fromNode && toNode ? Math.abs(fromNode.z - toNode.z) : 0;
+
+                // Estimate DN based on position in network
+                let dn = 150;
+                if (networkType === 'drainage') dn = 400;
+                else if (networkType === 'water') dn = 75;
+                else dn = 150 + Math.floor(idx / 3) * 50;
+
+                // Estimate depths
+                const profUp = 1.0 + (Math.random() * 0.3);
+                const profDown = profUp + dz * 0.5 + 0.3;
+
+                return {
+                    ...link,
+                    DN: Math.min(dn, 400),
+                    profUp: profUp,
+                    profDown: Math.max(profDown, profUp + 0.2)
+                };
+            });
+
+            // Calculate costs
+            const custos = calculateAllCosts(linksWithData, networkType);
+
+            // Show cost summary section
+            document.getElementById('cost-summary').style.display = 'block';
+
+            // Update summary cards
+            const extensao = previewLinks.reduce((s, l) => s + l.length, 0);
+            let totalEscavacao = 0, totalBotaFora = 0, totalPavimento = 0;
+
+            custos.trechos.forEach(t => {
+                t.itens.forEach(item => {
+                    if (item.item.includes('004')) totalEscavacao += item.quantidade;
+                    if (item.item.includes('007B')) totalBotaFora += item.quantidade;
+                    if (item.item.includes('018')) totalPavimento += item.quantidade;
+                });
+            });
+
+            document.getElementById('cost-extensao').textContent = extensao.toFixed(1) + ' m';
+            document.getElementById('cost-escavacao').textContent = totalEscavacao.toFixed(1) + ' m³';
+            document.getElementById('cost-botafora').textContent = totalBotaFora.toFixed(1) + ' m³';
+            document.getElementById('cost-pavimento').textContent = totalPavimento.toFixed(1) + ' m²';
+            document.getElementById('cost-total').textContent = 'R$ ' + custos.totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+
+            // Render costs table by link
+            let costsTbody = '';
+            custos.trechos.forEach((t, idx) => {
+                const [de, para] = t.trecho.split(' → ');
+                const escav = t.itens.find(i => i.item.includes('004'))?.quantidade || 0;
+                const reat = t.itens.find(i => i.item.includes('007') && !i.item.includes('007B'))?.quantidade || 0;
+                const pav = t.itens.find(i => i.item.includes('018'))?.quantidade || 0;
+
+                costsTbody += `<tr>
+                    <td>T${String(idx+1).padStart(2,'0')}</td>
+                    <td>${de}</td>
+                    <td>${para}</td>
+                    <td>${t.comprimento.toFixed(2)}</td>
+                    <td>${t.dn}</td>
+                    <td>${t.profMedia.toFixed(2)}</td>
+                    <td>${escav.toFixed(2)}</td>
+                    <td>${reat.toFixed(2)}</td>
+                    <td>${pav.toFixed(2)}</td>
+                    <td style="font-weight: bold;">R$ ${t.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                </tr>`;
+            });
+            document.getElementById('costs-tbody').innerHTML = costsTbody;
+
+            // Render totals footer
+            document.getElementById('costs-tfoot').innerHTML = `
+                <tr style="background: var(--bg-card); font-weight: bold;">
+                    <td colspan="3">SUBTOTAL TRECHOS</td>
+                    <td>${extensao.toFixed(2)}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>${totalEscavacao.toFixed(2)}</td>
+                    <td>-</td>
+                    <td>${totalPavimento.toFixed(2)}</td>
+                    <td>R$ ${custos.totalTrechos.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                </tr>
+                <tr style="background: var(--bg-card);">
+                    <td colspan="3">POÇOS DE VISITA</td>
+                    <td colspan="5">${custos.pvs.quantidade} un x R$ ${custos.pvs.custoUnit.toFixed(2)}</td>
+                    <td></td>
+                    <td style="font-weight: bold;">R$ ${custos.pvs.custoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                </tr>
+                <tr style="background: var(--accent-blue); color: white; font-weight: bold;">
+                    <td colspan="9">TOTAL GERAL</td>
+                    <td>R$ ${custos.totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                </tr>
+            `;
+
+            // Render aggregated items table
+            const agregado = {};
+            custos.trechos.forEach(t => {
+                t.itens.forEach(item => {
+                    if (!agregado[item.item]) {
+                        agregado[item.item] = {
+                            descricao: item.descricao,
+                            unidade: item.unidade,
+                            quantidade: 0,
+                            sinapi: COST_TABLE[Object.keys(COST_TABLE).find(k => COST_TABLE[k].id === item.item)]?.sinapi || 0,
+                            seinfra: COST_TABLE[Object.keys(COST_TABLE).find(k => COST_TABLE[k].id === item.item)]?.seinfra || 0,
+                            custoUnit: item.custoUnit,
+                            custoTotal: 0
+                        };
+                    }
+                    agregado[item.item].quantidade += item.quantidade;
+                    agregado[item.item].custoTotal += item.custoTotal;
+                });
+            });
+
+            let itemsTbody = '';
+            Object.entries(agregado).forEach(([item, dados]) => {
+                itemsTbody += `<tr>
+                    <td>${item}</td>
+                    <td>${dados.descricao}</td>
+                    <td>${dados.unidade}</td>
+                    <td>${dados.quantidade.toFixed(2)}</td>
+                    <td>${dados.sinapi.toFixed(2)}</td>
+                    <td>${dados.seinfra.toFixed(2)}</td>
+                    <td style="color: var(--accent-green);">${dados.custoUnit.toFixed(2)}</td>
+                    <td style="font-weight: bold;">R$ ${dados.custoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                </tr>`;
+            });
+
+            // Add PVs row
+            itemsTbody += `<tr style="background: var(--bg-card);">
+                <td>${COST_TABLE['PV_COMPLETO'].id}</td>
+                <td>${COST_TABLE['PV_COMPLETO'].descricao}</td>
+                <td>un</td>
+                <td>${custos.pvs.quantidade}</td>
+                <td>${COST_TABLE['PV_COMPLETO'].sinapi.toFixed(2)}</td>
+                <td>${COST_TABLE['PV_COMPLETO'].seinfra.toFixed(2)}</td>
+                <td style="color: var(--accent-green);">${custos.pvs.custoUnit.toFixed(2)}</td>
+                <td style="font-weight: bold;">R$ ${custos.pvs.custoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            </tr>`;
+
+            document.getElementById('items-tbody').innerHTML = itemsTbody;
+
+            // Items footer
+            document.getElementById('items-tfoot').innerHTML = `
+                <tr style="background: var(--accent-green); color: white; font-weight: bold;">
+                    <td colspan="7">TOTAL GERAL DA OBRA</td>
+                    <td>R$ ${custos.totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                </tr>
+            `;
+
+            // Scroll to costs section
+            document.getElementById('costs-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function generatePreviewLinks() {
