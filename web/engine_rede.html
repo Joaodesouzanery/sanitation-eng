@@ -359,6 +359,17 @@
                         <p style="color: var(--accent-green);">✓ Arquivo carregado: <strong id="file-name"></strong></p>
                         <p style="color: var(--text-secondary); font-size: 0.9rem;" id="file-stats"></p>
                     </div>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label>Ou cole os dados diretamente aqui:</label>
+                        <textarea id="paste-data" rows="6" placeholder="Cole seus dados aqui (formato: id,x,y,cota)
+Exemplo:
+PV01,100.00,0.00,102.50
+PV02,150.00,0.00,101.80
+PV03,200.00,0.00,101.00"
+                            style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-family: monospace; font-size: 0.9rem; resize: vertical;"></textarea>
+                        <button class="btn btn-small btn-add" style="margin-top: 10px;" onclick="parseFromTextarea()">Processar Dados Colados</button>
+                    </div>
                 </div>
 
                 <div class="card">
@@ -814,60 +825,134 @@ PV05,300.00,0.00,99.50</pre>
         }
 
         function parseTopographyData(content, fileName) {
-            const format = document.getElementById('import-format').value;
-            let separator = ',';
+            const formatSelect = document.getElementById('import-format').value;
 
-            switch (format) {
-                case 'csv-semicolon': separator = ';'; break;
-                case 'txt-tab': separator = '\t'; break;
-                case 'txt-space': separator = /\s+/; break;
-                default: separator = ',';
+            // Auto-detect separator if needed
+            const lines = content.trim().split(/\r?\n/);
+            let separator;
+
+            // Try to auto-detect separator from first data line
+            const sampleLine = lines.length > 1 ? lines[1] : lines[0];
+
+            if (formatSelect === 'csv') {
+                separator = ',';
+            } else if (formatSelect === 'csv-semicolon') {
+                separator = ';';
+            } else if (formatSelect === 'txt-tab') {
+                separator = '\t';
+            } else if (formatSelect === 'txt-space') {
+                separator = /\s+/;
+            } else {
+                // Auto-detect
+                if (sampleLine.includes('\t')) {
+                    separator = '\t';
+                } else if (sampleLine.includes(';')) {
+                    separator = ';';
+                } else if (sampleLine.includes(',')) {
+                    separator = ',';
+                } else {
+                    separator = /\s+/;
+                }
             }
 
-            const lines = content.trim().split('\n');
             importedNodes = [];
+            let parseErrors = [];
 
             let startLine = 0;
-            // Check if first line is header
+            // Check if first line is header (contains letters that aren't numbers)
             const firstLine = lines[0].toLowerCase();
-            if (firstLine.includes('id') || firstLine.includes('cota') || firstLine.includes('x')) {
+            if (firstLine.includes('id') || firstLine.includes('cota') ||
+                firstLine.includes('x') || firstLine.includes('ponto') ||
+                firstLine.includes('norte') || firstLine.includes('este') ||
+                /^[a-z]/i.test(firstLine.trim())) {
                 startLine = 1;
             }
 
             for (let i = startLine; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
+                let line = lines[i].trim();
+                if (!line || line.startsWith('#') || line.startsWith('//')) continue;
 
-                const parts = line.split(separator).map(p => p.trim());
+                // Split by separator
+                let parts;
+                if (separator instanceof RegExp) {
+                    parts = line.split(separator).filter(p => p.trim() !== '');
+                } else {
+                    parts = line.split(separator).map(p => p.trim());
+                }
 
                 let id, x, y, z;
 
-                // Try to detect format
+                // Helper function to parse number (handles Brazilian format with comma)
+                const parseNum = (str) => {
+                    if (!str) return NaN;
+                    // Replace comma with dot for decimal
+                    let cleaned = str.trim().replace(',', '.');
+                    // Remove any thousand separators (dots before the decimal)
+                    // Only if there's more than one dot
+                    const dots = (cleaned.match(/\./g) || []).length;
+                    if (dots > 1) {
+                        // Keep only the last dot as decimal
+                        const lastDot = cleaned.lastIndexOf('.');
+                        cleaned = cleaned.substring(0, lastDot).replace(/\./g, '') + cleaned.substring(lastDot);
+                    }
+                    return parseFloat(cleaned);
+                };
+
+                // Try to detect format based on number of columns
                 if (parts.length >= 4) {
-                    // id, x, y, z format
-                    id = parts[0];
-                    x = parseFloat(parts[1]);
-                    y = parseFloat(parts[2]);
-                    z = parseFloat(parts[3]);
+                    // id, x, y, z format OR id, x, y, z, extras...
+                    id = parts[0].trim();
+                    x = parseNum(parts[1]);
+                    y = parseNum(parts[2]);
+                    z = parseNum(parts[3]);
                 } else if (parts.length === 3) {
                     // x, y, z format (generate ID)
                     id = `P${String(importedNodes.length + 1).padStart(2, '0')}`;
-                    x = parseFloat(parts[0]);
-                    y = parseFloat(parts[1]);
-                    z = parseFloat(parts[2]);
+                    x = parseNum(parts[0]);
+                    y = parseNum(parts[1]);
+                    z = parseNum(parts[2]);
+                } else if (parts.length === 2) {
+                    // Maybe just id and cota? Or x and y?
+                    parseErrors.push(`Linha ${i + 1}: formato não reconhecido (${parts.length} colunas)`);
+                    continue;
                 } else {
-                    continue; // Skip invalid lines
+                    parseErrors.push(`Linha ${i + 1}: poucos dados`);
+                    continue;
                 }
 
-                if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-                    importedNodes.push({ id, x, y, z });
+                // Validate parsed numbers
+                if (isNaN(x) || isNaN(y) || isNaN(z)) {
+                    parseErrors.push(`Linha ${i + 1}: valores inválidos (x=${parts[1]}, y=${parts[2]}, z=${parts[3]})`);
+                    continue;
                 }
+
+                importedNodes.push({ id, x, y, z });
             }
 
             // Show file info
             document.getElementById('file-info').style.display = 'block';
             document.getElementById('file-name').textContent = fileName;
-            document.getElementById('file-stats').textContent = `${importedNodes.length} pontos importados`;
+
+            if (importedNodes.length > 0) {
+                document.getElementById('file-stats').textContent =
+                    `${importedNodes.length} pontos importados com sucesso`;
+                document.getElementById('file-stats').style.color = 'var(--accent-green)';
+            } else {
+                document.getElementById('file-stats').innerHTML =
+                    `<span style="color: var(--accent-red);">Nenhum ponto extraído!</span><br>` +
+                    `<small>Verifique o formato do arquivo. Esperado: id,x,y,cota</small>`;
+                if (parseErrors.length > 0) {
+                    document.getElementById('file-stats').innerHTML +=
+                        `<br><small style="color: var(--accent-orange);">Erros: ${parseErrors.slice(0, 3).join('; ')}</small>`;
+                }
+            }
+
+            // Debug: show first few lines of file
+            console.log('=== DEBUG IMPORT ===');
+            console.log('Separator:', separator);
+            console.log('First 5 lines:', lines.slice(0, 5));
+            console.log('Parsed nodes:', importedNodes);
+            console.log('Parse errors:', parseErrors);
 
             // Show preview
             showPreview();
@@ -911,6 +996,15 @@ PV05,300.00,0.00,99.50</pre>
 
             document.getElementById('preview-summary').textContent =
                 `Cota mín: ${minZ.toFixed(2)}m | Cota máx: ${maxZ.toFixed(2)}m | Desnível: ${dz.toFixed(2)}m`;
+        }
+
+        function parseFromTextarea() {
+            const content = document.getElementById('paste-data').value;
+            if (!content.trim()) {
+                alert('Cole os dados no campo de texto primeiro.');
+                return;
+            }
+            parseTopographyData(content, 'dados_colados.txt');
         }
 
         function loadTopographyDemo() {
