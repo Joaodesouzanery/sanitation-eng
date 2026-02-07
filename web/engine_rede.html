@@ -2259,7 +2259,7 @@ PV02,359290.456,7352780.123,1.82</pre>
             return { shp, shx, dbf, prj };
         }
 
-        function createShapefileLines(nodes, links) {
+        function createShapefileLines(nodes, links, linksWithCosts = null) {
             const shpParts = [];
             const shxParts = [];
             const dbfRecords = [];
@@ -2290,7 +2290,7 @@ PV02,359290.456,7352780.123,1.82</pre>
             let shpOffset = 100;
             let recordNum = 1;
 
-            links.forEach(link => {
+            links.forEach((link, idx) => {
                 const fromNode = nodes.find(n => n.id === link.from);
                 const toNode = nodes.find(n => n.id === link.to);
                 if (!fromNode || !toNode) return;
@@ -2332,11 +2332,48 @@ PV02,359290.456,7352780.123,1.82</pre>
                 shpOffset += 8 + recordLen;
                 recordNum++;
 
-                dbfRecords.push({
-                    DE: link.from.substring(0, 20),
-                    PARA: link.to.substring(0, 20),
-                    COMP: link.length
-                });
+                // Get cost data if available
+                const costData = linksWithCosts ? linksWithCosts[idx] : null;
+
+                if (costData) {
+                    // Full record with quantities and costs
+                    const escav = costData.itens.find(i => i.item.includes('004'))?.quantidade || 0;
+                    const reat = costData.itens.find(i => i.item.includes('007') && !i.item.includes('007B'))?.quantidade || 0;
+                    const bota = costData.itens.find(i => i.item.includes('007B'))?.quantidade || 0;
+                    const pav = costData.itens.find(i => i.item.includes('018'))?.quantidade || 0;
+                    const tubo = costData.itens.find(i => i.item.includes('001') || i.item.includes('002'))?.custoTotal || 0;
+
+                    dbfRecords.push({
+                        TRECHO: `T${String(idx+1).padStart(2,'0')}`,
+                        DE: link.from.substring(0, 15),
+                        PARA: link.to.substring(0, 15),
+                        COMP_M: link.length,
+                        DN_MM: costData.dn || 150,
+                        PROF_M: costData.profMedia || 1.5,
+                        ESCAV_M3: escav,
+                        REAT_M3: reat,
+                        BOTA_M3: bota,
+                        PAV_M2: pav,
+                        C_TUBO: tubo,
+                        C_TOTAL: costData.total || 0
+                    });
+                } else {
+                    // Basic record without costs
+                    dbfRecords.push({
+                        TRECHO: `T${String(idx+1).padStart(2,'0')}`,
+                        DE: link.from.substring(0, 15),
+                        PARA: link.to.substring(0, 15),
+                        COMP_M: link.length,
+                        DN_MM: 150,
+                        PROF_M: 1.5,
+                        ESCAV_M3: 0,
+                        REAT_M3: 0,
+                        BOTA_M3: 0,
+                        PAV_M2: 0,
+                        C_TUBO: 0,
+                        C_TOTAL: 0
+                    });
+                }
             });
 
             // Update file lengths
@@ -2362,9 +2399,18 @@ PV02,359290.456,7352780.123,1.82</pre>
             });
 
             const dbf = createDBF(dbfRecords, [
-                { name: 'DE', type: 'C', length: 20 },
-                { name: 'PARA', type: 'C', length: 20 },
-                { name: 'COMP', type: 'N', length: 12, decimals: 2 }
+                { name: 'TRECHO', type: 'C', length: 10 },
+                { name: 'DE', type: 'C', length: 15 },
+                { name: 'PARA', type: 'C', length: 15 },
+                { name: 'COMP_M', type: 'N', length: 10, decimals: 2 },
+                { name: 'DN_MM', type: 'N', length: 6, decimals: 0 },
+                { name: 'PROF_M', type: 'N', length: 8, decimals: 2 },
+                { name: 'ESCAV_M3', type: 'N', length: 10, decimals: 2 },
+                { name: 'REAT_M3', type: 'N', length: 10, decimals: 2 },
+                { name: 'BOTA_M3', type: 'N', length: 10, decimals: 2 },
+                { name: 'PAV_M2', type: 'N', length: 10, decimals: 2 },
+                { name: 'C_TUBO', type: 'N', length: 12, decimals: 2 },
+                { name: 'C_TOTAL', type: 'N', length: 12, decimals: 2 }
             ]);
 
             const prj = 'GEOGCS["GCS_SIRGAS_2000",DATUM["D_SIRGAS_2000",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]';
@@ -2442,6 +2488,22 @@ PV02,359290.456,7352780.123,1.82</pre>
             try {
                 const zip = new JSZip();
 
+                // Calculate costs for export
+                const networkType = document.getElementById('import-network-type').value;
+                const linksWithData = previewLinks.map((link, idx) => {
+                    const fromNode = importedNodes.find(n => n.id === link.from);
+                    const toNode = importedNodes.find(n => n.id === link.to);
+                    const dz = fromNode && toNode ? Math.abs(fromNode.z - toNode.z) : 0;
+                    let dn = networkType === 'drainage' ? 400 : (networkType === 'water' ? 75 : 150 + Math.floor(idx / 3) * 50);
+                    return {
+                        ...link,
+                        DN: Math.min(dn, 400),
+                        profUp: 1.0 + (Math.random() * 0.3),
+                        profDown: 1.3 + dz * 0.5
+                    };
+                });
+                const custos = calculateAllCosts(linksWithData, networkType);
+
                 // Create points shapefile
                 const points = createShapefilePoints(importedNodes);
                 zip.file("pontos_rede.shp", points.shp);
@@ -2449,8 +2511,8 @@ PV02,359290.456,7352780.123,1.82</pre>
                 zip.file("pontos_rede.dbf", points.dbf);
                 zip.file("pontos_rede.prj", points.prj);
 
-                // Create lines shapefile
-                const lines = createShapefileLines(importedNodes, previewLinks);
+                // Create lines shapefile with costs
+                const lines = createShapefileLines(importedNodes, previewLinks, custos.trechos);
                 zip.file("trechos_rede.shp", lines.shp);
                 zip.file("trechos_rede.shx", lines.shx);
                 zip.file("trechos_rede.dbf", lines.dbf);
@@ -2477,6 +2539,22 @@ PV02,359290.456,7352780.123,1.82</pre>
             if (previewLinks.length === 0) {
                 generatePreviewLinks();
             }
+
+            // Calculate costs for export
+            const networkType = document.getElementById('import-network-type').value;
+            const linksWithData = previewLinks.map((link, idx) => {
+                const fromNode = importedNodes.find(n => n.id === link.from);
+                const toNode = importedNodes.find(n => n.id === link.to);
+                return {
+                    from: link.from,
+                    to: link.to,
+                    length: link.length,
+                    DN: 150,
+                    profUp: 1.2 + (idx * 0.1),
+                    profDown: 1.3 + (idx * 0.1)
+                };
+            });
+            const custos = calculateAllCosts(linksWithData, networkType);
 
             // Create simplified IFC content
             const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0];
@@ -2514,24 +2592,90 @@ DATA;
                 entityId += 10;
             }
 
-            // Add pipes (links)
-            for (const link of previewLinks) {
+            // Add pipes (links) with quantities and costs
+            const pipeEntities = [];
+            for (let i = 0; i < previewLinks.length; i++) {
+                const link = previewLinks[i];
                 const fromNode = importedNodes.find(n => n.id === link.from);
                 const toNode = importedNodes.find(n => n.id === link.to);
                 if (!fromNode || !toNode) continue;
 
+                // Get cost data for this link
+                const costData = custos.trechos ? custos.trechos[i] : null;
+
+                // Build description with quantities and costs
+                let descricao = `Trecho L=${link.length.toFixed(2)}m`;
+                if (costData) {
+                    const escav = costData.itens.find(it => it.item.includes('ESCAVACAO'));
+                    const tubo = costData.itens.find(it => it.item.includes('TUBO'));
+                    const reat = costData.itens.find(it => it.item.includes('REATERRO'));
+                    const bota = costData.itens.find(it => it.item.includes('BOTA'));
+                    const pav = costData.itens.find(it => it.item.includes('PAVIMENTO'));
+
+                    descricao = `DN${costData.dn || 150}mm | L=${link.length.toFixed(2)}m | ` +
+                        `Escav=${escav ? escav.quantidade.toFixed(2) : '0'}m3 | ` +
+                        `Reat=${reat ? reat.quantidade.toFixed(2) : '0'}m3 | ` +
+                        `Bota=${bota ? bota.quantidade.toFixed(2) : '0'}m3 | ` +
+                        `Pav=${pav ? pav.quantidade.toFixed(2) : '0'}m2 | ` +
+                        `Custo=R$${costData.total.toFixed(2)}`;
+                }
+
+                const pipeId = entityId + 3;
                 ifc += `#${entityId}=IFCCARTESIANPOINT((${fromNode.x},${fromNode.y},${fromNode.z}));\n`;
                 ifc += `#${entityId+1}=IFCCARTESIANPOINT((${toNode.x},${toNode.y},${toNode.z}));\n`;
                 ifc += `#${entityId+2}=IFCPOLYLINE((#${entityId},#${entityId+1}));\n`;
-                ifc += `#${entityId+3}=IFCPIPESEGMENT('${generateGUID()}',#2,'${link.from}-${link.to}','Trecho L=${link.length.toFixed(2)}m',$,$,$,$,.RIGIDSEGMENT.);\n`;
+                ifc += `#${entityId+3}=IFCPIPESEGMENT('${generateGUID()}',#2,'${link.from}-${link.to}','${descricao}',$,$,$,$,.RIGIDSEGMENT.);\n`;
+
+                // Store pipe entity ID and cost data for property sets
+                pipeEntities.push({ pipeId, costData, link });
                 entityId += 10;
+            }
+
+            // Add property sets with quantities and costs for each pipe
+            for (const pe of pipeEntities) {
+                const costData = pe.costData;
+                if (!costData) continue;
+
+                const escav = costData.itens.find(it => it.item.includes('ESCAVACAO'));
+                const tubo = costData.itens.find(it => it.item.includes('TUBO'));
+                const reat = costData.itens.find(it => it.item.includes('REATERRO'));
+                const bota = costData.itens.find(it => it.item.includes('BOTA'));
+                const pav = costData.itens.find(it => it.item.includes('PAVIMENTO'));
+
+                // Create property values
+                ifc += `#${entityId}=IFCPROPERTYSINGLEVALUE('Comprimento','m',IFCLENGTHMEASURE(${pe.link.length.toFixed(4)}),$);\n`;
+                ifc += `#${entityId+1}=IFCPROPERTYSINGLEVALUE('DN','mm',IFCINTEGER(${costData.dn || 150}),$);\n`;
+                ifc += `#${entityId+2}=IFCPROPERTYSINGLEVALUE('ProfundidadeMedia','m',IFCLENGTHMEASURE(${costData.profMedia ? costData.profMedia.toFixed(4) : 1.5}),$);\n`;
+                ifc += `#${entityId+3}=IFCPROPERTYSINGLEVALUE('Escavacao_m3','m3',IFCVOLUMEMEASURE(${escav ? escav.quantidade.toFixed(4) : 0}),$);\n`;
+                ifc += `#${entityId+4}=IFCPROPERTYSINGLEVALUE('Reaterro_m3','m3',IFCVOLUMEMEASURE(${reat ? reat.quantidade.toFixed(4) : 0}),$);\n`;
+                ifc += `#${entityId+5}=IFCPROPERTYSINGLEVALUE('BotaFora_m3','m3',IFCVOLUMEMEASURE(${bota ? bota.quantidade.toFixed(4) : 0}),$);\n`;
+                ifc += `#${entityId+6}=IFCPROPERTYSINGLEVALUE('Pavimento_m2','m2',IFCAREAMEASURE(${pav ? pav.quantidade.toFixed(4) : 0}),$);\n`;
+                ifc += `#${entityId+7}=IFCPROPERTYSINGLEVALUE('CustoTubulacao','R$',IFCMONETARYMEASURE(${tubo ? tubo.custoTotal.toFixed(2) : 0}),$);\n`;
+                ifc += `#${entityId+8}=IFCPROPERTYSINGLEVALUE('CustoTotal','R$',IFCMONETARYMEASURE(${costData.total.toFixed(2)}),$);\n`;
+
+                // Create property set
+                ifc += `#${entityId+9}=IFCPROPERTYSET('${generateGUID()}',#2,'Quantitativos_Custos','Quantitativos e custos do trecho',(#${entityId},#${entityId+1},#${entityId+2},#${entityId+3},#${entityId+4},#${entityId+5},#${entityId+6},#${entityId+7},#${entityId+8}));\n`;
+
+                // Link property set to pipe
+                ifc += `#${entityId+10}=IFCRELDEFINESBYPROPERTIES('${generateGUID()}',#2,$,$,(#${pe.pipeId}),#${entityId+9});\n`;
+
+                entityId += 15;
+            }
+
+            // Add total cost summary property set
+            if (custos.totalGeral) {
+                ifc += `#${entityId}=IFCPROPERTYSINGLEVALUE('ExtensaoTotal','m',IFCLENGTHMEASURE(${custos.extensaoTotal ? custos.extensaoTotal.toFixed(4) : 0}),$);\n`;
+                ifc += `#${entityId+1}=IFCPROPERTYSINGLEVALUE('CustoTotalGeral','R$',IFCMONETARYMEASURE(${custos.totalGeral.toFixed(2)}),$);\n`;
+                ifc += `#${entityId+2}=IFCPROPERTYSET('${generateGUID()}',#2,'Resumo_Custos','Resumo geral de custos da rede',(#${entityId},#${entityId+1}));\n`;
+                ifc += `#${entityId+3}=IFCRELDEFINESBYPROPERTIES('${generateGUID()}',#2,$,$,(#13),#${entityId+2});\n`;
+                entityId += 5;
             }
 
             ifc += `ENDSEC;
 END-ISO-10303-21;`;
 
             downloadFile(ifc, 'rede_saneamento.ifc', 'application/x-step');
-            alert('Arquivo IFC exportado!\n\nAbra em software BIM como:\n- Autodesk Revit\n- ArchiCAD\n- Solibri\n- BIM Vision (gratuito)');
+            alert('Arquivo IFC exportado com quantitativos e custos!\n\nAbra em software BIM como:\n- Autodesk Revit\n- ArchiCAD\n- Solibri\n- BIM Vision (gratuito)\n\nOs quantitativos e custos estão nas propriedades de cada trecho.');
         }
 
         function generateGUID() {
@@ -2674,8 +2818,8 @@ EOF
                 shpFolder.file("pontos_rede.dbf", points.dbf);
                 shpFolder.file("pontos_rede.prj", points.prj);
 
-                // SHP Files (Lines)
-                const lines = createShapefileLines(importedNodes, previewLinks);
+                // SHP Files (Lines) - with quantities and costs
+                const lines = createShapefileLines(importedNodes, previewLinks, custos.trechos);
                 shpFolder.file("trechos_rede.shp", lines.shp);
                 shpFolder.file("trechos_rede.shx", lines.shx);
                 shpFolder.file("trechos_rede.dbf", lines.dbf);
@@ -2685,8 +2829,8 @@ EOF
                 const geojson = createGeoJSONContent();
                 zip.file("rede_saneamento.geojson", geojson);
 
-                // 3. IFC
-                const ifc = createIFCContent();
+                // 3. IFC - with quantities and costs
+                const ifc = createIFCContent(custos);
                 zip.file("rede_saneamento.ifc", ifc);
 
                 // 4. DXF
@@ -2907,7 +3051,7 @@ Gerado por: HydroNetwork v3.0
             return dxf;
         }
 
-        function createIFCContent() {
+        function createIFCContent(custos = null) {
             const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0];
             let ifc = `ISO-10303-21;
 HEADER;
@@ -2941,17 +3085,79 @@ DATA;
                 entityId += 10;
             });
 
-            previewLinks.forEach(link => {
+            // Add pipes (links) with quantities and costs
+            const pipeEntities = [];
+            previewLinks.forEach((link, i) => {
                 const from = importedNodes.find(n => n.id === link.from);
                 const to = importedNodes.find(n => n.id === link.to);
                 if (from && to) {
+                    // Get cost data for this link
+                    const costData = custos && custos.trechos ? custos.trechos[i] : null;
+
+                    // Build description with quantities and costs
+                    let descricao = `L=${link.length.toFixed(2)}m`;
+                    if (costData) {
+                        const escav = costData.itens.find(it => it.item.includes('ESCAVACAO'));
+                        const reat = costData.itens.find(it => it.item.includes('REATERRO'));
+                        const bota = costData.itens.find(it => it.item.includes('BOTA'));
+                        const pav = costData.itens.find(it => it.item.includes('PAVIMENTO'));
+
+                        descricao = `DN${costData.dn || 150}mm | L=${link.length.toFixed(2)}m | ` +
+                            `Escav=${escav ? escav.quantidade.toFixed(2) : '0'}m3 | ` +
+                            `Custo=R$${costData.total.toFixed(2)}`;
+                    }
+
+                    const pipeId = entityId + 3;
                     ifc += `#${entityId}=IFCCARTESIANPOINT((${from.x},${from.y},${from.z}));\n`;
                     ifc += `#${entityId+1}=IFCCARTESIANPOINT((${to.x},${to.y},${to.z}));\n`;
                     ifc += `#${entityId+2}=IFCPOLYLINE((#${entityId},#${entityId+1}));\n`;
-                    ifc += `#${entityId+3}=IFCPIPESEGMENT('${generateGUID()}',#2,'${link.from}-${link.to}','L=${link.length.toFixed(2)}m',$,$,$,$,.RIGIDSEGMENT.);\n`;
+                    ifc += `#${entityId+3}=IFCPIPESEGMENT('${generateGUID()}',#2,'${link.from}-${link.to}','${descricao}',$,$,$,$,.RIGIDSEGMENT.);\n`;
+
+                    // Store pipe entity ID and cost data for property sets
+                    if (costData) {
+                        pipeEntities.push({ pipeId, costData, link });
+                    }
                     entityId += 10;
                 }
             });
+
+            // Add property sets with quantities and costs for each pipe
+            for (const pe of pipeEntities) {
+                const costData = pe.costData;
+                const escav = costData.itens.find(it => it.item.includes('ESCAVACAO'));
+                const tubo = costData.itens.find(it => it.item.includes('TUBO'));
+                const reat = costData.itens.find(it => it.item.includes('REATERRO'));
+                const bota = costData.itens.find(it => it.item.includes('BOTA'));
+                const pav = costData.itens.find(it => it.item.includes('PAVIMENTO'));
+
+                // Create property values
+                ifc += `#${entityId}=IFCPROPERTYSINGLEVALUE('Comprimento','m',IFCLENGTHMEASURE(${pe.link.length.toFixed(4)}),$);\n`;
+                ifc += `#${entityId+1}=IFCPROPERTYSINGLEVALUE('DN','mm',IFCINTEGER(${costData.dn || 150}),$);\n`;
+                ifc += `#${entityId+2}=IFCPROPERTYSINGLEVALUE('ProfundidadeMedia','m',IFCLENGTHMEASURE(${costData.profMedia ? costData.profMedia.toFixed(4) : 1.5}),$);\n`;
+                ifc += `#${entityId+3}=IFCPROPERTYSINGLEVALUE('Escavacao_m3','m3',IFCVOLUMEMEASURE(${escav ? escav.quantidade.toFixed(4) : 0}),$);\n`;
+                ifc += `#${entityId+4}=IFCPROPERTYSINGLEVALUE('Reaterro_m3','m3',IFCVOLUMEMEASURE(${reat ? reat.quantidade.toFixed(4) : 0}),$);\n`;
+                ifc += `#${entityId+5}=IFCPROPERTYSINGLEVALUE('BotaFora_m3','m3',IFCVOLUMEMEASURE(${bota ? bota.quantidade.toFixed(4) : 0}),$);\n`;
+                ifc += `#${entityId+6}=IFCPROPERTYSINGLEVALUE('Pavimento_m2','m2',IFCAREAMEASURE(${pav ? pav.quantidade.toFixed(4) : 0}),$);\n`;
+                ifc += `#${entityId+7}=IFCPROPERTYSINGLEVALUE('CustoTubulacao','R$',IFCMONETARYMEASURE(${tubo ? tubo.custoTotal.toFixed(2) : 0}),$);\n`;
+                ifc += `#${entityId+8}=IFCPROPERTYSINGLEVALUE('CustoTotal','R$',IFCMONETARYMEASURE(${costData.total.toFixed(2)}),$);\n`;
+
+                // Create property set
+                ifc += `#${entityId+9}=IFCPROPERTYSET('${generateGUID()}',#2,'Quantitativos_Custos','Quantitativos e custos do trecho',(#${entityId},#${entityId+1},#${entityId+2},#${entityId+3},#${entityId+4},#${entityId+5},#${entityId+6},#${entityId+7},#${entityId+8}));\n`;
+
+                // Link property set to pipe
+                ifc += `#${entityId+10}=IFCRELDEFINESBYPROPERTIES('${generateGUID()}',#2,$,$,(#${pe.pipeId}),#${entityId+9});\n`;
+
+                entityId += 15;
+            }
+
+            // Add total cost summary property set
+            if (custos && custos.totalGeral) {
+                ifc += `#${entityId}=IFCPROPERTYSINGLEVALUE('ExtensaoTotal','m',IFCLENGTHMEASURE(${custos.extensaoTotal ? custos.extensaoTotal.toFixed(4) : 0}),$);\n`;
+                ifc += `#${entityId+1}=IFCPROPERTYSINGLEVALUE('CustoTotalGeral','R$',IFCMONETARYMEASURE(${custos.totalGeral.toFixed(2)}),$);\n`;
+                ifc += `#${entityId+2}=IFCPROPERTYSET('${generateGUID()}',#2,'Resumo_Custos','Resumo geral de custos da rede',(#${entityId},#${entityId+1}));\n`;
+                ifc += `#${entityId+3}=IFCRELDEFINESBYPROPERTIES('${generateGUID()}',#2,$,$,(#13),#${entityId+2});\n`;
+                entityId += 5;
+            }
 
             ifc += `ENDSEC;\nEND-ISO-10303-21;`;
             return ifc;
