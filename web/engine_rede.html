@@ -417,7 +417,48 @@ PV01,359284.525,7352735.514,1.65"
                         <label>Coef. de Runoff (para Drenagem)</label>
                         <input type="number" id="import-runoff" value="0.7" min="0.1" max="1.0" step="0.05">
                     </div>
+
+                    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
+                    <h4 style="color: var(--accent-blue); margin-bottom: 10px;">📍 Interpolação de Cotas</h4>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="import-street-corners" style="width: auto;">
+                            Pontos topográficos estão nos cantos da rua
+                        </label>
+                        <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                            Marque se os pontos foram levantados nas bordas/cantos da rua
+                        </small>
+                    </div>
+
+                    <div class="form-group" id="pv-position-group" style="display: none;">
+                        <label>Posição do PV na rua</label>
+                        <select id="import-pv-position">
+                            <option value="center">Centro da rua</option>
+                            <option value="left">Terço esquerdo</option>
+                            <option value="right">Terço direito</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="street-width-group" style="display: none;">
+                        <label>Largura da Rua (m)</label>
+                        <input type="number" id="import-street-width" value="7.0" min="3" max="30" step="0.5">
+                    </div>
                 </div>
+            </div>
+
+            <!-- Interpolation Info -->
+            <div class="card" id="interpolation-card" style="display: none; margin-top: 20px; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(59, 130, 246, 0.1) 100%);">
+                <h2><span class="icon">📍</span> Interpolação de Cotas de Terreno</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                    Os pontos importados são tratados como cantos da rua. O sistema vai estimar a posição e cota de terreno dos PVs.
+                </p>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                    <button class="btn btn-primary" onclick="processStreetCornerPoints()">
+                        <span>⚙️</span> Interpolar Cotas e Gerar PVs
+                    </button>
+                </div>
+                <div id="interpolation-info" style="display: none;"></div>
             </div>
 
             <!-- Preview Table -->
@@ -426,7 +467,7 @@ PV01,359284.525,7352735.514,1.65"
                 <div class="table-container" style="max-height: 300px; overflow-y: auto;">
                     <table id="preview-table">
                         <thead>
-                            <tr><th>ID</th><th>X</th><th>Y</th><th>Cota (m)</th></tr>
+                            <tr><th>ID</th><th>X</th><th>Y</th><th>Cota Terreno (m)</th></tr>
                         </thead>
                         <tbody id="preview-tbody"></tbody>
                     </table>
@@ -1514,8 +1555,282 @@ PV02,359290.456,7352780.123,1.82</pre>
             console.log('Parsed nodes:', importedNodes);
             console.log('Parse errors:', parseErrors);
 
-            // Show preview
+            // Check if street corners mode is enabled
+            const streetCornersEnabled = document.getElementById('import-street-corners')?.checked || false;
+
+            if (streetCornersEnabled && importedNodes.length >= 2) {
+                // Store raw points for interpolation
+                rawTopoPoints = [...importedNodes];
+
+                // Show interpolation card
+                document.getElementById('interpolation-card').style.display = 'block';
+                document.getElementById('interpolation-info').style.display = 'none';
+
+                // Update file stats
+                document.getElementById('file-stats').innerHTML =
+                    `<span style="color: var(--accent-blue);">${importedNodes.length} pontos topográficos importados</span><br>` +
+                    `<small style="color: var(--text-secondary);">Clique em "Interpolar Cotas e Gerar PVs" para estimar as cotas de terreno</small>`;
+
+                // Show preview of raw points
+                showPreview();
+            } else {
+                // Normal mode - hide interpolation card
+                document.getElementById('interpolation-card').style.display = 'none';
+                rawTopoPoints = [];
+
+                // Show preview
+                showPreview();
+            }
+        }
+
+        // ============================================
+        // INTERPOLAÇÃO DE COTAS DE TERRENO
+        // ============================================
+
+        // Pontos topográficos originais (cantos da rua) - usados para interpolação
+        let rawTopoPoints = [];
+
+        /**
+         * Interpola a cota de terreno para um ponto PV usando IDW (Inverse Distance Weighting)
+         * @param {number} x - Coordenada X do PV
+         * @param {number} y - Coordenada Y do PV
+         * @param {Array} refPoints - Pontos de referência (cantos da rua)
+         * @param {number} power - Potência do IDW (default 2)
+         * @returns {number} - Cota interpolada
+         */
+        function interpolateElevationIDW(x, y, refPoints, power = 2) {
+            if (refPoints.length === 0) return 0;
+            if (refPoints.length === 1) return refPoints[0].z;
+
+            let sumWeightedZ = 0;
+            let sumWeights = 0;
+
+            for (const pt of refPoints) {
+                const dist = Math.sqrt(Math.pow(pt.x - x, 2) + Math.pow(pt.y - y, 2));
+
+                // Se o ponto estiver exatamente sobre um ponto de referência
+                if (dist < 0.001) {
+                    return pt.z;
+                }
+
+                const weight = 1 / Math.pow(dist, power);
+                sumWeightedZ += pt.z * weight;
+                sumWeights += weight;
+            }
+
+            return sumWeightedZ / sumWeights;
+        }
+
+        /**
+         * Encontra os N pontos mais próximos de uma coordenada
+         */
+        function findNearestPoints(x, y, points, n = 4) {
+            return points
+                .map(pt => ({
+                    ...pt,
+                    dist: Math.sqrt(Math.pow(pt.x - x, 2) + Math.pow(pt.y - y, 2))
+                }))
+                .sort((a, b) => a.dist - b.dist)
+                .slice(0, n);
+        }
+
+        /**
+         * Calcula a posição do PV dentro da rua baseado na largura e posição escolhida
+         * @param {Object} pt1 - Ponto 1 (canto esquerdo da rua)
+         * @param {Object} pt2 - Ponto 2 (canto direito da rua)
+         * @param {string} position - 'center', 'left', 'right'
+         * @param {number} streetWidth - Largura da rua em metros
+         * @returns {Object} - {x, y, z} do PV estimado
+         */
+        function estimatePVPosition(pt1, pt2, position = 'center', streetWidth = 7.0) {
+            // Vetor da rua (perpendicular ao eixo)
+            const dx = pt2.x - pt1.x;
+            const dy = pt2.y - pt1.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+
+            if (length < 0.01) {
+                // Pontos muito próximos, usar média
+                return {
+                    x: (pt1.x + pt2.x) / 2,
+                    y: (pt1.y + pt2.y) / 2,
+                    z: (pt1.z + pt2.z) / 2
+                };
+            }
+
+            // Normalizar
+            const nx = dx / length;
+            const ny = dy / length;
+
+            // Fator de posição (0 = pt1, 0.5 = centro, 1 = pt2)
+            let factor;
+            switch (position) {
+                case 'left':
+                    factor = 1/3; // Terço esquerdo
+                    break;
+                case 'right':
+                    factor = 2/3; // Terço direito
+                    break;
+                case 'center':
+                default:
+                    factor = 0.5; // Centro
+                    break;
+            }
+
+            // Posição interpolada
+            const x = pt1.x + dx * factor;
+            const y = pt1.y + dy * factor;
+
+            // Cota interpolada linearmente entre os dois pontos
+            const z = pt1.z + (pt2.z - pt1.z) * factor;
+
+            return { x, y, z };
+        }
+
+        /**
+         * Processa os pontos topográficos e gera PVs com cotas interpoladas
+         * Assume que pontos consecutivos formam pares de cantos da rua
+         */
+        function processStreetCornerPoints() {
+            if (rawTopoPoints.length < 2) {
+                alert('São necessários pelo menos 2 pontos para interpolação.');
+                return;
+            }
+
+            const position = document.getElementById('import-pv-position').value;
+            const streetWidth = parseFloat(document.getElementById('import-street-width').value) || 7.0;
+
+            // Limpar nós existentes
+            importedNodes = [];
+
+            // Estratégia: agrupar pontos em pares transversais da rua
+            // Se temos pontos em sequência alternada (esq1, dir1, esq2, dir2, ...)
+            // Ou se temos duas sequências paralelas
+
+            // Detectar padrão: verificar se os pontos estão organizados em pares
+            const pairs = [];
+
+            // Método simples: para cada ponto, encontrar o ponto mais próximo
+            // que forma um par transversal (perpendicular ao eixo da rua)
+            const used = new Set();
+
+            for (let i = 0; i < rawTopoPoints.length; i++) {
+                if (used.has(i)) continue;
+
+                const pt1 = rawTopoPoints[i];
+
+                // Encontrar o ponto mais próximo não usado
+                let bestIdx = -1;
+                let bestDist = Infinity;
+
+                for (let j = 0; j < rawTopoPoints.length; j++) {
+                    if (i === j || used.has(j)) continue;
+
+                    const pt2 = rawTopoPoints[j];
+                    const dist = Math.sqrt(Math.pow(pt2.x - pt1.x, 2) + Math.pow(pt2.y - pt1.y, 2));
+
+                    // Procurar ponto próximo (dentro da largura da rua + margem)
+                    if (dist < streetWidth * 2 && dist < bestDist) {
+                        bestDist = dist;
+                        bestIdx = j;
+                    }
+                }
+
+                if (bestIdx >= 0) {
+                    pairs.push({ pt1, pt2: rawTopoPoints[bestIdx], idx1: i, idx2: bestIdx });
+                    used.add(i);
+                    used.add(bestIdx);
+                } else {
+                    // Ponto sem par - usar sozinho
+                    pairs.push({ pt1, pt2: pt1, idx1: i, idx2: i });
+                    used.add(i);
+                }
+            }
+
+            // Gerar PVs a partir dos pares
+            pairs.forEach((pair, idx) => {
+                const pvPos = estimatePVPosition(pair.pt1, pair.pt2, position, streetWidth);
+
+                // Se queremos interpolar usando TODOS os pontos próximos (método IDW)
+                const nearestPoints = findNearestPoints(pvPos.x, pvPos.y, rawTopoPoints, 4);
+                const interpolatedZ = interpolateElevationIDW(pvPos.x, pvPos.y, nearestPoints, 2);
+
+                importedNodes.push({
+                    id: `PV${String(idx + 1).padStart(2, '0')}`,
+                    x: pvPos.x,
+                    y: pvPos.y,
+                    z: interpolatedZ,
+                    cotaOriginal: pvPos.z, // Cota da interpolação linear simples
+                    cotaIDW: interpolatedZ  // Cota da interpolação IDW
+                });
+            });
+
+            // Ordenar PVs por proximidade (criar sequência lógica)
+            if (importedNodes.length > 1) {
+                const sortedNodes = [importedNodes[0]];
+                const remaining = importedNodes.slice(1);
+
+                while (remaining.length > 0) {
+                    const lastNode = sortedNodes[sortedNodes.length - 1];
+                    let nearestIdx = 0;
+                    let nearestDist = Infinity;
+
+                    remaining.forEach((node, idx) => {
+                        const dist = Math.sqrt(
+                            Math.pow(node.x - lastNode.x, 2) +
+                            Math.pow(node.y - lastNode.y, 2)
+                        );
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestIdx = idx;
+                        }
+                    });
+
+                    sortedNodes.push(remaining.splice(nearestIdx, 1)[0]);
+                }
+
+                // Renumerar
+                importedNodes = sortedNodes.map((node, idx) => ({
+                    ...node,
+                    id: `PV${String(idx + 1).padStart(2, '0')}`
+                }));
+            }
+
+            // Mostrar informações
+            console.log('=== INTERPOLAÇÃO DE COTAS ===');
+            console.log('Pontos topográficos originais:', rawTopoPoints.length);
+            console.log('PVs gerados:', importedNodes.length);
+            console.log('Posição:', position);
+            console.log('Largura da rua:', streetWidth, 'm');
+            console.log('PVs:', importedNodes);
+
+            // Atualizar preview
             showPreview();
+            showInterpolationInfo();
+        }
+
+        /**
+         * Mostra informações sobre a interpolação realizada
+         */
+        function showInterpolationInfo() {
+            const infoDiv = document.getElementById('interpolation-info');
+            if (!infoDiv) return;
+
+            const position = document.getElementById('import-pv-position').value;
+            const positionText = position === 'center' ? 'Centro' :
+                                position === 'left' ? 'Terço Esquerdo' : 'Terço Direito';
+
+            infoDiv.innerHTML = `
+                <div style="background: var(--bg-input); padding: 10px; border-radius: 6px; margin-top: 10px;">
+                    <strong style="color: var(--accent-blue);">📊 Interpolação Realizada:</strong>
+                    <ul style="margin: 5px 0 0 20px; color: var(--text-secondary);">
+                        <li>Pontos topográficos (cantos): ${rawTopoPoints.length}</li>
+                        <li>PVs estimados: ${importedNodes.length}</li>
+                        <li>Posição na rua: ${positionText}</li>
+                        <li>Método: IDW (Inverse Distance Weighting)</li>
+                    </ul>
+                </div>
+            `;
+            infoDiv.style.display = 'block';
         }
 
         function showPreview() {
@@ -4592,6 +4907,16 @@ DATA;
                     document.getElementById('demand-input-group').style.display = type === 'water' ? 'block' : 'none';
                     document.getElementById('area-input-group').style.display = type === 'drainage' ? 'block' : 'none';
                     document.getElementById('runoff-input-group').style.display = type === 'drainage' ? 'block' : 'none';
+                });
+            }
+
+            // Set up street corners checkbox handler
+            const streetCornersCheckbox = document.getElementById('import-street-corners');
+            if (streetCornersCheckbox) {
+                streetCornersCheckbox.addEventListener('change', function() {
+                    const show = this.checked;
+                    document.getElementById('pv-position-group').style.display = show ? 'block' : 'none';
+                    document.getElementById('street-width-group').style.display = show ? 'block' : 'none';
                 });
             }
         });
