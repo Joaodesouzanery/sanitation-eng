@@ -863,6 +863,356 @@ PV02,359290.456,7352780.123,1.82</pre>
         let drainageNodes = [];
         let drainageLinks = [];
         let qtyLinks = [];
+        let calculatedCosts = [];
+
+        // ============================================
+        // TABELA DE CUSTOS - SINAPI/SEINFRA/MERCADO
+        // ============================================
+        const COST_TABLE = {
+            // ESGOTO - Tubulação
+            'TUBO_PVC_DN150': {
+                id: 'SAN-001/002',
+                descricao: 'Tubo PVC esgoto DN 150mm (fornec. + assent.)',
+                unidade: 'm',
+                sinapi: 4.17,
+                seinfra: 70.13 + 5.80, // fornecimento + assentamento
+                mercado: 74.68,
+                adotado: 75.93
+            },
+            'TUBO_PVC_DN200': {
+                id: 'SAN-003',
+                descricao: 'Tubo PVC esgoto DN 200mm (fornec. + assent.)',
+                unidade: 'm',
+                sinapi: 5.50,
+                seinfra: 95.00,
+                mercado: 98.50,
+                adotado: 100.50
+            },
+            'TUBO_PVC_DN250': {
+                id: 'SAN-003',
+                descricao: 'Tubo PVC esgoto DN 250mm (fornec. + assent.)',
+                unidade: 'm',
+                sinapi: 7.20,
+                seinfra: 125.00,
+                mercado: 130.00,
+                adotado: 132.20
+            },
+            'TUBO_PVC_DN300': {
+                id: 'SAN-003',
+                descricao: 'Tubo PVC esgoto DN 300mm (fornec. + assent.)',
+                unidade: 'm',
+                sinapi: 9.80,
+                seinfra: 165.00,
+                mercado: 170.00,
+                adotado: 174.80
+            },
+            // Escavação
+            'ESCAVACAO_MECANICA': {
+                id: 'SAN-004',
+                descricao: 'Escavação mecânica de vala solo 1ª cat.',
+                unidade: 'm³',
+                sinapi: 8.50,
+                seinfra: 12.30,
+                mercado: 15.00,
+                adotado: 12.30
+            },
+            // Escoramento
+            'ESCORAMENTO_MADEIRA': {
+                id: 'SAN-005',
+                descricao: 'Escoramento de vala com madeira',
+                unidade: 'm²',
+                sinapi: 25.00,
+                seinfra: 32.50,
+                mercado: 35.00,
+                adotado: 32.50
+            },
+            // Lastro
+            'LASTRO_AREIA': {
+                id: 'SAN-006',
+                descricao: 'Lastro de areia e=10cm para tubulação',
+                unidade: 'm³',
+                sinapi: 95.00,
+                seinfra: 110.00,
+                mercado: 120.00,
+                adotado: 110.00
+            },
+            // Reaterro
+            'REATERRO_COMPACTADO': {
+                id: 'SAN-007',
+                descricao: 'Reaterro e compactação de vala',
+                unidade: 'm³',
+                sinapi: 18.00,
+                seinfra: 22.50,
+                mercado: 25.00,
+                adotado: 22.50
+            },
+            // Bota-fora
+            'BOTA_FORA': {
+                id: 'SAN-007B',
+                descricao: 'Carga, transporte e descarga de material (bota-fora)',
+                unidade: 'm³',
+                sinapi: 28.00,
+                seinfra: 35.00,
+                mercado: 40.00,
+                adotado: 35.00
+            },
+            // Poço de Visita
+            'PV_COMPLETO': {
+                id: 'SAN-008',
+                descricao: 'Poço de visita Ø1,0m completo (anéis, base, tampa)',
+                unidade: 'un',
+                sinapi: 1850.00,
+                seinfra: 2200.00,
+                mercado: 2500.00,
+                adotado: 2200.00
+            },
+            // Pavimento
+            'RECOMP_ASFALTO': {
+                id: 'SAN-018',
+                descricao: 'Recomposição pavimento asfáltico (base+CBUQ)',
+                unidade: 'm²',
+                sinapi: 85.00,
+                seinfra: 110.00,
+                mercado: 125.00,
+                adotado: 110.00
+            },
+            'RECOMP_CALCADA': {
+                id: 'SAN-019',
+                descricao: 'Recomposição de calçada (concreto)',
+                unidade: 'm²',
+                sinapi: 65.00,
+                seinfra: 80.00,
+                mercado: 90.00,
+                adotado: 80.00
+            },
+            // Teste
+            'TESTE_ESTANQUEIDADE': {
+                id: 'SAN-010',
+                descricao: 'Teste de estanqueidade em rede coletora',
+                unidade: 'm',
+                sinapi: 2.50,
+                seinfra: 3.80,
+                mercado: 5.00,
+                adotado: 3.80
+            },
+            // ÁGUA
+            'TUBO_PEAD_DN63': {
+                id: 'SAN-011/012',
+                descricao: 'Tubo PEAD DN 63mm PN10 (fornec. + assent.)',
+                unidade: 'm',
+                sinapi: 18.00,
+                seinfra: 25.00,
+                mercado: 28.00,
+                adotado: 25.00
+            },
+            'TUBO_PEAD_DN75': {
+                id: 'SAN-011/012',
+                descricao: 'Tubo PEAD DN 75mm PN10 (fornec. + assent.)',
+                unidade: 'm',
+                sinapi: 22.00,
+                seinfra: 30.00,
+                mercado: 35.00,
+                adotado: 30.00
+            },
+            'TUBO_PEAD_DN100': {
+                id: 'SAN-011/012',
+                descricao: 'Tubo PEAD DN 100mm PN10 (fornec. + assent.)',
+                unidade: 'm',
+                sinapi: 35.00,
+                seinfra: 48.00,
+                mercado: 55.00,
+                adotado: 48.00
+            },
+            // DRENAGEM
+            'TUBO_CONCRETO_DN400': {
+                id: 'SAN-015',
+                descricao: 'Tubo concreto armado PA1 DN 400mm',
+                unidade: 'm',
+                sinapi: 180.00,
+                seinfra: 220.00,
+                mercado: 250.00,
+                adotado: 220.00
+            },
+            'TUBO_CONCRETO_DN600': {
+                id: 'SAN-015',
+                descricao: 'Tubo concreto armado PA1 DN 600mm',
+                unidade: 'm',
+                sinapi: 320.00,
+                seinfra: 380.00,
+                mercado: 420.00,
+                adotado: 380.00
+            },
+            'BOCA_LOBO': {
+                id: 'SAN-016',
+                descricao: 'Boca de lobo simples com grelha',
+                unidade: 'un',
+                sinapi: 850.00,
+                seinfra: 1100.00,
+                mercado: 1300.00,
+                adotado: 1100.00
+            }
+        };
+
+        // Função para obter custo do tubo por DN
+        function getTuboCost(dn, tipo = 'esgoto') {
+            if (tipo === 'esgoto') {
+                if (dn <= 150) return COST_TABLE['TUBO_PVC_DN150'];
+                if (dn <= 200) return COST_TABLE['TUBO_PVC_DN200'];
+                if (dn <= 250) return COST_TABLE['TUBO_PVC_DN250'];
+                return COST_TABLE['TUBO_PVC_DN300'];
+            } else if (tipo === 'agua') {
+                if (dn <= 63) return COST_TABLE['TUBO_PEAD_DN63'];
+                if (dn <= 75) return COST_TABLE['TUBO_PEAD_DN75'];
+                return COST_TABLE['TUBO_PEAD_DN100'];
+            } else if (tipo === 'drenagem') {
+                if (dn <= 500) return COST_TABLE['TUBO_CONCRETO_DN400'];
+                return COST_TABLE['TUBO_CONCRETO_DN600'];
+            }
+            return COST_TABLE['TUBO_PVC_DN150'];
+        }
+
+        // Calcular custos detalhados por trecho
+        function calculateLinkCosts(link, networkType = 'sewer') {
+            const costs = [];
+            const dn = link.DN || 150;
+            const length = link.length || 0;
+            const profUp = link.profUp || 1.2;
+            const profDown = link.profDown || 1.5;
+            const profMedia = (profUp + profDown) / 2;
+            const larguraVala = Math.max(0.60, (dn / 1000) + 0.30);
+
+            // 1. Escavação
+            const volEscavacao = profMedia * larguraVala * length;
+            costs.push({
+                item: COST_TABLE['ESCAVACAO_MECANICA'].id,
+                descricao: COST_TABLE['ESCAVACAO_MECANICA'].descricao,
+                unidade: 'm³',
+                quantidade: volEscavacao,
+                custoUnit: COST_TABLE['ESCAVACAO_MECANICA'].adotado,
+                custoTotal: volEscavacao * COST_TABLE['ESCAVACAO_MECANICA'].adotado
+            });
+
+            // 2. Escoramento (se prof > 1.25m)
+            if (profMedia > 1.25) {
+                const areaEscoramento = 2 * profMedia * length; // duas faces
+                costs.push({
+                    item: COST_TABLE['ESCORAMENTO_MADEIRA'].id,
+                    descricao: COST_TABLE['ESCORAMENTO_MADEIRA'].descricao,
+                    unidade: 'm²',
+                    quantidade: areaEscoramento,
+                    custoUnit: COST_TABLE['ESCORAMENTO_MADEIRA'].adotado,
+                    custoTotal: areaEscoramento * COST_TABLE['ESCORAMENTO_MADEIRA'].adotado
+                });
+            }
+
+            // 3. Lastro de areia
+            const volLastro = 0.10 * larguraVala * length; // 10cm de espessura
+            costs.push({
+                item: COST_TABLE['LASTRO_AREIA'].id,
+                descricao: COST_TABLE['LASTRO_AREIA'].descricao,
+                unidade: 'm³',
+                quantidade: volLastro,
+                custoUnit: COST_TABLE['LASTRO_AREIA'].adotado,
+                custoTotal: volLastro * COST_TABLE['LASTRO_AREIA'].adotado
+            });
+
+            // 4. Tubulação
+            const tuboRef = getTuboCost(dn, networkType === 'sewer' ? 'esgoto' : (networkType === 'water' ? 'agua' : 'drenagem'));
+            costs.push({
+                item: tuboRef.id,
+                descricao: tuboRef.descricao,
+                unidade: 'm',
+                quantidade: length,
+                custoUnit: tuboRef.adotado,
+                custoTotal: length * tuboRef.adotado
+            });
+
+            // 5. Reaterro
+            const volTubo = Math.PI * Math.pow(dn / 1000, 2) / 4 * length;
+            const volReaterro = (volEscavacao - volTubo - volLastro) * 0.7;
+            costs.push({
+                item: COST_TABLE['REATERRO_COMPACTADO'].id,
+                descricao: COST_TABLE['REATERRO_COMPACTADO'].descricao,
+                unidade: 'm³',
+                quantidade: volReaterro,
+                custoUnit: COST_TABLE['REATERRO_COMPACTADO'].adotado,
+                custoTotal: volReaterro * COST_TABLE['REATERRO_COMPACTADO'].adotado
+            });
+
+            // 6. Bota-fora
+            const volBotaFora = (volEscavacao - volReaterro) * 1.25; // empolamento
+            costs.push({
+                item: COST_TABLE['BOTA_FORA'].id,
+                descricao: COST_TABLE['BOTA_FORA'].descricao,
+                unidade: 'm³',
+                quantidade: volBotaFora,
+                custoUnit: COST_TABLE['BOTA_FORA'].adotado,
+                custoTotal: volBotaFora * COST_TABLE['BOTA_FORA'].adotado
+            });
+
+            // 7. Recomposição de pavimento
+            const areaPavimento = (larguraVala + 0.60) * length;
+            costs.push({
+                item: COST_TABLE['RECOMP_ASFALTO'].id,
+                descricao: COST_TABLE['RECOMP_ASFALTO'].descricao,
+                unidade: 'm²',
+                quantidade: areaPavimento,
+                custoUnit: COST_TABLE['RECOMP_ASFALTO'].adotado,
+                custoTotal: areaPavimento * COST_TABLE['RECOMP_ASFALTO'].adotado
+            });
+
+            // 8. Teste de estanqueidade
+            costs.push({
+                item: COST_TABLE['TESTE_ESTANQUEIDADE'].id,
+                descricao: COST_TABLE['TESTE_ESTANQUEIDADE'].descricao,
+                unidade: 'm',
+                quantidade: length,
+                custoUnit: COST_TABLE['TESTE_ESTANQUEIDADE'].adotado,
+                custoTotal: length * COST_TABLE['TESTE_ESTANQUEIDADE'].adotado
+            });
+
+            const totalTrecho = costs.reduce((sum, c) => sum + c.custoTotal, 0);
+
+            return {
+                trecho: `${link.from} → ${link.to}`,
+                comprimento: length,
+                dn: dn,
+                profMedia: profMedia,
+                itens: costs,
+                total: totalTrecho
+            };
+        }
+
+        // Calcular custos de todos os trechos
+        function calculateAllCosts(networkResults, networkType) {
+            calculatedCosts = [];
+            let totalGeral = 0;
+            let totalPVs = 0;
+
+            // Custos por trecho
+            networkResults.forEach(link => {
+                const linkCosts = calculateLinkCosts(link, networkType);
+                calculatedCosts.push(linkCosts);
+                totalGeral += linkCosts.total;
+            });
+
+            // Adicionar PVs (quantidade = número de nós)
+            const numPVs = importedNodes.length;
+            const custoPVs = numPVs * COST_TABLE['PV_COMPLETO'].adotado;
+            totalPVs = custoPVs;
+
+            return {
+                trechos: calculatedCosts,
+                pvs: {
+                    quantidade: numPVs,
+                    custoUnit: COST_TABLE['PV_COMPLETO'].adotado,
+                    custoTotal: custoPVs
+                },
+                totalTrechos: totalGeral,
+                totalPVs: totalPVs,
+                totalGeral: totalGeral + totalPVs
+            };
+        }
 
         // ============================================
         // FILE IMPORT FUNCTIONS
@@ -1994,6 +2344,22 @@ EOF
             try {
                 const zip = new JSZip();
 
+                // Calcular quantitativos e custos
+                const networkType = document.getElementById('import-network-type').value;
+                const linksWithData = previewLinks.map((link, idx) => {
+                    const fromNode = importedNodes.find(n => n.id === link.from);
+                    const toNode = importedNodes.find(n => n.id === link.to);
+                    const dz = fromNode && toNode ? Math.abs(fromNode.z - toNode.z) : 0;
+                    return {
+                        ...link,
+                        DN: 150 + Math.floor(idx / 3) * 50, // DN estimado
+                        profUp: 1.0 + Math.random() * 0.5,
+                        profDown: 1.2 + Math.random() * 0.8 + dz
+                    };
+                });
+
+                const custos = calculateAllCosts(linksWithData, networkType);
+
                 // 1. SHP Files (Points)
                 const points = createShapefilePoints(importedNodes);
                 const shpFolder = zip.folder("SHP");
@@ -2021,20 +2387,125 @@ EOF
                 const dxf = createDXFContent();
                 zip.file("rede_saneamento.dxf", dxf);
 
-                // 5. CSV
+                // 5. CSV - Pontos
                 let nodesCSV = 'id,x,y,cota\n';
                 importedNodes.forEach(n => {
                     nodesCSV += `${n.id},${n.x},${n.y},${n.z}\n`;
                 });
                 zip.file("pontos_rede.csv", nodesCSV);
 
-                let linksCSV = 'de,para,comprimento\n';
-                previewLinks.forEach(l => {
-                    linksCSV += `${l.from},${l.to},${l.length}\n`;
+                // 6. CSV - Trechos com quantitativos
+                let linksCSV = 'TRECHO,DE,PARA,COMPRIMENTO_M,DN_MM,PROF_MEDIA_M,CUSTO_TOTAL_R$\n';
+                custos.trechos.forEach((t, idx) => {
+                    linksCSV += `T${String(idx+1).padStart(2,'0')},${t.trecho.replace(' → ', ',')},${t.comprimento.toFixed(2)},${t.dn},${t.profMedia.toFixed(2)},${t.total.toFixed(2)}\n`;
                 });
-                zip.file("trechos_rede.csv", linksCSV);
+                zip.file("trechos_quantitativos.csv", linksCSV);
 
-                // 6. README
+                // 7. CSV - Orçamento detalhado por trecho
+                let orcamentoCSV = 'TRECHO,ITEM,DESCRICAO,UNIDADE,QUANTIDADE,CUSTO_UNIT_R$,CUSTO_TOTAL_R$\n';
+                custos.trechos.forEach((t, idx) => {
+                    const trechoId = `T${String(idx+1).padStart(2,'0')}`;
+                    t.itens.forEach(item => {
+                        orcamentoCSV += `${trechoId},${item.item},"${item.descricao}",${item.unidade},${item.quantidade.toFixed(3)},${item.custoUnit.toFixed(2)},${item.custoTotal.toFixed(2)}\n`;
+                    });
+                });
+                // Adicionar PVs
+                orcamentoCSV += `GERAL,SAN-008,"${COST_TABLE['PV_COMPLETO'].descricao}",un,${custos.pvs.quantidade},${custos.pvs.custoUnit.toFixed(2)},${custos.pvs.custoTotal.toFixed(2)}\n`;
+                zip.file("orcamento_detalhado.csv", orcamentoCSV);
+
+                // 8. CSV - Resumo de custos
+                let resumoCSV = 'CATEGORIA,DESCRICAO,VALOR_R$\n';
+                resumoCSV += `TRECHOS,Custo total dos trechos (tubulação + escavação + reaterro + pavimento),${custos.totalTrechos.toFixed(2)}\n`;
+                resumoCSV += `PVS,Poços de visita (${custos.pvs.quantidade} unidades),${custos.totalPVs.toFixed(2)}\n`;
+                resumoCSV += `TOTAL_GERAL,Custo total da obra,${custos.totalGeral.toFixed(2)}\n`;
+                resumoCSV += `\nDETALHAMENTO POR ITEM\n`;
+                resumoCSV += `ITEM,DESCRICAO,UNIDADE,QTD_TOTAL,CUSTO_UNIT,CUSTO_TOTAL\n`;
+
+                // Agregar quantidades por item
+                const agregado = {};
+                custos.trechos.forEach(t => {
+                    t.itens.forEach(item => {
+                        if (!agregado[item.item]) {
+                            agregado[item.item] = {
+                                descricao: item.descricao,
+                                unidade: item.unidade,
+                                quantidade: 0,
+                                custoUnit: item.custoUnit,
+                                custoTotal: 0
+                            };
+                        }
+                        agregado[item.item].quantidade += item.quantidade;
+                        agregado[item.item].custoTotal += item.custoTotal;
+                    });
+                });
+
+                Object.entries(agregado).forEach(([item, dados]) => {
+                    resumoCSV += `${item},"${dados.descricao}",${dados.unidade},${dados.quantidade.toFixed(2)},${dados.custoUnit.toFixed(2)},${dados.custoTotal.toFixed(2)}\n`;
+                });
+                zip.file("resumo_custos.csv", resumoCSV);
+
+                // 9. Planilha Excel completa
+                const wb = XLSX.utils.book_new();
+
+                // Aba 1: Resumo
+                const resumoData = [
+                    ['ORÇAMENTO - REDE DE SANEAMENTO'],
+                    [''],
+                    ['Data:', new Date().toLocaleString('pt-BR')],
+                    ['Pontos (PVs):', importedNodes.length],
+                    ['Trechos:', previewLinks.length],
+                    ['Extensão Total (m):', previewLinks.reduce((s, l) => s + l.length, 0).toFixed(2)],
+                    [''],
+                    ['RESUMO DE CUSTOS'],
+                    ['Trechos (tubulação + terraplenagem + pavimento):', `R$ ${custos.totalTrechos.toFixed(2)}`],
+                    ['Poços de Visita:', `R$ ${custos.totalPVs.toFixed(2)}`],
+                    ['TOTAL GERAL:', `R$ ${custos.totalGeral.toFixed(2)}`],
+                ];
+                const wsResumo = XLSX.utils.aoa_to_sheet(resumoData);
+                XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo');
+
+                // Aba 2: Orçamento por trecho
+                const orcamentoData = [['TRECHO', 'DE', 'PARA', 'COMP(m)', 'DN(mm)', 'PROF(m)', 'CUSTO(R$)']];
+                custos.trechos.forEach((t, idx) => {
+                    const [de, para] = t.trecho.split(' → ');
+                    orcamentoData.push([`T${String(idx+1).padStart(2,'0')}`, de, para, t.comprimento, t.dn, t.profMedia, t.total]);
+                });
+                orcamentoData.push(['', '', '', '', '', 'SUBTOTAL TRECHOS:', custos.totalTrechos]);
+                orcamentoData.push(['PVs', '', '', custos.pvs.quantidade, 'un', custos.pvs.custoUnit, custos.pvs.custoTotal]);
+                orcamentoData.push(['', '', '', '', '', 'TOTAL GERAL:', custos.totalGeral]);
+                const wsOrcamento = XLSX.utils.aoa_to_sheet(orcamentoData);
+                XLSX.utils.book_append_sheet(wb, wsOrcamento, 'Orcamento_Trechos');
+
+                // Aba 3: Detalhamento de serviços
+                const detalheData = [['ITEM', 'DESCRIÇÃO', 'UN', 'QTD', 'CUSTO_UNIT', 'CUSTO_TOTAL']];
+                Object.entries(agregado).forEach(([item, dados]) => {
+                    detalheData.push([item, dados.descricao, dados.unidade, dados.quantidade, dados.custoUnit, dados.custoTotal]);
+                });
+                detalheData.push([COST_TABLE['PV_COMPLETO'].id, COST_TABLE['PV_COMPLETO'].descricao, 'un', custos.pvs.quantidade, custos.pvs.custoUnit, custos.pvs.custoTotal]);
+                detalheData.push(['', '', '', '', 'TOTAL:', custos.totalGeral]);
+                const wsDetalhe = XLSX.utils.aoa_to_sheet(detalheData);
+                XLSX.utils.book_append_sheet(wb, wsDetalhe, 'Servicos_Agregados');
+
+                // Aba 4: Tabela de preços referência
+                const precosData = [['CÓDIGO', 'DESCRIÇÃO', 'UN', 'SINAPI', 'SEINFRA', 'MERCADO', 'ADOTADO']];
+                Object.entries(COST_TABLE).forEach(([key, item]) => {
+                    precosData.push([item.id, item.descricao, item.unidade, item.sinapi, item.seinfra, item.mercado, item.adotado]);
+                });
+                const wsPrecos = XLSX.utils.aoa_to_sheet(precosData);
+                XLSX.utils.book_append_sheet(wb, wsPrecos, 'Tabela_Precos');
+
+                // Aba 5: Pontos
+                const pontosData = [['ID', 'X', 'Y', 'COTA']];
+                importedNodes.forEach(n => {
+                    pontosData.push([n.id, n.x, n.y, n.z]);
+                });
+                const wsPontos = XLSX.utils.aoa_to_sheet(pontosData);
+                XLSX.utils.book_append_sheet(wb, wsPontos, 'Pontos');
+
+                const xlsxBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                zip.file("orcamento_completo.xlsx", xlsxBuffer);
+
+                // 10. README atualizado
                 const readme = `REDE DE SANEAMENTO - EXPORTAÇÃO COMPLETA
 ========================================
 
@@ -2045,18 +2516,27 @@ Arquivos incluídos:
    - trechos_rede.shp/shx/dbf/prj - Tubulações
 
 📄 rede_saneamento.geojson - Formato GeoJSON
-
 📄 rede_saneamento.ifc - Formato BIM (IFC4)
-
 📄 rede_saneamento.dxf - Formato CAD (AutoCAD)
 
-📄 pontos_rede.csv - Tabela de pontos
-📄 trechos_rede.csv - Tabela de trechos
+📊 PLANILHAS DE CUSTOS:
+   - orcamento_completo.xlsx - Planilha Excel com todas as abas
+   - orcamento_detalhado.csv - Custos por trecho e item
+   - resumo_custos.csv - Resumo geral de custos
+   - trechos_quantitativos.csv - Quantitativos por trecho
+
+📄 pontos_rede.csv - Coordenadas dos PVs
+
+RESUMO DA OBRA:
+- Total de pontos: ${importedNodes.length}
+- Total de trechos: ${previewLinks.length}
+- Extensão total: ${previewLinks.reduce((s, l) => s + l.length, 0).toFixed(2)} m
+- CUSTO TOTAL ESTIMADO: R$ ${custos.totalGeral.toFixed(2)}
+
+Referências de preços: SINAPI, SEINFRA-CE, PNCP
+Data base: ${new Date().toLocaleDateString('pt-BR')}
 
 Gerado por: HydroNetwork v3.0
-Data: ${new Date().toLocaleString('pt-BR')}
-Total de pontos: ${importedNodes.length}
-Total de trechos: ${previewLinks.length}
 `;
                 zip.file("LEIA-ME.txt", readme);
 
