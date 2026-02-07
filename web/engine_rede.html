@@ -2650,16 +2650,21 @@ PV02,359290.456,7352780.123,1.82</pre>
                 // Get cost data if available
                 const costData = linksWithCosts ? linksWithCosts[idx] : null;
 
-                if (costData) {
+                if (costData && costData.itens) {
                     // Full record with quantities and costs - matching table columns exactly
-                    const escav = costData.itens.find(i => i.item.includes('ESCAVACAO'))?.quantidade || 0;
-                    const reat = costData.itens.find(i => i.item.includes('REATERRO'))?.quantidade || 0;
-                    const pav = costData.itens.find(i => i.item.includes('PAVIMENTO'))?.quantidade || 0;
+                    // Search in 'descricao' field which contains the item description
+                    const escavItem = costData.itens.find(i => i.descricao && i.descricao.toLowerCase().includes('escava'));
+                    const reatItem = costData.itens.find(i => i.descricao && i.descricao.toLowerCase().includes('reaterro'));
+                    const pavItem = costData.itens.find(i => i.descricao && i.descricao.toLowerCase().includes('pavimento'));
+
+                    const escav = escavItem ? escavItem.quantidade : 0;
+                    const reat = reatItem ? reatItem.quantidade : 0;
+                    const pav = pavItem ? pavItem.quantidade : 0;
 
                     dbfRecords.push({
                         TRECHO: `T${String(idx+1).padStart(2,'0')}`,
-                        DE: link.from.substring(0, 15),
-                        PARA: link.to.substring(0, 15),
+                        DE: link.from.substring(0, 20),
+                        PARA: link.to.substring(0, 20),
                         COMP_M: link.length,
                         DN_MM: costData.dn || 150,
                         PROF_M: costData.profMedia || 1.5,
@@ -2672,8 +2677,8 @@ PV02,359290.456,7352780.123,1.82</pre>
                     // Basic record without costs
                     dbfRecords.push({
                         TRECHO: `T${String(idx+1).padStart(2,'0')}`,
-                        DE: link.from.substring(0, 15),
-                        PARA: link.to.substring(0, 15),
+                        DE: link.from.substring(0, 20),
+                        PARA: link.to.substring(0, 20),
                         COMP_M: link.length,
                         DN_MM: 150,
                         PROF_M: 1.5,
