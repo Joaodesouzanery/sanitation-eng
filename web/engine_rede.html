@@ -309,19 +309,148 @@
         <header>
             <h1>HYDRO NETWORK</h1>
             <p>Motor de Cálculo Hidráulico para Redes de Saneamento</p>
-            <span class="version-badge">v2.0 - Esgoto | Água | Drenagem</span>
+            <span class="version-badge">v3.0 - Plataforma Unificada</span>
         </header>
 
         <!-- Tabs -->
         <div class="tabs">
-            <div class="tab active" onclick="showTab('sewer')">📍 Esgoto</div>
+            <div class="tab active" onclick="showTab('import')">📂 Importar Topografia</div>
+            <div class="tab" onclick="showTab('sewer')">📍 Esgoto</div>
             <div class="tab" onclick="showTab('water')">💧 Água</div>
             <div class="tab" onclick="showTab('drainage')">🌧️ Drenagem</div>
             <div class="tab" onclick="showTab('quantities')">🏗️ Quantitativos</div>
         </div>
 
+        <!-- IMPORT TAB -->
+        <div id="import-tab" class="tab-content active">
+            <div class="grid">
+                <div class="card">
+                    <h2><span class="icon">📂</span> Importar Arquivo Topográfico</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                        Carregue um arquivo TXT ou CSV com os dados topográficos da sua rede.
+                    </p>
+
+                    <div class="form-group">
+                        <label>Formato do Arquivo</label>
+                        <select id="import-format">
+                            <option value="csv">CSV (separado por vírgula)</option>
+                            <option value="csv-semicolon">CSV (separado por ponto e vírgula)</option>
+                            <option value="txt-tab">TXT (separado por TAB)</option>
+                            <option value="txt-space">TXT (separado por espaço)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Arquivo de Topografia (id, x, y, cota)</label>
+                        <div style="border: 2px dashed var(--border-color); border-radius: 8px; padding: 30px; text-align: center; cursor: pointer; transition: all 0.3s;"
+                             id="drop-zone"
+                             ondragover="handleDragOver(event)"
+                             ondragleave="handleDragLeave(event)"
+                             ondrop="handleDrop(event)"
+                             onclick="document.getElementById('file-input').click()">
+                            <p style="font-size: 2rem; margin-bottom: 10px;">📁</p>
+                            <p style="color: var(--text-secondary);">Arraste o arquivo aqui ou clique para selecionar</p>
+                            <p style="color: var(--accent-blue); font-size: 0.85rem; margin-top: 10px;">Formatos: .txt, .csv</p>
+                            <input type="file" id="file-input" accept=".txt,.csv" style="display: none;" onchange="handleFileSelect(event)">
+                        </div>
+                    </div>
+
+                    <div id="file-info" style="display: none; margin-top: 15px; padding: 15px; background: var(--bg-card); border-radius: 8px;">
+                        <p style="color: var(--accent-green);">✓ Arquivo carregado: <strong id="file-name"></strong></p>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;" id="file-stats"></p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2><span class="icon">⚙️</span> Opções de Importação</h2>
+
+                    <div class="form-group">
+                        <label>Tipo de Rede a Calcular</label>
+                        <select id="import-network-type">
+                            <option value="sewer">Rede de Esgoto (Gravidade)</option>
+                            <option value="water">Rede de Água (Pressurizada)</option>
+                            <option value="drainage">Drenagem Pluvial</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Geração de Trechos</label>
+                        <select id="import-link-mode">
+                            <option value="sequential">Sequencial (ponto a ponto na ordem)</option>
+                            <option value="nearest">Nearest Neighbor (por proximidade)</option>
+                            <option value="manual">Manual (apenas importar nós)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="pop-input-group">
+                        <label>População por Nó (para Esgoto)</label>
+                        <input type="number" id="import-pop" value="50" min="0" max="1000">
+                    </div>
+
+                    <div class="form-group" id="demand-input-group" style="display: none;">
+                        <label>Demanda por Nó em L/s (para Água)</label>
+                        <input type="number" id="import-demand" value="2.0" min="0" max="100" step="0.1">
+                    </div>
+
+                    <div class="form-group" id="area-input-group" style="display: none;">
+                        <label>Área por Nó em ha (para Drenagem)</label>
+                        <input type="number" id="import-area" value="0.5" min="0" max="100" step="0.1">
+                    </div>
+
+                    <div class="form-group" id="runoff-input-group" style="display: none;">
+                        <label>Coef. de Runoff (para Drenagem)</label>
+                        <input type="number" id="import-runoff" value="0.7" min="0.1" max="1.0" step="0.05">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Table -->
+            <div class="card" id="preview-card" style="display: none; margin-top: 20px;">
+                <h2><span class="icon">👁️</span> Pré-visualização dos Dados</h2>
+                <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+                    <table id="preview-table">
+                        <thead>
+                            <tr><th>ID</th><th>X</th><th>Y</th><th>Cota (m)</th></tr>
+                        </thead>
+                        <tbody id="preview-tbody"></tbody>
+                    </table>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 10px;" id="preview-summary"></p>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" onclick="processImportedData()">
+                    <span>⚙️</span> Calcular Rede
+                </button>
+                <button class="btn btn-success" onclick="calculateAllFromImport()">
+                    <span>📊</span> Calcular Tudo (Rede + Quantitativos)
+                </button>
+                <button class="btn" style="background: var(--bg-card);" onclick="loadTopographyDemo()">
+                    <span>📁</span> Demo
+                </button>
+            </div>
+
+            <!-- Example Format -->
+            <div class="card" style="margin-top: 20px;">
+                <h2><span class="icon">📖</span> Formato Esperado do Arquivo</h2>
+                <div style="background: var(--bg-card); padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; overflow-x: auto;">
+                    <p style="color: var(--accent-blue); margin-bottom: 10px;"># Exemplo de arquivo CSV:</p>
+                    <pre style="color: var(--text-primary);">id,x,y,cota
+PV01,100.00,0.00,102.50
+PV02,150.00,0.00,101.80
+PV03,200.00,0.00,101.00
+PV04,250.00,0.00,100.20
+PV05,300.00,0.00,99.50</pre>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 15px;">
+                    <strong>Dica:</strong> A primeira linha pode ser o cabeçalho (será ignorada).
+                    As colunas podem estar em ordem: <code>id, x, y, cota</code> ou apenas <code>x, y, cota</code> (IDs serão gerados automaticamente).
+                </p>
+            </div>
+        </div>
+
         <!-- SEWER TAB -->
-        <div id="sewer-tab" class="tab-content active">
+        <div id="sewer-tab" class="tab-content">
             <div class="grid">
                 <div class="card">
                     <h2><span class="icon">📍</span> Rede de Esgoto (Gravidade)</h2>
@@ -629,8 +758,9 @@
         // ============================================
         // GLOBAL STATE
         // ============================================
-        let currentTab = 'sewer';
+        let currentTab = 'import';
         let currentResults = null;
+        let importedNodes = [];
         let sewerNodes = [];
         let sewerLinks = [];
         let waterNodes = [];
@@ -640,6 +770,617 @@
         let qtyLinks = [];
 
         // ============================================
+        // FILE IMPORT FUNCTIONS
+        // ============================================
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('drop-zone').style.borderColor = 'var(--accent-blue)';
+            document.getElementById('drop-zone').style.background = 'rgba(59, 130, 246, 0.1)';
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('drop-zone').style.borderColor = 'var(--border-color)';
+            document.getElementById('drop-zone').style.background = 'transparent';
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleDragLeave(e);
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        }
+
+        function processFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                parseTopographyData(content, file.name);
+            };
+            reader.readAsText(file);
+        }
+
+        function parseTopographyData(content, fileName) {
+            const format = document.getElementById('import-format').value;
+            let separator = ',';
+
+            switch (format) {
+                case 'csv-semicolon': separator = ';'; break;
+                case 'txt-tab': separator = '\t'; break;
+                case 'txt-space': separator = /\s+/; break;
+                default: separator = ',';
+            }
+
+            const lines = content.trim().split('\n');
+            importedNodes = [];
+
+            let startLine = 0;
+            // Check if first line is header
+            const firstLine = lines[0].toLowerCase();
+            if (firstLine.includes('id') || firstLine.includes('cota') || firstLine.includes('x')) {
+                startLine = 1;
+            }
+
+            for (let i = startLine; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                const parts = line.split(separator).map(p => p.trim());
+
+                let id, x, y, z;
+
+                // Try to detect format
+                if (parts.length >= 4) {
+                    // id, x, y, z format
+                    id = parts[0];
+                    x = parseFloat(parts[1]);
+                    y = parseFloat(parts[2]);
+                    z = parseFloat(parts[3]);
+                } else if (parts.length === 3) {
+                    // x, y, z format (generate ID)
+                    id = `P${String(importedNodes.length + 1).padStart(2, '0')}`;
+                    x = parseFloat(parts[0]);
+                    y = parseFloat(parts[1]);
+                    z = parseFloat(parts[2]);
+                } else {
+                    continue; // Skip invalid lines
+                }
+
+                if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                    importedNodes.push({ id, x, y, z });
+                }
+            }
+
+            // Show file info
+            document.getElementById('file-info').style.display = 'block';
+            document.getElementById('file-name').textContent = fileName;
+            document.getElementById('file-stats').textContent = `${importedNodes.length} pontos importados`;
+
+            // Show preview
+            showPreview();
+        }
+
+        function showPreview() {
+            if (importedNodes.length === 0) {
+                document.getElementById('preview-card').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('preview-card').style.display = 'block';
+
+            let tbody = '';
+            const maxPreview = Math.min(importedNodes.length, 20);
+
+            for (let i = 0; i < maxPreview; i++) {
+                const node = importedNodes[i];
+                tbody += `<tr>
+                    <td>${node.id}</td>
+                    <td>${node.x.toFixed(2)}</td>
+                    <td>${node.y.toFixed(2)}</td>
+                    <td>${node.z.toFixed(2)}</td>
+                </tr>`;
+            }
+
+            if (importedNodes.length > 20) {
+                tbody += `<tr style="background: var(--bg-card);">
+                    <td colspan="4" style="text-align: center; color: var(--text-secondary);">
+                        ... e mais ${importedNodes.length - 20} pontos
+                    </td>
+                </tr>`;
+            }
+
+            document.getElementById('preview-tbody').innerHTML = tbody;
+
+            // Calculate summary stats
+            const minZ = Math.min(...importedNodes.map(n => n.z));
+            const maxZ = Math.max(...importedNodes.map(n => n.z));
+            const dz = maxZ - minZ;
+
+            document.getElementById('preview-summary').textContent =
+                `Cota mín: ${minZ.toFixed(2)}m | Cota máx: ${maxZ.toFixed(2)}m | Desnível: ${dz.toFixed(2)}m`;
+        }
+
+        function loadTopographyDemo() {
+            const demoData = `id,x,y,cota
+PV01,100.00,0.00,102.50
+PV02,150.00,0.00,101.80
+PV03,200.00,0.00,101.00
+PV04,250.00,0.00,100.20
+PV05,300.00,0.00,99.50
+PV06,100.00,50.00,102.30
+PV07,150.00,50.00,101.50
+PV08,200.00,50.00,100.80`;
+
+            parseTopographyData(demoData, 'demo_topografia.csv');
+
+            // Show file info
+            document.getElementById('file-info').style.display = 'block';
+            document.getElementById('file-name').textContent = 'demo_topografia.csv';
+        }
+
+        function generateLinksFromNodes(nodes, mode) {
+            const links = [];
+
+            if (mode === 'sequential') {
+                // Connect points in sequence
+                for (let i = 0; i < nodes.length - 1; i++) {
+                    const from = nodes[i];
+                    const to = nodes[i + 1];
+                    const dx = to.x - from.x;
+                    const dy = to.y - from.y;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+
+                    links.push({
+                        from: from.id,
+                        to: to.id,
+                        length: Math.round(length * 100) / 100
+                    });
+                }
+            } else if (mode === 'nearest') {
+                // Connect each point to nearest unconnected neighbor (downstream by elevation)
+                const connected = new Set();
+                const sortedByZ = [...nodes].sort((a, b) => b.z - a.z); // Highest first
+
+                for (let i = 0; i < sortedByZ.length - 1; i++) {
+                    const from = sortedByZ[i];
+                    connected.add(from.id);
+
+                    // Find nearest unconnected lower node
+                    let nearestDist = Infinity;
+                    let nearestNode = null;
+
+                    for (let j = i + 1; j < sortedByZ.length; j++) {
+                        const to = sortedByZ[j];
+                        if (to.z >= from.z) continue; // Must flow downhill
+
+                        const dx = to.x - from.x;
+                        const dy = to.y - from.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestNode = to;
+                        }
+                    }
+
+                    if (nearestNode && nearestDist < 200) { // Max 200m between nodes
+                        links.push({
+                            from: from.id,
+                            to: nearestNode.id,
+                            length: Math.round(nearestDist * 100) / 100
+                        });
+                    }
+                }
+            }
+            // 'manual' mode returns empty links
+
+            return links;
+        }
+
+        function processImportedData() {
+            if (importedNodes.length < 2) {
+                alert('Importe pelo menos 2 pontos topográficos.');
+                return;
+            }
+
+            const networkType = document.getElementById('import-network-type').value;
+            const linkMode = document.getElementById('import-link-mode').value;
+
+            // Generate links
+            const links = generateLinksFromNodes(importedNodes, linkMode);
+
+            // Convert to appropriate network type and calculate
+            if (networkType === 'sewer') {
+                const pop = parseInt(document.getElementById('import-pop').value) || 50;
+
+                sewerNodes = importedNodes.map(n => ({
+                    id: n.id, x: n.x, y: n.y, z: n.z, pop: pop
+                }));
+                sewerLinks = links;
+
+                renderSewerNodes();
+                renderSewerLinks();
+                showTab('sewer');
+
+                // Auto-calculate
+                setTimeout(() => calculateSewer(), 100);
+
+            } else if (networkType === 'water') {
+                const demand = parseFloat(document.getElementById('import-demand').value) || 2.0;
+
+                waterNodes = importedNodes.map((n, i) => ({
+                    id: n.id, x: n.x, y: n.y, z: n.z,
+                    demand: i === 0 ? 0 : demand,
+                    isSource: i === 0 // First node is source
+                }));
+                waterLinks = links;
+
+                renderWaterNodes();
+                renderWaterLinks();
+                showTab('water');
+
+                setTimeout(() => calculateWater(), 100);
+
+            } else if (networkType === 'drainage') {
+                const area = parseFloat(document.getElementById('import-area').value) || 0.5;
+                const runoff = parseFloat(document.getElementById('import-runoff').value) || 0.7;
+
+                drainageNodes = importedNodes.map(n => ({
+                    id: n.id, x: n.x, y: n.y, z: n.z, area: area, runoff: runoff
+                }));
+                drainageLinks = links;
+
+                renderDrainageNodes();
+                renderDrainageLinks();
+                showTab('drainage');
+
+                setTimeout(() => calculateDrainage(), 100);
+            }
+        }
+
+        function exportImportedToTab() {
+            if (importedNodes.length < 1) {
+                alert('Importe dados primeiro.');
+                return;
+            }
+
+            const networkType = document.getElementById('import-network-type').value;
+            const linkMode = document.getElementById('import-link-mode').value;
+            const links = generateLinksFromNodes(importedNodes, linkMode);
+
+            if (networkType === 'sewer') {
+                const pop = parseInt(document.getElementById('import-pop').value) || 50;
+                sewerNodes = importedNodes.map(n => ({
+                    id: n.id, x: n.x, y: n.y, z: n.z, pop: pop
+                }));
+                sewerLinks = links;
+                renderSewerNodes();
+                renderSewerLinks();
+                showTab('sewer');
+
+            } else if (networkType === 'water') {
+                const demand = parseFloat(document.getElementById('import-demand').value) || 2.0;
+                waterNodes = importedNodes.map((n, i) => ({
+                    id: n.id, x: n.x, y: n.y, z: n.z,
+                    demand: i === 0 ? 0 : demand,
+                    isSource: i === 0
+                }));
+                waterLinks = links;
+                renderWaterNodes();
+                renderWaterLinks();
+                showTab('water');
+
+            } else if (networkType === 'drainage') {
+                const area = parseFloat(document.getElementById('import-area').value) || 0.5;
+                const runoff = parseFloat(document.getElementById('import-runoff').value) || 0.7;
+                drainageNodes = importedNodes.map(n => ({
+                    id: n.id, x: n.x, y: n.y, z: n.z, area: area, runoff: runoff
+                }));
+                drainageLinks = links;
+                renderDrainageNodes();
+                renderDrainageLinks();
+                showTab('drainage');
+            }
+        }
+
+        function calculateAllFromImport() {
+            if (importedNodes.length < 2) {
+                alert('Importe pelo menos 2 pontos topográficos.');
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+
+            const networkType = document.getElementById('import-network-type').value;
+            const linkMode = document.getElementById('import-link-mode').value;
+            const links = generateLinksFromNodes(importedNodes, linkMode);
+
+            // Build node map
+            const nodeMap = {};
+            importedNodes.forEach(n => { nodeMap[n.id] = n; });
+
+            setTimeout(() => {
+                let networkResults = [];
+                let quantityResults = [];
+                let violations = [];
+                let networkSummary = {};
+                let quantitySummary = {};
+
+                // ===== NETWORK CALCULATION =====
+                if (networkType === 'sewer') {
+                    const qpc = parseFloat(document.getElementById('sewer-qpc')?.value || 160);
+                    const n = parseFloat(document.getElementById('sewer-manning')?.value || 0.013);
+                    const pop = parseInt(document.getElementById('import-pop').value) || 50;
+                    const dnList = [150, 200, 250, 300, 400, 500, 600, 800, 1000];
+
+                    links.forEach((link, idx) => {
+                        const fromNode = nodeMap[link.from];
+                        const toNode = nodeMap[link.to];
+                        if (!fromNode || !toNode) return;
+
+                        const Qm = pop * qpc * 0.8 / 86400;
+                        const Kp = 1 + 14 / (4 + Math.sqrt(pop / 1000));
+                        const Qp = Qm * Kp;
+                        const dz = fromNode.z - toNode.z;
+                        const S = Math.max(dz / link.length, 0.005);
+                        const DN = selectDiameter(Qp, S, n, dnList);
+                        const D_m = DN / 1000;
+                        const V = manningVelocity(D_m, S, n);
+                        const Qfull = manningFlow(D_m, S, n);
+                        const yD = Qfull > 0 ? Math.min(Qp / Qfull, 0.75) : 0;
+
+                        let status = 'OK';
+                        if (V < 0.6) { status = 'WARN'; violations.push({ link: link.from + '-' + link.to, msg: `V ${V.toFixed(2)} < 0.6 m/s`, severity: 'warn' }); }
+                        if (V > 5.0) { status = 'ERROR'; violations.push({ link: link.from + '-' + link.to, msg: `V ${V.toFixed(2)} > 5.0 m/s`, severity: 'error' }); }
+
+                        // Calculate depths
+                        const profUp = 1.0 + Math.random() * 0.5; // Simplified - in real app would use actual depth
+                        const profDown = profUp + (dz > 0 ? dz : 0) + D_m;
+
+                        networkResults.push({
+                            id: `T${String(idx + 1).padStart(2, '0')}`,
+                            from: link.from, to: link.to,
+                            length: link.length, DN: DN, slope: S,
+                            Q_lps: Qp * 1000, V: V, yD: yD, status: status,
+                            profUp: profUp, profDown: profDown
+                        });
+                    });
+
+                    networkSummary = {
+                        type: 'Esgoto (Manning)',
+                        totalLinks: networkResults.length,
+                        totalLength: networkResults.reduce((s, r) => s + r.length, 0),
+                        avgVelocity: networkResults.reduce((s, r) => s + r.V, 0) / networkResults.length,
+                        violations: violations.length
+                    };
+
+                } else if (networkType === 'water') {
+                    const C = parseFloat(document.getElementById('water-c')?.value || 140);
+                    const demand = parseFloat(document.getElementById('import-demand').value) || 2.0;
+                    const dnList = [50, 75, 100, 150, 200, 250, 300, 400];
+
+                    links.forEach((link, idx) => {
+                        const fromNode = nodeMap[link.from];
+                        const toNode = nodeMap[link.to];
+                        if (!fromNode || !toNode) return;
+
+                        const Q_lps = demand;
+                        const Q_m3s = Q_lps / 1000;
+
+                        let DN = 50;
+                        for (const dn of dnList) {
+                            const D_m = dn / 1000;
+                            const V = hazenWilliamsVelocity(Q_m3s, D_m);
+                            if (V <= 3.5) { DN = dn; break; }
+                        }
+
+                        const D_m = DN / 1000;
+                        const V = hazenWilliamsVelocity(Q_m3s, D_m);
+                        const hf = hazenWilliamsHeadloss(Q_m3s, D_m, link.length, C);
+
+                        const profUp = 0.8;
+                        const profDown = 0.8;
+
+                        networkResults.push({
+                            id: `L${idx + 1}`,
+                            from: link.from, to: link.to,
+                            length: link.length, DN: DN,
+                            Q_lps: Q_lps, V: V, hf: hf, status: 'OK',
+                            profUp: profUp, profDown: profDown
+                        });
+                    });
+
+                    networkSummary = {
+                        type: 'Água (Hazen-Williams)',
+                        totalLinks: networkResults.length,
+                        totalLength: networkResults.reduce((s, r) => s + r.length, 0),
+                        totalHeadloss: networkResults.reduce((s, r) => s + r.hf, 0),
+                        violations: 0
+                    };
+
+                } else if (networkType === 'drainage') {
+                    const i = parseFloat(document.getElementById('drainage-i')?.value || 120);
+                    const n = parseFloat(document.getElementById('drainage-manning')?.value || 0.015);
+                    const area = parseFloat(document.getElementById('import-area').value) || 0.5;
+                    const runoff = parseFloat(document.getElementById('import-runoff').value) || 0.7;
+                    const dnList = [300, 400, 500, 600, 800, 1000, 1200, 1500];
+
+                    let accArea = 0;
+                    links.forEach((link, idx) => {
+                        const fromNode = nodeMap[link.from];
+                        const toNode = nodeMap[link.to];
+                        if (!fromNode || !toNode) return;
+
+                        accArea += area;
+                        const Q_m3s = runoff * i * accArea / 360;
+                        const dz = fromNode.z - toNode.z;
+                        const S = Math.max(dz / link.length, 0.005);
+
+                        let DN = 300;
+                        for (const dn of dnList) {
+                            const Qmax = manningFlow(dn / 1000, S, n);
+                            if (Qmax >= Q_m3s) { DN = dn; break; }
+                        }
+
+                        const D_m = DN / 1000;
+                        const V = manningVelocity(D_m, S, n);
+                        const Qfull = manningFlow(D_m, S, n);
+                        const yD = Qfull > 0 ? Math.min(Q_m3s / Qfull, 0.85) : 0;
+
+                        const profUp = 1.2;
+                        const profDown = 1.2 + (dz > 0 ? dz / 2 : 0);
+
+                        networkResults.push({
+                            id: `G${idx + 1}`,
+                            from: link.from, to: link.to,
+                            length: link.length, DN: DN, slope: S,
+                            Q_m3s: Q_m3s, V: V, yD: yD, area: accArea, status: 'OK',
+                            profUp: profUp, profDown: profDown
+                        });
+                    });
+
+                    networkSummary = {
+                        type: 'Drenagem (Racional)',
+                        totalLinks: networkResults.length,
+                        totalLength: networkResults.reduce((s, r) => s + r.length, 0),
+                        totalArea: accArea,
+                        maxFlow: Math.max(...networkResults.map(r => r.Q_m3s)) * 1000,
+                        violations: 0
+                    };
+                }
+
+                // ===== QUANTITY CALCULATION =====
+                const empolamento = 1.25;
+                const larguraMin = 0.60;
+                let totalExc = 0, totalReat = 0, totalBota = 0, totalPav = 0;
+
+                networkResults.forEach(r => {
+                    const profMedia = (r.profUp + r.profDown) / 2;
+                    const largura = Math.max(larguraMin, (r.DN / 1000) + 0.30);
+                    const areaSecao = profMedia * largura;
+                    const volEsc = areaSecao * r.length;
+                    const D_m = r.DN / 1000;
+                    const volTubo = Math.PI * Math.pow(D_m, 2) / 4 * r.length;
+                    const volReat = (volEsc - volTubo) * 0.7;
+                    const volBota = (volEsc - volReat) * empolamento;
+                    const areaPav = (largura + 0.60) * r.length;
+
+                    quantityResults.push({
+                        id: r.id,
+                        length: r.length,
+                        DN: r.DN,
+                        profMedia: profMedia,
+                        largura: largura,
+                        volEsc: volEsc,
+                        volReat: volReat,
+                        volBota: volBota,
+                        areaPav: areaPav,
+                        escoramento: profMedia > 1.25
+                    });
+
+                    totalExc += volEsc;
+                    totalReat += volReat;
+                    totalBota += volBota;
+                    totalPav += areaPav;
+                });
+
+                quantitySummary = {
+                    totalExc: totalExc,
+                    totalReat: totalReat,
+                    totalBota: totalBota,
+                    totalPav: totalPav
+                };
+
+                // Store combined results
+                currentResults = {
+                    type: 'unified',
+                    networkType: networkType,
+                    networkData: networkResults,
+                    quantityData: quantityResults,
+                    violations: violations,
+                    networkSummary: networkSummary,
+                    quantitySummary: quantitySummary
+                };
+
+                displayUnifiedResults();
+            }, 300);
+        }
+
+        function displayUnifiedResults() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+
+            const ns = currentResults.networkSummary;
+            const qs = currentResults.quantitySummary;
+            const networkData = currentResults.networkData;
+            const violations = currentResults.violations || [];
+
+            // Title
+            document.getElementById('results-title').textContent = `📊 Resultados Completos - ${ns.type}`;
+
+            // Summary cards
+            let summaryHtml = `
+                <div class="summary-card blue"><div class="icon">🔗</div><div class="value">${ns.totalLinks}</div><div class="label">Trechos</div></div>
+                <div class="summary-card green"><div class="icon">📏</div><div class="value">${ns.totalLength.toFixed(1)} m</div><div class="label">Extensão Total</div></div>
+                <div class="summary-card orange"><div class="icon">⛏️</div><div class="value">${qs.totalExc.toFixed(1)} m³</div><div class="label">Escavação</div></div>
+                <div class="summary-card purple"><div class="icon">🚛</div><div class="value">${qs.totalBota.toFixed(1)} m³</div><div class="label">Bota-fora</div></div>
+                <div class="summary-card red"><div class="icon">🛣️</div><div class="value">${qs.totalPav.toFixed(1)} m²</div><div class="label">Recomp. Pavimento</div></div>
+            `;
+            document.getElementById('summary-cards').innerHTML = summaryHtml;
+
+            // Validation
+            if (violations.length > 0) {
+                document.getElementById('validation-card').style.display = 'block';
+                let valHtml = '';
+                violations.forEach(v => {
+                    valHtml += `<div class="validation-item ${v.severity}"><span style="font-weight: bold;">${v.link}</span>: ${v.msg}</div>`;
+                });
+                document.getElementById('validation-results').innerHTML = valHtml;
+            } else {
+                document.getElementById('validation-card').style.display = 'none';
+            }
+
+            // Combined table
+            let thead = '<tr><th>ID</th><th>De</th><th>Para</th><th>Comp</th><th>DN</th><th>V (m/s)</th><th>Escav.</th><th>Bota-fora</th><th>Pav.</th><th>Status</th></tr>';
+            let tbody = '';
+
+            const qtyMap = {};
+            currentResults.quantityData.forEach(q => { qtyMap[q.id] = q; });
+
+            networkData.forEach(r => {
+                const q = qtyMap[r.id] || {};
+                const badgeClass = r.status === 'OK' ? 'badge-ok' : (r.status === 'WARN' ? 'badge-warn' : 'badge-error');
+                tbody += `<tr>
+                    <td>${r.id}</td><td>${r.from}</td><td>${r.to}</td>
+                    <td>${r.length.toFixed(1)}</td><td>${r.DN}</td>
+                    <td>${r.V.toFixed(3)}</td>
+                    <td>${(q.volEsc || 0).toFixed(1)}</td>
+                    <td>${(q.volBota || 0).toFixed(1)}</td>
+                    <td>${(q.areaPav || 0).toFixed(1)}</td>
+                    <td><span class="badge ${badgeClass}">${r.status}</span></td>
+                </tr>`;
+            });
+
+            document.getElementById('results-thead').innerHTML = thead;
+            document.getElementById('results-tbody').innerHTML = tbody;
+            document.getElementById('charts-container').innerHTML = '';
+        }
+
+
+        // ============================================
         // TAB NAVIGATION
         // ============================================
         function showTab(tab) {
@@ -647,7 +1388,8 @@
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-            document.querySelector(`.tab:nth-child(${['sewer', 'water', 'drainage', 'quantities'].indexOf(tab) + 1})`).classList.add('active');
+            const tabOrder = ['import', 'sewer', 'water', 'drainage', 'quantities'];
+            document.querySelector(`.tab:nth-child(${tabOrder.indexOf(tab) + 1})`).classList.add('active');
             document.getElementById(`${tab}-tab`).classList.add('active');
             document.getElementById('results').style.display = 'none';
         }
@@ -1585,6 +2327,18 @@
             renderDrainageNodes();
             renderDrainageLinks();
             renderQtyLinks();
+
+            // Set up network type change handler
+            const networkTypeSelect = document.getElementById('import-network-type');
+            if (networkTypeSelect) {
+                networkTypeSelect.addEventListener('change', function() {
+                    const type = this.value;
+                    document.getElementById('pop-input-group').style.display = type === 'sewer' ? 'block' : 'none';
+                    document.getElementById('demand-input-group').style.display = type === 'water' ? 'block' : 'none';
+                    document.getElementById('area-input-group').style.display = type === 'drainage' ? 'block' : 'none';
+                    document.getElementById('runoff-input-group').style.display = type === 'drainage' ? 'block' : 'none';
+                });
+            }
         });
     </script>
 </body>
