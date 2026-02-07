@@ -362,11 +362,14 @@
 
                     <div class="form-group" style="margin-top: 20px;">
                         <label>Ou cole os dados diretamente aqui:</label>
-                        <textarea id="paste-data" rows="6" placeholder="Cole seus dados aqui (formato: id,x,y,cota)
-Exemplo:
-PV01,100.00,0.00,102.50
-PV02,150.00,0.00,101.80
-PV03,200.00,0.00,101.00"
+                        <textarea id="paste-data" rows="6" placeholder="Cole seus dados aqui. Formatos aceitos:
+
+Formato 1 (5 colunas): numero,id,norte,este,cota
+1,PV01,7352735.514,359284.525,1.65
+2,PV02,7352780.123,359290.456,1.82
+
+Formato 2 (4 colunas): id,x,y,cota
+PV01,359284.525,7352735.514,1.65"
                             style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-family: monospace; font-size: 0.9rem; resize: vertical;"></textarea>
                         <button class="btn btn-small btn-add" style="margin-top: 10px;" onclick="parseFromTextarea()">Processar Dados Colados</button>
                     </div>
@@ -499,19 +502,26 @@ PV03,200.00,0.00,101.00"
 
             <!-- Example Format -->
             <div class="card" style="margin-top: 20px;">
-                <h2><span class="icon">📖</span> Formato Esperado do Arquivo</h2>
+                <h2><span class="icon">📖</span> Formatos Aceitos</h2>
                 <div style="background: var(--bg-card); padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; overflow-x: auto;">
-                    <p style="color: var(--accent-blue); margin-bottom: 10px;"># Exemplo de arquivo CSV:</p>
+                    <p style="color: var(--accent-blue); margin-bottom: 10px;"># Formato 1: NUMERO, ID, NORTE, ESTE, COTA (5 colunas)</p>
+                    <pre style="color: var(--text-primary);">numero,id,norte,este,cota
+1,PV01,7352735.514,359284.525,1.65
+2,PV02,7352780.123,359290.456,1.82
+3,PV03,7352820.789,359295.789,2.10
+4,PV04,7352865.456,359301.123,2.35
+5,PV05,7352910.012,359307.456,2.58</pre>
+                </div>
+                <div style="background: var(--bg-card); padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; overflow-x: auto; margin-top: 10px;">
+                    <p style="color: var(--accent-green); margin-bottom: 10px;"># Formato 2: ID, X, Y, COTA (4 colunas)</p>
                     <pre style="color: var(--text-primary);">id,x,y,cota
-PV01,100.00,0.00,102.50
-PV02,150.00,0.00,101.80
-PV03,200.00,0.00,101.00
-PV04,250.00,0.00,100.20
-PV05,300.00,0.00,99.50</pre>
+PV01,359284.525,7352735.514,1.65
+PV02,359290.456,7352780.123,1.82</pre>
                 </div>
                 <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 15px;">
-                    <strong>Dica:</strong> A primeira linha pode ser o cabeçalho (será ignorada).
-                    As colunas podem estar em ordem: <code>id, x, y, cota</code> ou apenas <code>x, y, cota</code> (IDs serão gerados automaticamente).
+                    <strong>Dica:</strong> A primeira linha (cabeçalho) é ignorada automaticamente.<br>
+                    <strong>Separadores:</strong> vírgula (,) ponto e vírgula (;) TAB ou espaço.<br>
+                    <strong>Decimais:</strong> aceita ponto (1.65) ou vírgula brasileira (1,65).
                 </p>
             </div>
         </div>
@@ -941,8 +951,10 @@ PV05,300.00,0.00,99.50</pre>
                 // Helper function to parse number (handles Brazilian format with comma)
                 const parseNum = (str) => {
                     if (!str) return NaN;
+                    // Remove parentheses, extra spaces, and quotes
+                    let cleaned = str.trim().replace(/[()"']/g, '').trim();
                     // Replace comma with dot for decimal
-                    let cleaned = str.trim().replace(',', '.');
+                    cleaned = cleaned.replace(',', '.');
                     // Remove any thousand separators (dots before the decimal)
                     // Only if there's more than one dot
                     const dots = (cleaned.match(/\./g) || []).length;
@@ -955,9 +967,17 @@ PV05,300.00,0.00,99.50</pre>
                 };
 
                 // Try to detect format based on number of columns
-                if (parts.length >= 4) {
-                    // id, x, y, z format OR id, x, y, z, extras...
-                    id = parts[0].trim();
+                if (parts.length >= 5) {
+                    // Format: NUMERO, ID, NORTE, ESTE, COTA (5+ columns)
+                    // numero is ignored (index 0), id is the identifier (index 1)
+                    // norte = Y (index 2), este = X (index 3), cota = Z (index 4)
+                    id = parts[1].trim().replace(/["']/g, '');
+                    y = parseNum(parts[2]); // Norte = Y
+                    x = parseNum(parts[3]); // Este = X
+                    z = parseNum(parts[4]); // Cota = Z
+                } else if (parts.length === 4) {
+                    // Format: id, x/norte, y/este, cota (4 columns)
+                    id = parts[0].trim().replace(/["']/g, '');
                     x = parseNum(parts[1]);
                     y = parseNum(parts[2]);
                     z = parseNum(parts[3]);
@@ -1569,21 +1589,21 @@ END-ISO-10303-21;`;
         }
 
         function loadTopographyDemo() {
-            const demoData = `id,x,y,cota
-PV01,100.00,0.00,102.50
-PV02,150.00,0.00,101.80
-PV03,200.00,0.00,101.00
-PV04,250.00,0.00,100.20
-PV05,300.00,0.00,99.50
-PV06,100.00,50.00,102.30
-PV07,150.00,50.00,101.50
-PV08,200.00,50.00,100.80`;
+            const demoData = `numero,id,norte,este,cota
+1,PV01,7352735.514,359284.525,102.50
+2,PV02,7352785.514,359334.525,101.80
+3,PV03,7352835.514,359384.525,101.00
+4,PV04,7352885.514,359434.525,100.20
+5,PV05,7352935.514,359484.525,99.50
+6,PV06,7352735.514,359334.525,102.30
+7,PV07,7352785.514,359384.525,101.50
+8,PV08,7352835.514,359434.525,100.80`;
 
-            parseTopographyData(demoData, 'demo_topografia.csv');
+            parseTopographyData(demoData, 'demo_topografia.txt');
 
             // Show file info
             document.getElementById('file-info').style.display = 'block';
-            document.getElementById('file-name').textContent = 'demo_topografia.csv';
+            document.getElementById('file-name').textContent = 'demo_topografia.txt';
         }
 
         function generateLinksFromNodes(nodes, mode) {
