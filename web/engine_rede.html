@@ -2336,12 +2336,10 @@ PV02,359290.456,7352780.123,1.82</pre>
                 const costData = linksWithCosts ? linksWithCosts[idx] : null;
 
                 if (costData) {
-                    // Full record with quantities and costs
-                    const escav = costData.itens.find(i => i.item.includes('004'))?.quantidade || 0;
-                    const reat = costData.itens.find(i => i.item.includes('007') && !i.item.includes('007B'))?.quantidade || 0;
-                    const bota = costData.itens.find(i => i.item.includes('007B'))?.quantidade || 0;
-                    const pav = costData.itens.find(i => i.item.includes('018'))?.quantidade || 0;
-                    const tubo = costData.itens.find(i => i.item.includes('001') || i.item.includes('002'))?.custoTotal || 0;
+                    // Full record with quantities and costs - matching table columns exactly
+                    const escav = costData.itens.find(i => i.item.includes('ESCAVACAO'))?.quantidade || 0;
+                    const reat = costData.itens.find(i => i.item.includes('REATERRO'))?.quantidade || 0;
+                    const pav = costData.itens.find(i => i.item.includes('PAVIMENTO'))?.quantidade || 0;
 
                     dbfRecords.push({
                         TRECHO: `T${String(idx+1).padStart(2,'0')}`,
@@ -2352,10 +2350,8 @@ PV02,359290.456,7352780.123,1.82</pre>
                         PROF_M: costData.profMedia || 1.5,
                         ESCAV_M3: escav,
                         REAT_M3: reat,
-                        BOTA_M3: bota,
                         PAV_M2: pav,
-                        C_TUBO: tubo,
-                        C_TOTAL: costData.total || 0
+                        CUSTO_RS: costData.total || 0
                     });
                 } else {
                     // Basic record without costs
@@ -2368,10 +2364,8 @@ PV02,359290.456,7352780.123,1.82</pre>
                         PROF_M: 1.5,
                         ESCAV_M3: 0,
                         REAT_M3: 0,
-                        BOTA_M3: 0,
                         PAV_M2: 0,
-                        C_TUBO: 0,
-                        C_TOTAL: 0
+                        CUSTO_RS: 0
                     });
                 }
             });
@@ -2398,19 +2392,18 @@ PV02,359290.456,7352780.123,1.82</pre>
                 offset += part.byteLength;
             });
 
+            // DBF fields matching the table: Trecho, De, Para, Comp(m), DN(mm), Prof(m), Escav(m³), Reat(m³), Pav(m²), Custo(R$)
             const dbf = createDBF(dbfRecords, [
                 { name: 'TRECHO', type: 'C', length: 10 },
-                { name: 'DE', type: 'C', length: 15 },
-                { name: 'PARA', type: 'C', length: 15 },
-                { name: 'COMP_M', type: 'N', length: 10, decimals: 2 },
+                { name: 'DE', type: 'C', length: 20 },
+                { name: 'PARA', type: 'C', length: 20 },
+                { name: 'COMP_M', type: 'N', length: 12, decimals: 2 },
                 { name: 'DN_MM', type: 'N', length: 6, decimals: 0 },
-                { name: 'PROF_M', type: 'N', length: 8, decimals: 2 },
-                { name: 'ESCAV_M3', type: 'N', length: 10, decimals: 2 },
-                { name: 'REAT_M3', type: 'N', length: 10, decimals: 2 },
-                { name: 'BOTA_M3', type: 'N', length: 10, decimals: 2 },
-                { name: 'PAV_M2', type: 'N', length: 10, decimals: 2 },
-                { name: 'C_TUBO', type: 'N', length: 12, decimals: 2 },
-                { name: 'C_TOTAL', type: 'N', length: 12, decimals: 2 }
+                { name: 'PROF_M', type: 'N', length: 10, decimals: 2 },
+                { name: 'ESCAV_M3', type: 'N', length: 12, decimals: 2 },
+                { name: 'REAT_M3', type: 'N', length: 12, decimals: 2 },
+                { name: 'PAV_M2', type: 'N', length: 12, decimals: 2 },
+                { name: 'CUSTO_RS', type: 'N', length: 14, decimals: 2 }
             ]);
 
             const prj = 'GEOGCS["GCS_SIRGAS_2000",DATUM["D_SIRGAS_2000",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]';
