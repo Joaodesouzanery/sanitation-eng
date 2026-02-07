@@ -51,7 +51,7 @@ def _detect_file_format(file_path: Union[str, Path]) -> str:
         file_path: Path to the input file.
 
     Returns:
-        File format identifier ('csv' or 'excel').
+        File format identifier ('csv', 'txt', or 'excel').
 
     Raises:
         TopographyReaderError: If file format is not supported.
@@ -61,13 +61,47 @@ def _detect_file_format(file_path: Union[str, Path]) -> str:
 
     if suffix == ".csv":
         return "csv"
+    elif suffix == ".txt":
+        return "txt"
     elif suffix in (".xlsx", ".xls"):
         return "excel"
     else:
         raise TopographyReaderError(
             f"Unsupported file format: {suffix}. "
-            "Supported formats: .csv, .xlsx, .xls"
+            "Supported formats: .csv, .txt, .xlsx, .xls"
         )
+
+
+def _detect_delimiter(file_path: Union[str, Path]) -> str:
+    """
+    Auto-detect delimiter in a text file.
+
+    Args:
+        file_path: Path to the text file.
+
+    Returns:
+        Detected delimiter character.
+    """
+    path = Path(file_path)
+
+    with open(path, "r", encoding="utf-8") as f:
+        first_lines = f.read(2048)
+
+    # Count occurrences of common delimiters
+    delimiters = {
+        "\t": first_lines.count("\t"),
+        ";": first_lines.count(";"),
+        ",": first_lines.count(","),
+        " ": first_lines.count(" "),
+    }
+
+    # Return the most common delimiter (excluding space if others exist)
+    for delim in ["\t", ";", ","]:
+        if delimiters[delim] > 0:
+            return delim
+
+    # Default to whitespace (space)
+    return r"\s+"
 
 
 def _validate_required_columns(df: pd.DataFrame, file_path: Union[str, Path]) -> None:
@@ -111,11 +145,13 @@ def read_topography_dataframe(file_path: Union[str, Path]) -> pd.DataFrame:
     """
     Read topography file into a pandas DataFrame.
 
-    Supports both CSV and Excel formats. The file must contain columns:
+    Supports CSV, TXT, and Excel formats. The file must contain columns:
     id, x, y, cota (case-insensitive).
 
+    For TXT files, the delimiter is auto-detected (tab, semicolon, comma, or space).
+
     Args:
-        file_path: Path to the topography file (.csv, .xlsx, or .xls).
+        file_path: Path to the topography file (.csv, .txt, .xlsx, or .xls).
 
     Returns:
         DataFrame with columns: id, x, y, cota.
@@ -134,6 +170,12 @@ def read_topography_dataframe(file_path: Union[str, Path]) -> pd.DataFrame:
     try:
         if file_format == "csv":
             df = pd.read_csv(path)
+        elif file_format == "txt":
+            delimiter = _detect_delimiter(path)
+            if delimiter == r"\s+":
+                df = pd.read_csv(path, sep=r"\s+", engine="python")
+            else:
+                df = pd.read_csv(path, sep=delimiter)
         else:
             df = pd.read_excel(path)
     except Exception as e:
