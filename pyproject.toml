@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "engine_rede"
-version = "1.0.0"
-description = "Sanitation Network Pre-Design and Budget Estimation Engine"
+version = "2.0.0"
+description = "Sanitation Network Pre-Design, Budget Estimation, and GIS Export Engine"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
@@ -19,6 +19,10 @@ keywords = [
     "sewage",
     "topography",
     "budget",
+    "gis",
+    "shapefile",
+    "qgis",
+    "construction",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -41,11 +45,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+gis = [
+    "geopandas>=0.12.0",
+    "shapely>=2.0.0",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "mypy>=1.0.0",
     "ruff>=0.1.0",
+]
+all = [
+    "engine_rede[gis,dev]",
 ]
 
 [project.urls]
