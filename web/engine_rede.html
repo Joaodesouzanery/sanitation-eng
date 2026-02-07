@@ -6,6 +6,8 @@
     <title>HydroNetwork - Motor de Cálculo Hidráulico</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <style>
         :root {
             --bg-primary: #0f172a;
@@ -472,18 +474,34 @@ PV01,359284.525,7352735.514,1.65"
                 <p style="color: var(--text-secondary); margin-bottom: 20px;">
                     Verifique o traçado acima antes de exportar. Exporte para SHP (GIS) ou IFC (BIM).
                 </p>
+
+                <!-- Export All Button - Highlighted -->
+                <div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple)); border-radius: 8px;">
+                    <button class="btn" style="background: white; color: #1e293b; width: 100%; font-size: 1.1rem;" onclick="exportAllFormats()">
+                        <span>📦</span> EXPORTAR TODOS OS FORMATOS (.ZIP)
+                    </button>
+                    <p style="color: rgba(255,255,255,0.8); font-size: 0.85rem; margin-top: 10px; text-align: center;">
+                        Inclui: SHP (pontos + trechos) + IFC + GeoJSON + CSV
+                    </p>
+                </div>
+
+                <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.9rem;">Ou exporte individualmente:</p>
+
                 <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                     <button class="btn btn-primary" onclick="exportToSHP()">
-                        <span>🗺️</span> Exportar SHP (Shapefile)
+                        <span>🗺️</span> SHP (Shapefile)
                     </button>
                     <button class="btn btn-success" onclick="exportToIFC()">
-                        <span>🏗️</span> Exportar IFC (BIM)
+                        <span>🏗️</span> IFC (BIM)
                     </button>
                     <button class="btn" style="background: var(--accent-purple); color: white;" onclick="exportToGeoJSON()">
-                        <span>📋</span> Exportar GeoJSON
+                        <span>📋</span> GeoJSON
                     </button>
-                    <button class="btn" style="background: var(--bg-card);" onclick="exportToCSV()">
-                        <span>📊</span> Exportar CSV
+                    <button class="btn" style="background: var(--accent-orange); color: white;" onclick="exportToCSV()">
+                        <span>📊</span> CSV
+                    </button>
+                    <button class="btn" style="background: var(--bg-card);" onclick="exportToDXF()">
+                        <span>📐</span> DXF (CAD)
                     </button>
                 </div>
             </div>
@@ -1460,45 +1478,337 @@ PV02,359290.456,7352780.123,1.82</pre>
             setTimeout(() => downloadFile(linksCSV, 'trechos_rede.csv', 'text/csv'), 500);
         }
 
-        function exportToSHP() {
+        // ============================================
+        // SHAPEFILE ENCODER (Binary SHP/SHX/DBF)
+        // ============================================
+        function createShapefilePoints(nodes) {
+            // Create binary shapefile for points
+            const shpParts = [];
+            const shxParts = [];
+            const dbfRecords = [];
+
+            // Calculate bounding box
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            let minZ = Infinity, maxZ = -Infinity;
+
+            nodes.forEach(n => {
+                minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+                minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+                minZ = Math.min(minZ, n.z); maxZ = Math.max(maxZ, n.z);
+            });
+
+            // SHP Header (100 bytes)
+            const shpHeader = new ArrayBuffer(100);
+            const shpView = new DataView(shpHeader);
+
+            // File code (big endian)
+            shpView.setInt32(0, 9994, false);
+            // File length (will update later)
+            // Version
+            shpView.setInt32(28, 1000, true);
+            // Shape type: PointZ = 11
+            shpView.setInt32(32, 11, true);
+            // Bounding box
+            shpView.setFloat64(36, minX, true);
+            shpView.setFloat64(44, minY, true);
+            shpView.setFloat64(52, maxX, true);
+            shpView.setFloat64(60, maxY, true);
+            shpView.setFloat64(68, minZ, true);
+            shpView.setFloat64(76, maxZ, true);
+
+            // SHX Header (same as SHP header)
+            const shxHeader = new ArrayBuffer(100);
+            new Uint8Array(shxHeader).set(new Uint8Array(shpHeader));
+
+            let shpOffset = 100; // After header
+            let recordNum = 1;
+
+            // Create records
+            nodes.forEach(node => {
+                // Record header (8 bytes) + PointZ content (36 bytes)
+                const recordLen = 36; // PointZ: type(4) + x(8) + y(8) + z(8) + m(8)
+                const record = new ArrayBuffer(8 + recordLen);
+                const recView = new DataView(record);
+
+                // Record number (big endian)
+                recView.setInt32(0, recordNum, false);
+                // Content length in 16-bit words (big endian)
+                recView.setInt32(4, recordLen / 2, false);
+                // Shape type (little endian)
+                recView.setInt32(8, 11, true);
+                // X, Y, Z, M
+                recView.setFloat64(12, node.x, true);
+                recView.setFloat64(20, node.y, true);
+                recView.setFloat64(28, node.z, true);
+                recView.setFloat64(36, 0, true); // M value
+
+                shpParts.push(record);
+
+                // SHX record
+                const shxRec = new ArrayBuffer(8);
+                const shxRecView = new DataView(shxRec);
+                shxRecView.setInt32(0, shpOffset / 2, false); // Offset
+                shxRecView.setInt32(4, recordLen / 2, false); // Length
+                shxParts.push(shxRec);
+
+                shpOffset += 8 + recordLen;
+                recordNum++;
+
+                // DBF record
+                dbfRecords.push({
+                    ID: node.id.substring(0, 20),
+                    COTA: node.z,
+                    X: node.x,
+                    Y: node.y
+                });
+            });
+
+            // Update file lengths
+            const shpFileLen = shpOffset;
+            new DataView(shpHeader).setInt32(24, shpFileLen / 2, false);
+
+            const shxFileLen = 100 + nodes.length * 8;
+            new DataView(shxHeader).setInt32(24, shxFileLen / 2, false);
+
+            // Combine SHP
+            const shp = new Uint8Array(shpFileLen);
+            shp.set(new Uint8Array(shpHeader), 0);
+            let offset = 100;
+            shpParts.forEach(part => {
+                shp.set(new Uint8Array(part), offset);
+                offset += part.byteLength;
+            });
+
+            // Combine SHX
+            const shx = new Uint8Array(shxFileLen);
+            shx.set(new Uint8Array(shxHeader), 0);
+            offset = 100;
+            shxParts.forEach(part => {
+                shx.set(new Uint8Array(part), offset);
+                offset += part.byteLength;
+            });
+
+            // Create DBF
+            const dbf = createDBF(dbfRecords, [
+                { name: 'ID', type: 'C', length: 20 },
+                { name: 'COTA', type: 'N', length: 12, decimals: 3 },
+                { name: 'X', type: 'N', length: 14, decimals: 3 },
+                { name: 'Y', type: 'N', length: 14, decimals: 3 }
+            ]);
+
+            // PRJ file (WGS84 UTM - adjust as needed)
+            const prj = 'GEOGCS["GCS_SIRGAS_2000",DATUM["D_SIRGAS_2000",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]';
+
+            return { shp, shx, dbf, prj };
+        }
+
+        function createShapefileLines(nodes, links) {
+            const shpParts = [];
+            const shxParts = [];
+            const dbfRecords = [];
+
+            // Calculate bounding box
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+
+            nodes.forEach(n => {
+                minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+                minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+            });
+
+            // SHP Header
+            const shpHeader = new ArrayBuffer(100);
+            const shpView = new DataView(shpHeader);
+            shpView.setInt32(0, 9994, false);
+            shpView.setInt32(28, 1000, true);
+            shpView.setInt32(32, 3, true); // PolyLine = 3
+            shpView.setFloat64(36, minX, true);
+            shpView.setFloat64(44, minY, true);
+            shpView.setFloat64(52, maxX, true);
+            shpView.setFloat64(60, maxY, true);
+
+            const shxHeader = new ArrayBuffer(100);
+            new Uint8Array(shxHeader).set(new Uint8Array(shpHeader));
+
+            let shpOffset = 100;
+            let recordNum = 1;
+
+            links.forEach(link => {
+                const fromNode = nodes.find(n => n.id === link.from);
+                const toNode = nodes.find(n => n.id === link.to);
+                if (!fromNode || !toNode) return;
+
+                // PolyLine record: type(4) + bbox(32) + numParts(4) + numPoints(4) + parts(4) + points(32)
+                const recordLen = 4 + 32 + 4 + 4 + 4 + 32; // 80 bytes
+                const record = new ArrayBuffer(8 + recordLen);
+                const recView = new DataView(record);
+
+                recView.setInt32(0, recordNum, false);
+                recView.setInt32(4, recordLen / 2, false);
+                recView.setInt32(8, 3, true); // PolyLine
+
+                // BBox
+                recView.setFloat64(12, Math.min(fromNode.x, toNode.x), true);
+                recView.setFloat64(20, Math.min(fromNode.y, toNode.y), true);
+                recView.setFloat64(28, Math.max(fromNode.x, toNode.x), true);
+                recView.setFloat64(36, Math.max(fromNode.y, toNode.y), true);
+
+                recView.setInt32(44, 1, true); // NumParts
+                recView.setInt32(48, 2, true); // NumPoints
+                recView.setInt32(52, 0, true); // Parts[0]
+
+                // Points
+                recView.setFloat64(56, fromNode.x, true);
+                recView.setFloat64(64, fromNode.y, true);
+                recView.setFloat64(72, toNode.x, true);
+                recView.setFloat64(80, toNode.y, true);
+
+                shpParts.push(record);
+
+                // SHX
+                const shxRec = new ArrayBuffer(8);
+                const shxRecView = new DataView(shxRec);
+                shxRecView.setInt32(0, shpOffset / 2, false);
+                shxRecView.setInt32(4, recordLen / 2, false);
+                shxParts.push(shxRec);
+
+                shpOffset += 8 + recordLen;
+                recordNum++;
+
+                dbfRecords.push({
+                    DE: link.from.substring(0, 20),
+                    PARA: link.to.substring(0, 20),
+                    COMP: link.length
+                });
+            });
+
+            // Update file lengths
+            new DataView(shpHeader).setInt32(24, shpOffset / 2, false);
+            new DataView(shxHeader).setInt32(24, (100 + links.length * 8) / 2, false);
+
+            // Combine files
+            const shp = new Uint8Array(shpOffset);
+            shp.set(new Uint8Array(shpHeader), 0);
+            let offset = 100;
+            shpParts.forEach(part => {
+                shp.set(new Uint8Array(part), offset);
+                offset += part.byteLength;
+            });
+
+            const shxFileLen = 100 + links.length * 8;
+            const shx = new Uint8Array(shxFileLen);
+            shx.set(new Uint8Array(shxHeader), 0);
+            offset = 100;
+            shxParts.forEach(part => {
+                shx.set(new Uint8Array(part), offset);
+                offset += part.byteLength;
+            });
+
+            const dbf = createDBF(dbfRecords, [
+                { name: 'DE', type: 'C', length: 20 },
+                { name: 'PARA', type: 'C', length: 20 },
+                { name: 'COMP', type: 'N', length: 12, decimals: 2 }
+            ]);
+
+            const prj = 'GEOGCS["GCS_SIRGAS_2000",DATUM["D_SIRGAS_2000",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]';
+
+            return { shp, shx, dbf, prj };
+        }
+
+        function createDBF(records, fields) {
+            if (records.length === 0) return new Uint8Array(0);
+
+            const recordSize = fields.reduce((sum, f) => sum + f.length, 0) + 1; // +1 for delete flag
+            const headerSize = 32 + fields.length * 32 + 1;
+            const fileSize = headerSize + records.length * recordSize + 1;
+
+            const buffer = new ArrayBuffer(fileSize);
+            const view = new DataView(buffer);
+            const bytes = new Uint8Array(buffer);
+
+            // Header
+            view.setUint8(0, 0x03); // dBASE III
+            const now = new Date();
+            view.setUint8(1, now.getFullYear() - 1900);
+            view.setUint8(2, now.getMonth() + 1);
+            view.setUint8(3, now.getDate());
+            view.setUint32(4, records.length, true);
+            view.setUint16(8, headerSize, true);
+            view.setUint16(10, recordSize, true);
+
+            // Field descriptors
+            let offset = 32;
+            fields.forEach(field => {
+                const nameBytes = new TextEncoder().encode(field.name.substring(0, 10).padEnd(11, '\0'));
+                bytes.set(nameBytes, offset);
+                view.setUint8(offset + 11, field.type.charCodeAt(0));
+                view.setUint8(offset + 16, field.length);
+                view.setUint8(offset + 17, field.decimals || 0);
+                offset += 32;
+            });
+            view.setUint8(offset, 0x0D); // Header terminator
+            offset++;
+
+            // Records
+            records.forEach(record => {
+                view.setUint8(offset, 0x20); // Not deleted
+                offset++;
+                fields.forEach(field => {
+                    let value = record[field.name];
+                    if (value === undefined || value === null) value = '';
+                    if (field.type === 'N') {
+                        value = parseFloat(value) || 0;
+                        value = value.toFixed(field.decimals || 0).padStart(field.length, ' ');
+                    } else {
+                        value = String(value).substring(0, field.length).padEnd(field.length, ' ');
+                    }
+                    const valueBytes = new TextEncoder().encode(value);
+                    bytes.set(valueBytes.slice(0, field.length), offset);
+                    offset += field.length;
+                });
+            });
+            view.setUint8(offset, 0x1A); // EOF
+
+            return bytes;
+        }
+
+        async function exportToSHP() {
             if (importedNodes.length === 0) {
                 alert('Importe dados primeiro.');
                 return;
             }
 
-            // Generate links if not done
             if (previewLinks.length === 0) {
                 generatePreviewLinks();
             }
 
-            // Create SHP content (simplified - points as WKT for now)
-            // For real SHP, we'd need a library like shapefile.js
-            let wkt = '# WKT Format - Import in QGIS as Delimited Text Layer\n';
-            wkt += '# File 1: Points\n';
-            wkt += 'WKT,id,cota\n';
+            try {
+                const zip = new JSZip();
 
-            for (const node of importedNodes) {
-                wkt += `"POINT Z (${node.x} ${node.y} ${node.z})",${node.id},${node.z}\n`;
+                // Create points shapefile
+                const points = createShapefilePoints(importedNodes);
+                zip.file("pontos_rede.shp", points.shp);
+                zip.file("pontos_rede.shx", points.shx);
+                zip.file("pontos_rede.dbf", points.dbf);
+                zip.file("pontos_rede.prj", points.prj);
+
+                // Create lines shapefile
+                const lines = createShapefileLines(importedNodes, previewLinks);
+                zip.file("trechos_rede.shp", lines.shp);
+                zip.file("trechos_rede.shx", lines.shx);
+                zip.file("trechos_rede.dbf", lines.dbf);
+                zip.file("trechos_rede.prj", lines.prj);
+
+                // Generate ZIP
+                const content = await zip.generateAsync({ type: "blob" });
+                saveAs(content, "rede_saneamento_SHP.zip");
+
+                alert('Shapefile exportado com sucesso!\n\nO arquivo ZIP contém:\n- pontos_rede.shp/shx/dbf/prj\n- trechos_rede.shp/shx/dbf/prj\n\nAbra diretamente no QGIS, ArcGIS ou similar.');
+            } catch (e) {
+                console.error('Erro ao exportar SHP:', e);
+                alert('Erro ao exportar: ' + e.message);
             }
-
-            downloadFile(wkt, 'pontos_rede_WKT.csv', 'text/csv');
-
-            // Lines WKT
-            let wktLines = '# WKT Format - Import in QGIS as Delimited Text Layer\n';
-            wktLines += '# File 2: Lines\n';
-            wktLines += 'WKT,de,para,comprimento\n';
-
-            for (const link of previewLinks) {
-                const fromNode = importedNodes.find(n => n.id === link.from);
-                const toNode = importedNodes.find(n => n.id === link.to);
-                if (!fromNode || !toNode) continue;
-
-                wktLines += `"LINESTRING Z (${fromNode.x} ${fromNode.y} ${fromNode.z}, ${toNode.x} ${toNode.y} ${toNode.z})",${link.from},${link.to},${link.length}\n`;
-            }
-
-            setTimeout(() => downloadFile(wktLines, 'trechos_rede_WKT.csv', 'text/csv'), 500);
-
-            alert('Arquivos WKT exportados!\n\nPara importar no QGIS:\n1. Layer → Add Layer → Add Delimited Text Layer\n2. Selecione o arquivo CSV\n3. Em "Geometry Definition", escolha WKT\n4. Clique em Add');
         }
 
         function exportToIFC() {
@@ -1574,6 +1884,291 @@ END-ISO-10303-21;`;
                 const v = c === 'x' ? r : (r & 0x3 | 0x8);
                 return v.toString(16).toUpperCase();
             });
+        }
+
+        function exportToDXF() {
+            if (importedNodes.length === 0) {
+                alert('Importe dados primeiro.');
+                return;
+            }
+
+            if (previewLinks.length === 0) {
+                generatePreviewLinks();
+            }
+
+            let dxf = `0
+SECTION
+2
+HEADER
+9
+$ACADVER
+1
+AC1014
+0
+ENDSEC
+0
+SECTION
+2
+ENTITIES
+`;
+
+            // Add points as POINT entities
+            importedNodes.forEach(node => {
+                dxf += `0
+POINT
+8
+PONTOS
+10
+${node.x}
+20
+${node.y}
+30
+${node.z}
+`;
+            });
+
+            // Add text labels
+            importedNodes.forEach(node => {
+                dxf += `0
+TEXT
+8
+LABELS
+10
+${node.x + 2}
+20
+${node.y + 2}
+30
+${node.z}
+40
+1.5
+1
+${node.id}
+`;
+            });
+
+            // Add lines
+            previewLinks.forEach(link => {
+                const fromNode = importedNodes.find(n => n.id === link.from);
+                const toNode = importedNodes.find(n => n.id === link.to);
+                if (!fromNode || !toNode) return;
+
+                dxf += `0
+LINE
+8
+TRECHOS
+10
+${fromNode.x}
+20
+${fromNode.y}
+30
+${fromNode.z}
+11
+${toNode.x}
+21
+${toNode.y}
+31
+${toNode.z}
+`;
+            });
+
+            dxf += `0
+ENDSEC
+0
+EOF
+`;
+
+            downloadFile(dxf, 'rede_saneamento.dxf', 'application/dxf');
+            alert('Arquivo DXF exportado!\n\nAbra no AutoCAD, Civil 3D ou similar.');
+        }
+
+        async function exportAllFormats() {
+            if (importedNodes.length === 0) {
+                alert('Importe dados primeiro.');
+                return;
+            }
+
+            if (previewLinks.length === 0) {
+                generatePreviewLinks();
+            }
+
+            try {
+                const zip = new JSZip();
+
+                // 1. SHP Files (Points)
+                const points = createShapefilePoints(importedNodes);
+                const shpFolder = zip.folder("SHP");
+                shpFolder.file("pontos_rede.shp", points.shp);
+                shpFolder.file("pontos_rede.shx", points.shx);
+                shpFolder.file("pontos_rede.dbf", points.dbf);
+                shpFolder.file("pontos_rede.prj", points.prj);
+
+                // SHP Files (Lines)
+                const lines = createShapefileLines(importedNodes, previewLinks);
+                shpFolder.file("trechos_rede.shp", lines.shp);
+                shpFolder.file("trechos_rede.shx", lines.shx);
+                shpFolder.file("trechos_rede.dbf", lines.dbf);
+                shpFolder.file("trechos_rede.prj", lines.prj);
+
+                // 2. GeoJSON
+                const geojson = createGeoJSONContent();
+                zip.file("rede_saneamento.geojson", geojson);
+
+                // 3. IFC
+                const ifc = createIFCContent();
+                zip.file("rede_saneamento.ifc", ifc);
+
+                // 4. DXF
+                const dxf = createDXFContent();
+                zip.file("rede_saneamento.dxf", dxf);
+
+                // 5. CSV
+                let nodesCSV = 'id,x,y,cota\n';
+                importedNodes.forEach(n => {
+                    nodesCSV += `${n.id},${n.x},${n.y},${n.z}\n`;
+                });
+                zip.file("pontos_rede.csv", nodesCSV);
+
+                let linksCSV = 'de,para,comprimento\n';
+                previewLinks.forEach(l => {
+                    linksCSV += `${l.from},${l.to},${l.length}\n`;
+                });
+                zip.file("trechos_rede.csv", linksCSV);
+
+                // 6. README
+                const readme = `REDE DE SANEAMENTO - EXPORTAÇÃO COMPLETA
+========================================
+
+Arquivos incluídos:
+
+📁 SHP/ (Shapefile para GIS)
+   - pontos_rede.shp/shx/dbf/prj - Poços de visita
+   - trechos_rede.shp/shx/dbf/prj - Tubulações
+
+📄 rede_saneamento.geojson - Formato GeoJSON
+
+📄 rede_saneamento.ifc - Formato BIM (IFC4)
+
+📄 rede_saneamento.dxf - Formato CAD (AutoCAD)
+
+📄 pontos_rede.csv - Tabela de pontos
+📄 trechos_rede.csv - Tabela de trechos
+
+Gerado por: HydroNetwork v3.0
+Data: ${new Date().toLocaleString('pt-BR')}
+Total de pontos: ${importedNodes.length}
+Total de trechos: ${previewLinks.length}
+`;
+                zip.file("LEIA-ME.txt", readme);
+
+                // Generate and download
+                const content = await zip.generateAsync({ type: "blob" });
+                saveAs(content, "rede_saneamento_COMPLETO.zip");
+
+                alert(`Exportação completa!\n\nArquivo ZIP contém:\n- SHP (Shapefile)\n- GeoJSON\n- IFC (BIM)\n- DXF (CAD)\n- CSV\n\nTotal: ${importedNodes.length} pontos, ${previewLinks.length} trechos`);
+
+            } catch (e) {
+                console.error('Erro ao exportar:', e);
+                alert('Erro ao exportar: ' + e.message);
+            }
+        }
+
+        function createGeoJSONContent() {
+            const features = [];
+
+            importedNodes.forEach(node => {
+                features.push({
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: [node.x, node.y, node.z] },
+                    properties: { id: node.id, cota: node.z, tipo: 'PV' }
+                });
+            });
+
+            previewLinks.forEach(link => {
+                const from = importedNodes.find(n => n.id === link.from);
+                const to = importedNodes.find(n => n.id === link.to);
+                if (from && to) {
+                    features.push({
+                        type: 'Feature',
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [[from.x, from.y, from.z], [to.x, to.y, to.z]]
+                        },
+                        properties: { de: link.from, para: link.to, comprimento: link.length, tipo: 'TRECHO' }
+                    });
+                }
+            });
+
+            return JSON.stringify({ type: 'FeatureCollection', features }, null, 2);
+        }
+
+        function createDXFContent() {
+            let dxf = `0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1014\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n`;
+
+            importedNodes.forEach(node => {
+                dxf += `0\nPOINT\n8\nPONTOS\n10\n${node.x}\n20\n${node.y}\n30\n${node.z}\n`;
+                dxf += `0\nTEXT\n8\nLABELS\n10\n${node.x + 2}\n20\n${node.y + 2}\n30\n${node.z}\n40\n1.5\n1\n${node.id}\n`;
+            });
+
+            previewLinks.forEach(link => {
+                const from = importedNodes.find(n => n.id === link.from);
+                const to = importedNodes.find(n => n.id === link.to);
+                if (from && to) {
+                    dxf += `0\nLINE\n8\nTRECHOS\n10\n${from.x}\n20\n${from.y}\n30\n${from.z}\n11\n${to.x}\n21\n${to.y}\n31\n${to.z}\n`;
+                }
+            });
+
+            dxf += `0\nENDSEC\n0\nEOF\n`;
+            return dxf;
+        }
+
+        function createIFCContent() {
+            const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0];
+            let ifc = `ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('HydroNetwork Export'),'2;1');
+FILE_NAME('rede_saneamento.ifc','${timestamp}',('HydroNetwork'),('Sanitation Engineering'),'','HydroNetwork v3.0','');
+FILE_SCHEMA(('IFC4'));
+ENDSEC;
+DATA;
+#1=IFCPROJECT('${generateGUID()}',#2,'Rede de Saneamento',$,$,$,$,(#10),#9);
+#2=IFCOWNERHISTORY(#3,#4,$,.ADDED.,$,$,$,${Math.floor(Date.now()/1000)});
+#3=IFCPERSONANDORGANIZATION(#5,#6,$);
+#4=IFCAPPLICATION(#6,'3.0','HydroNetwork','HYDRO');
+#5=IFCPERSON($,'Usuario',$,$,$,$,$,$);
+#6=IFCORGANIZATION($,'HydroNetwork',$,$,$);
+#7=IFCSIUNIT(*,.LENGTHUNIT.,$,.METRE.);
+#8=IFCSIUNIT(*,.AREAUNIT.,$,.SQUARE_METRE.);
+#9=IFCUNITASSIGNMENT((#7,#8));
+#10=IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.E-05,#11,$);
+#11=IFCAXIS2PLACEMENT3D(#12,$,$);
+#12=IFCCARTESIANPOINT((0.,0.,0.));
+#13=IFCSITE('${generateGUID()}',#2,'Site',$,$,#14,$,$,.ELEMENT.,$,$,$,$,$);
+#14=IFCLOCALPLACEMENT($,#11);
+`;
+            let entityId = 100;
+
+            importedNodes.forEach(node => {
+                ifc += `#${entityId}=IFCCARTESIANPOINT((${node.x},${node.y},${node.z}));\n`;
+                ifc += `#${entityId+1}=IFCAXIS2PLACEMENT3D(#${entityId},$,$);\n`;
+                ifc += `#${entityId+2}=IFCLOCALPLACEMENT(#14,#${entityId+1});\n`;
+                ifc += `#${entityId+3}=IFCDISTRIBUTIONCHAMBER('${generateGUID()}',#2,'${node.id}','PV Cota: ${node.z}m',$,#${entityId+2},$,$,.MANHOLE.);\n`;
+                entityId += 10;
+            });
+
+            previewLinks.forEach(link => {
+                const from = importedNodes.find(n => n.id === link.from);
+                const to = importedNodes.find(n => n.id === link.to);
+                if (from && to) {
+                    ifc += `#${entityId}=IFCCARTESIANPOINT((${from.x},${from.y},${from.z}));\n`;
+                    ifc += `#${entityId+1}=IFCCARTESIANPOINT((${to.x},${to.y},${to.z}));\n`;
+                    ifc += `#${entityId+2}=IFCPOLYLINE((#${entityId},#${entityId+1}));\n`;
+                    ifc += `#${entityId+3}=IFCPIPESEGMENT('${generateGUID()}',#2,'${link.from}-${link.to}','L=${link.length.toFixed(2)}m',$,$,$,$,.RIGIDSEGMENT.);\n`;
+                    entityId += 10;
+                }
+            });
+
+            ifc += `ENDSEC;\nEND-ISO-10303-21;`;
+            return ifc;
         }
 
         function downloadFile(content, filename, mimeType) {
