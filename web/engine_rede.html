@@ -429,6 +429,62 @@ PV03,200.00,0.00,101.00"
                 <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 10px;" id="preview-summary"></p>
             </div>
 
+            <!-- Network Trace Visualization -->
+            <div class="card" id="trace-card" style="display: none; margin-top: 20px;">
+                <h2><span class="icon">🗺️</span> Traçado da Rede</h2>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <button class="btn btn-small btn-add" onclick="generatePreviewLinks()">🔗 Gerar Trechos</button>
+                    <button class="btn btn-small" style="background: var(--accent-blue); color: white; border: none;" onclick="zoomIn()">🔍+</button>
+                    <button class="btn btn-small" style="background: var(--accent-blue); color: white; border: none;" onclick="zoomOut()">🔍-</button>
+                    <button class="btn btn-small" style="background: var(--accent-purple); color: white; border: none;" onclick="resetView()">↺ Reset</button>
+                    <span style="color: var(--text-secondary); font-size: 0.85rem; align-self: center; margin-left: auto;" id="trace-info"></span>
+                </div>
+                <div style="position: relative; background: var(--bg-card); border-radius: 8px; overflow: hidden;">
+                    <canvas id="network-canvas" width="800" height="500" style="width: 100%; cursor: grab;"></canvas>
+                </div>
+                <div style="display: flex; gap: 20px; margin-top: 15px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <span style="width: 12px; height: 12px; background: var(--accent-blue); border-radius: 50%;"></span>
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;">Ponto (PV)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <span style="width: 20px; height: 3px; background: var(--accent-green);"></span>
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;">Trecho</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <span style="width: 12px; height: 12px; background: var(--accent-orange); border-radius: 50%;"></span>
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;">Ponto Selecionado</span>
+                    </div>
+                </div>
+                <!-- Point Details -->
+                <div id="point-details" style="display: none; margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <h4 style="margin-bottom: 10px; color: var(--accent-blue);">📍 Detalhes do Ponto</h4>
+                    <div id="point-details-content"></div>
+                </div>
+            </div>
+
+            <!-- Export Options -->
+            <div class="card" id="export-card" style="display: none; margin-top: 20px;">
+                <h2><span class="icon">📤</span> Exportação</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Verifique o traçado acima antes de exportar. Exporte para SHP (GIS) ou IFC (BIM).
+                </p>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="exportToSHP()">
+                        <span>🗺️</span> Exportar SHP (Shapefile)
+                    </button>
+                    <button class="btn btn-success" onclick="exportToIFC()">
+                        <span>🏗️</span> Exportar IFC (BIM)
+                    </button>
+                    <button class="btn" style="background: var(--accent-purple); color: white;" onclick="exportToGeoJSON()">
+                        <span>📋</span> Exportar GeoJSON
+                    </button>
+                    <button class="btn" style="background: var(--bg-card);" onclick="exportToCSV()">
+                        <span>📊</span> Exportar CSV
+                    </button>
+                </div>
+            </div>
+
             <div class="actions">
                 <button class="btn btn-primary" onclick="processImportedData()">
                     <span>⚙️</span> Calcular Rede
@@ -961,10 +1017,14 @@ PV05,300.00,0.00,99.50</pre>
         function showPreview() {
             if (importedNodes.length === 0) {
                 document.getElementById('preview-card').style.display = 'none';
+                document.getElementById('trace-card').style.display = 'none';
+                document.getElementById('export-card').style.display = 'none';
                 return;
             }
 
             document.getElementById('preview-card').style.display = 'block';
+            document.getElementById('trace-card').style.display = 'block';
+            document.getElementById('export-card').style.display = 'block';
 
             let tbody = '';
             const maxPreview = Math.min(importedNodes.length, 20);
@@ -989,6 +1049,11 @@ PV05,300.00,0.00,99.50</pre>
 
             document.getElementById('preview-tbody').innerHTML = tbody;
 
+            // Initialize canvas and draw network
+            initCanvas();
+            generatePreviewLinks();
+            drawNetwork();
+
             // Calculate summary stats
             const minZ = Math.min(...importedNodes.map(n => n.z));
             const maxZ = Math.max(...importedNodes.map(n => n.z));
@@ -1005,6 +1070,502 @@ PV05,300.00,0.00,99.50</pre>
                 return;
             }
             parseTopographyData(content, 'dados_colados.txt');
+        }
+
+        // ============================================
+        // CANVAS VISUALIZATION
+        // ============================================
+        let canvasZoom = 1;
+        let canvasOffsetX = 0;
+        let canvasOffsetY = 0;
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let previewLinks = [];
+        let selectedPoint = null;
+
+        function initCanvas() {
+            const canvas = document.getElementById('network-canvas');
+            if (!canvas) return;
+
+            canvas.addEventListener('mousedown', startDrag);
+            canvas.addEventListener('mousemove', drag);
+            canvas.addEventListener('mouseup', endDrag);
+            canvas.addEventListener('mouseleave', endDrag);
+            canvas.addEventListener('wheel', handleWheel);
+            canvas.addEventListener('click', handleCanvasClick);
+        }
+
+        function startDrag(e) {
+            isDragging = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            e.target.style.cursor = 'grabbing';
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            const dx = e.clientX - lastMouseX;
+            const dy = e.clientY - lastMouseY;
+            canvasOffsetX += dx;
+            canvasOffsetY += dy;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            drawNetwork();
+        }
+
+        function endDrag(e) {
+            isDragging = false;
+            if (e.target) e.target.style.cursor = 'grab';
+        }
+
+        function handleWheel(e) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            canvasZoom *= delta;
+            canvasZoom = Math.max(0.1, Math.min(10, canvasZoom));
+            drawNetwork();
+        }
+
+        function handleCanvasClick(e) {
+            const canvas = document.getElementById('network-canvas');
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const clickX = (e.clientX - rect.left) * scaleX;
+            const clickY = (e.clientY - rect.top) * scaleY;
+
+            // Find clicked point
+            const bounds = getNetworkBounds();
+            if (!bounds) return;
+
+            const padding = 50;
+            const drawWidth = canvas.width - 2 * padding;
+            const drawHeight = canvas.height - 2 * padding;
+
+            selectedPoint = null;
+            for (const node of importedNodes) {
+                const nx = padding + ((node.x - bounds.minX) / (bounds.maxX - bounds.minX || 1)) * drawWidth * canvasZoom + canvasOffsetX;
+                const ny = canvas.height - padding - ((node.y - bounds.minY) / (bounds.maxY - bounds.minY || 1)) * drawHeight * canvasZoom + canvasOffsetY;
+
+                const dist = Math.sqrt((clickX - nx) ** 2 + (clickY - ny) ** 2);
+                if (dist < 15) {
+                    selectedPoint = node;
+                    break;
+                }
+            }
+
+            if (selectedPoint) {
+                showPointDetails(selectedPoint);
+            } else {
+                document.getElementById('point-details').style.display = 'none';
+            }
+            drawNetwork();
+        }
+
+        function showPointDetails(point) {
+            const details = document.getElementById('point-details');
+            const content = document.getElementById('point-details-content');
+            details.style.display = 'block';
+
+            // Find connected links
+            const connectedLinks = previewLinks.filter(l => l.from === point.id || l.to === point.id);
+
+            content.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                    <div><strong>ID:</strong> ${point.id}</div>
+                    <div><strong>X:</strong> ${point.x.toFixed(2)}</div>
+                    <div><strong>Y:</strong> ${point.y.toFixed(2)}</div>
+                    <div><strong>Cota:</strong> ${point.z.toFixed(2)} m</div>
+                    <div><strong>Conexões:</strong> ${connectedLinks.length}</div>
+                </div>
+                ${connectedLinks.length > 0 ? `
+                <div style="margin-top: 10px;">
+                    <strong>Trechos conectados:</strong>
+                    <ul style="margin: 5px 0 0 20px; color: var(--text-secondary);">
+                        ${connectedLinks.map(l => `<li>${l.from} → ${l.to} (${l.length.toFixed(1)}m)</li>`).join('')}
+                    </ul>
+                </div>
+                ` : ''}
+            `;
+        }
+
+        function zoomIn() {
+            canvasZoom *= 1.2;
+            drawNetwork();
+        }
+
+        function zoomOut() {
+            canvasZoom *= 0.8;
+            drawNetwork();
+        }
+
+        function resetView() {
+            canvasZoom = 1;
+            canvasOffsetX = 0;
+            canvasOffsetY = 0;
+            drawNetwork();
+        }
+
+        function getNetworkBounds() {
+            if (importedNodes.length === 0) return null;
+
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+
+            for (const node of importedNodes) {
+                minX = Math.min(minX, node.x);
+                maxX = Math.max(maxX, node.x);
+                minY = Math.min(minY, node.y);
+                maxY = Math.max(maxY, node.y);
+            }
+
+            // Add some padding
+            const padX = (maxX - minX) * 0.1 || 10;
+            const padY = (maxY - minY) * 0.1 || 10;
+
+            return {
+                minX: minX - padX,
+                maxX: maxX + padX,
+                minY: minY - padY,
+                maxY: maxY + padY
+            };
+        }
+
+        function generatePreviewLinks() {
+            const mode = document.getElementById('import-link-mode').value;
+            previewLinks = generateLinksFromNodes(importedNodes, mode);
+            drawNetwork();
+            document.getElementById('trace-info').textContent =
+                `${importedNodes.length} pontos, ${previewLinks.length} trechos`;
+        }
+
+        function drawNetwork() {
+            const canvas = document.getElementById('network-canvas');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            // Clear canvas
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, width, height);
+
+            if (importedNodes.length === 0) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '16px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Importe dados topográficos para visualizar', width / 2, height / 2);
+                return;
+            }
+
+            const bounds = getNetworkBounds();
+            if (!bounds) return;
+
+            const padding = 50;
+            const drawWidth = width - 2 * padding;
+            const drawHeight = height - 2 * padding;
+
+            // Transform function
+            const transform = (x, y) => {
+                const nx = padding + ((x - bounds.minX) / (bounds.maxX - bounds.minX || 1)) * drawWidth * canvasZoom + canvasOffsetX;
+                const ny = height - padding - ((y - bounds.minY) / (bounds.maxY - bounds.minY || 1)) * drawHeight * canvasZoom + canvasOffsetY;
+                return { x: nx, y: ny };
+            };
+
+            // Draw grid
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                const x = padding + (i / 10) * drawWidth;
+                const y = padding + (i / 10) * drawHeight;
+                ctx.beginPath();
+                ctx.moveTo(x, padding);
+                ctx.lineTo(x, height - padding);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+            }
+
+            // Draw links
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 3;
+            for (const link of previewLinks) {
+                const fromNode = importedNodes.find(n => n.id === link.from);
+                const toNode = importedNodes.find(n => n.id === link.to);
+                if (!fromNode || !toNode) continue;
+
+                const p1 = transform(fromNode.x, fromNode.y);
+                const p2 = transform(toNode.x, toNode.y);
+
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+
+                // Draw arrow
+                const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+                const midX = (p1.x + p2.x) / 2;
+                const midY = (p1.y + p2.y) / 2;
+                ctx.fillStyle = '#10b981';
+                ctx.beginPath();
+                ctx.moveTo(midX + 8 * Math.cos(angle), midY + 8 * Math.sin(angle));
+                ctx.lineTo(midX - 5 * Math.cos(angle - 0.5), midY - 5 * Math.sin(angle - 0.5));
+                ctx.lineTo(midX - 5 * Math.cos(angle + 0.5), midY - 5 * Math.sin(angle + 0.5));
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Draw nodes
+            for (const node of importedNodes) {
+                const p = transform(node.x, node.y);
+
+                // Node circle
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, selectedPoint === node ? 10 : 7, 0, Math.PI * 2);
+                ctx.fillStyle = selectedPoint === node ? '#f97316' : '#3b82f6';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Node label
+                ctx.fillStyle = '#f8fafc';
+                ctx.font = '11px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText(node.id, p.x, p.y - 12);
+
+                // Cota label
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '9px Segoe UI';
+                ctx.fillText(`(${node.z.toFixed(1)})`, p.x, p.y + 18);
+            }
+
+            // Update info
+            document.getElementById('trace-info').textContent =
+                `${importedNodes.length} pontos, ${previewLinks.length} trechos | Zoom: ${(canvasZoom * 100).toFixed(0)}%`;
+        }
+
+        // ============================================
+        // EXPORT FUNCTIONS
+        // ============================================
+        function exportToGeoJSON() {
+            if (importedNodes.length === 0) {
+                alert('Importe dados primeiro.');
+                return;
+            }
+
+            // Generate links if not done
+            if (previewLinks.length === 0) {
+                generatePreviewLinks();
+            }
+
+            const features = [];
+
+            // Add point features
+            for (const node of importedNodes) {
+                features.push({
+                    type: 'Feature',
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [node.x, node.y, node.z]
+                    },
+                    properties: {
+                        id: node.id,
+                        cota: node.z,
+                        tipo: 'PV'
+                    }
+                });
+            }
+
+            // Add line features
+            for (const link of previewLinks) {
+                const fromNode = importedNodes.find(n => n.id === link.from);
+                const toNode = importedNodes.find(n => n.id === link.to);
+                if (!fromNode || !toNode) continue;
+
+                features.push({
+                    type: 'Feature',
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: [
+                            [fromNode.x, fromNode.y, fromNode.z],
+                            [toNode.x, toNode.y, toNode.z]
+                        ]
+                    },
+                    properties: {
+                        de: link.from,
+                        para: link.to,
+                        comprimento: link.length,
+                        tipo: 'TRECHO'
+                    }
+                });
+            }
+
+            const geojson = {
+                type: 'FeatureCollection',
+                features: features
+            };
+
+            downloadFile(JSON.stringify(geojson, null, 2), 'rede_saneamento.geojson', 'application/geo+json');
+        }
+
+        function exportToCSV() {
+            if (importedNodes.length === 0) {
+                alert('Importe dados primeiro.');
+                return;
+            }
+
+            // Generate links if not done
+            if (previewLinks.length === 0) {
+                generatePreviewLinks();
+            }
+
+            // Nodes CSV
+            let nodesCSV = 'id,x,y,cota\n';
+            for (const node of importedNodes) {
+                nodesCSV += `${node.id},${node.x},${node.y},${node.z}\n`;
+            }
+
+            // Links CSV
+            let linksCSV = 'de,para,comprimento\n';
+            for (const link of previewLinks) {
+                linksCSV += `${link.from},${link.to},${link.length}\n`;
+            }
+
+            downloadFile(nodesCSV, 'pontos_rede.csv', 'text/csv');
+            setTimeout(() => downloadFile(linksCSV, 'trechos_rede.csv', 'text/csv'), 500);
+        }
+
+        function exportToSHP() {
+            if (importedNodes.length === 0) {
+                alert('Importe dados primeiro.');
+                return;
+            }
+
+            // Generate links if not done
+            if (previewLinks.length === 0) {
+                generatePreviewLinks();
+            }
+
+            // Create SHP content (simplified - points as WKT for now)
+            // For real SHP, we'd need a library like shapefile.js
+            let wkt = '# WKT Format - Import in QGIS as Delimited Text Layer\n';
+            wkt += '# File 1: Points\n';
+            wkt += 'WKT,id,cota\n';
+
+            for (const node of importedNodes) {
+                wkt += `"POINT Z (${node.x} ${node.y} ${node.z})",${node.id},${node.z}\n`;
+            }
+
+            downloadFile(wkt, 'pontos_rede_WKT.csv', 'text/csv');
+
+            // Lines WKT
+            let wktLines = '# WKT Format - Import in QGIS as Delimited Text Layer\n';
+            wktLines += '# File 2: Lines\n';
+            wktLines += 'WKT,de,para,comprimento\n';
+
+            for (const link of previewLinks) {
+                const fromNode = importedNodes.find(n => n.id === link.from);
+                const toNode = importedNodes.find(n => n.id === link.to);
+                if (!fromNode || !toNode) continue;
+
+                wktLines += `"LINESTRING Z (${fromNode.x} ${fromNode.y} ${fromNode.z}, ${toNode.x} ${toNode.y} ${toNode.z})",${link.from},${link.to},${link.length}\n`;
+            }
+
+            setTimeout(() => downloadFile(wktLines, 'trechos_rede_WKT.csv', 'text/csv'), 500);
+
+            alert('Arquivos WKT exportados!\n\nPara importar no QGIS:\n1. Layer → Add Layer → Add Delimited Text Layer\n2. Selecione o arquivo CSV\n3. Em "Geometry Definition", escolha WKT\n4. Clique em Add');
+        }
+
+        function exportToIFC() {
+            if (importedNodes.length === 0) {
+                alert('Importe dados primeiro.');
+                return;
+            }
+
+            // Generate links if not done
+            if (previewLinks.length === 0) {
+                generatePreviewLinks();
+            }
+
+            // Create simplified IFC content
+            const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0];
+            let ifc = `ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('HydroNetwork Export'),'2;1');
+FILE_NAME('rede_saneamento.ifc','${timestamp}',('HydroNetwork'),('Sanitation Engineering'),'','HydroNetwork v3.0','');
+FILE_SCHEMA(('IFC4'));
+ENDSEC;
+DATA;
+#1=IFCPROJECT('${generateGUID()}',#2,'Rede de Saneamento',$,$,$,$,(#10),#9);
+#2=IFCOWNERHISTORY(#3,#4,$,.ADDED.,$,$,$,${Math.floor(Date.now()/1000)});
+#3=IFCPERSONANDORGANIZATION(#5,#6,$);
+#4=IFCAPPLICATION(#6,'3.0','HydroNetwork','HYDRO');
+#5=IFCPERSON($,'Usuario',$,$,$,$,$,$);
+#6=IFCORGANIZATION($,'HydroNetwork',$,$,$);
+#7=IFCSIUNIT(*,.LENGTHUNIT.,$,.METRE.);
+#8=IFCSIUNIT(*,.AREAUNIT.,$,.SQUARE_METRE.);
+#9=IFCUNITASSIGNMENT((#7,#8));
+#10=IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.E-05,#11,$);
+#11=IFCAXIS2PLACEMENT3D(#12,$,$);
+#12=IFCCARTESIANPOINT((0.,0.,0.));
+#13=IFCSITE('${generateGUID()}',#2,'Site',$,$,#14,$,$,.ELEMENT.,$,$,$,$,$);
+#14=IFCLOCALPLACEMENT($,#11);
+`;
+
+            let entityId = 100;
+
+            // Add manholes (points)
+            for (const node of importedNodes) {
+                ifc += `#${entityId}=IFCCARTESIANPOINT((${node.x},${node.y},${node.z}));\n`;
+                ifc += `#${entityId+1}=IFCAXIS2PLACEMENT3D(#${entityId},$,$);\n`;
+                ifc += `#${entityId+2}=IFCLOCALPLACEMENT(#14,#${entityId+1});\n`;
+                ifc += `#${entityId+3}=IFCDISTRIBUTIONCHAMBER('${generateGUID()}',#2,'${node.id}','Poco de Visita - Cota: ${node.z}m',$,#${entityId+2},$,$,.MANHOLE.);\n`;
+                entityId += 10;
+            }
+
+            // Add pipes (links)
+            for (const link of previewLinks) {
+                const fromNode = importedNodes.find(n => n.id === link.from);
+                const toNode = importedNodes.find(n => n.id === link.to);
+                if (!fromNode || !toNode) continue;
+
+                ifc += `#${entityId}=IFCCARTESIANPOINT((${fromNode.x},${fromNode.y},${fromNode.z}));\n`;
+                ifc += `#${entityId+1}=IFCCARTESIANPOINT((${toNode.x},${toNode.y},${toNode.z}));\n`;
+                ifc += `#${entityId+2}=IFCPOLYLINE((#${entityId},#${entityId+1}));\n`;
+                ifc += `#${entityId+3}=IFCPIPESEGMENT('${generateGUID()}',#2,'${link.from}-${link.to}','Trecho L=${link.length.toFixed(2)}m',$,$,$,$,.RIGIDSEGMENT.);\n`;
+                entityId += 10;
+            }
+
+            ifc += `ENDSEC;
+END-ISO-10303-21;`;
+
+            downloadFile(ifc, 'rede_saneamento.ifc', 'application/x-step');
+            alert('Arquivo IFC exportado!\n\nAbra em software BIM como:\n- Autodesk Revit\n- ArchiCAD\n- Solibri\n- BIM Vision (gratuito)');
+        }
+
+        function generateGUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16).toUpperCase();
+            });
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         function loadTopographyDemo() {
