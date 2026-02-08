@@ -19,6 +19,7 @@
             "roughness": {"shp_name": "RUGOSID", "type": "float", "precision": 2, "unit": null, "description": "Coeficiente de rugosidade"},
             "upstream_cover": {"shp_name": "COB_MONT", "type": "float", "precision": 2, "unit": "m", "description": "Cobertura montante"},
             "downstream_cover": {"shp_name": "COB_JUS", "type": "float", "precision": 2, "unit": "m", "description": "Cobertura jusante"},
+            "depth_average": {"shp_name": "PROF_MED", "type": "float", "precision": 2, "unit": "m", "description": "Profundidade média"},
             "pressure_min": {"shp_name": "P_MIN", "type": "float", "precision": 2, "unit": "mca", "description": "Pressão mínima"},
             "pressure_max": {"shp_name": "P_MAX", "type": "float", "precision": 2, "unit": "mca", "description": "Pressão máxima"},
             "velocity_min": {"shp_name": "V_MIN", "type": "float", "precision": 3, "unit": "m/s", "description": "Velocidade mínima"},
@@ -26,7 +27,15 @@
             "wbs_id": {"shp_name": "WBS_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID WBS do planejamento"},
             "planned_start": {"shp_name": "INI_PLAN", "type": "date", "unit": null, "description": "Início planejado"},
             "planned_end": {"shp_name": "FIM_PLAN", "type": "date", "unit": null, "description": "Fim planejado"},
-            "progress_percent": {"shp_name": "PCT_FIS", "type": "float", "precision": 1, "unit": "%", "description": "Percentual físico"}
+            "progress_percent": {"shp_name": "PCT_FIS", "type": "float", "precision": 1, "unit": "%", "description": "Percentual físico"},
+            "cost_pipe": {"shp_name": "CUSTO_TUB", "type": "float", "precision": 2, "unit": "R$", "description": "Custo tubulação"},
+            "cost_excavation": {"shp_name": "CUSTO_ESC", "type": "float", "precision": 2, "unit": "R$", "description": "Custo escavação"},
+            "cost_backfill": {"shp_name": "CUSTO_REA", "type": "float", "precision": 2, "unit": "R$", "description": "Custo reaterro"},
+            "cost_shoring": {"shp_name": "CUSTO_ESC", "type": "float", "precision": 2, "unit": "R$", "description": "Custo escoramento"},
+            "cost_labor": {"shp_name": "CUSTO_MO", "type": "float", "precision": 2, "unit": "R$", "description": "Custo mão de obra"},
+            "cost_equipment": {"shp_name": "CUSTO_EQ", "type": "float", "precision": 2, "unit": "R$", "description": "Custo equipamentos"},
+            "cost_total": {"shp_name": "CUSTO_TOT", "type": "float", "precision": 2, "unit": "R$", "description": "Custo total do trecho"},
+            "cost_per_meter": {"shp_name": "CUSTO_M", "type": "float", "precision": 2, "unit": "R$/m", "description": "Custo por metro"}
         }
     },
 
@@ -55,12 +64,25 @@
             "slope": {"shp_name": "DECLIV", "type": "float", "precision": 5, "unit": "m/m", "description": "Declividade"},
             "material": {"shp_name": "MATERIAL", "type": "str", "max_length": 20, "unit": null, "description": "Material do tubo"},
             "length": {"shp_name": "COMPRIM", "type": "float", "precision": 2, "unit": "m", "description": "Comprimento"},
+            "depth_average": {"shp_name": "PROF_MED", "type": "float", "precision": 2, "unit": "m", "description": "Profundidade média"},
             "upstream_invert": {"shp_name": "PROF_SUP", "type": "float", "precision": 3, "unit": "m", "description": "Cota fundo montante"},
             "downstream_invert": {"shp_name": "PROF_INF", "type": "float", "precision": 3, "unit": "m", "description": "Cota fundo jusante"},
             "sewer_type": {"shp_name": "TIPO_ESG", "type": "str", "max_length": 15, "unit": null, "description": "Tipo (sanitário/misto)"},
             "flow": {"shp_name": "VAZAO", "type": "float", "precision": 4, "unit": "L/s", "description": "Vazão calculada"},
             "velocity": {"shp_name": "VELOC", "type": "float", "precision": 3, "unit": "m/s", "description": "Velocidade"},
-            "tractive_force": {"shp_name": "T_TRAT", "type": "float", "precision": 3, "unit": "Pa", "description": "Tensão trativa"}
+            "tractive_force": {"shp_name": "T_TRAT", "type": "float", "precision": 3, "unit": "Pa", "description": "Tensão trativa"},
+            "wbs_id": {"shp_name": "WBS_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID WBS do planejamento"},
+            "planned_start": {"shp_name": "INI_PLAN", "type": "date", "unit": null, "description": "Início planejado"},
+            "planned_end": {"shp_name": "FIM_PLAN", "type": "date", "unit": null, "description": "Fim planejado"},
+            "cost_pipe": {"shp_name": "CUSTO_TUB", "type": "float", "precision": 2, "unit": "R$", "description": "Custo tubulação"},
+            "cost_excavation": {"shp_name": "CUSTO_ESC", "type": "float", "precision": 2, "unit": "R$", "description": "Custo escavação"},
+            "cost_backfill": {"shp_name": "CUSTO_REA", "type": "float", "precision": 2, "unit": "R$", "description": "Custo reaterro"},
+            "cost_shoring": {"shp_name": "CUSTO_ESO", "type": "float", "precision": 2, "unit": "R$", "description": "Custo escoramento"},
+            "cost_pumping": {"shp_name": "CUSTO_BOM", "type": "float", "precision": 2, "unit": "R$", "description": "Custo bombeamento"},
+            "cost_labor": {"shp_name": "CUSTO_MO", "type": "float", "precision": 2, "unit": "R$", "description": "Custo mão de obra"},
+            "cost_equipment": {"shp_name": "CUSTO_EQ", "type": "float", "precision": 2, "unit": "R$", "description": "Custo equipamentos"},
+            "cost_total": {"shp_name": "CUSTO_TOT", "type": "float", "precision": 2, "unit": "R$", "description": "Custo total do trecho"},
+            "cost_per_meter": {"shp_name": "CUSTO_M", "type": "float", "precision": 2, "unit": "R$/m", "description": "Custo por metro"}
         }
     },
 
@@ -74,7 +96,12 @@
             "diameter": {"shp_name": "DIAM_PV", "type": "float", "precision": 0, "unit": "mm", "description": "Diâmetro do PV"},
             "invert_elevation": {"shp_name": "COTA_FUND", "type": "float", "precision": 3, "unit": "m", "description": "Cota de fundo"},
             "ground_elevation": {"shp_name": "COTA_TER", "type": "float", "precision": 3, "unit": "m", "description": "Cota do terreno"},
-            "depth": {"shp_name": "PROF", "type": "float", "precision": 2, "unit": "m", "description": "Profundidade"}
+            "depth": {"shp_name": "PROF", "type": "float", "precision": 2, "unit": "m", "description": "Profundidade"},
+            "cost_excavation": {"shp_name": "CUSTO_ESC", "type": "float", "precision": 2, "unit": "R$", "description": "Custo escavação"},
+            "cost_concrete": {"shp_name": "CUSTO_CON", "type": "float", "precision": 2, "unit": "R$", "description": "Custo concreto/alvenaria"},
+            "cost_cover": {"shp_name": "CUSTO_TMP", "type": "float", "precision": 2, "unit": "R$", "description": "Custo tampão"},
+            "cost_labor": {"shp_name": "CUSTO_MO", "type": "float", "precision": 2, "unit": "R$", "description": "Custo mão de obra"},
+            "cost_total": {"shp_name": "CUSTO_TOT", "type": "float", "precision": 2, "unit": "R$", "description": "Custo total do PV"}
         }
     },
 
@@ -89,9 +116,20 @@
             "material": {"shp_name": "MATERIAL", "type": "str", "max_length": 20, "unit": null, "description": "Material"},
             "slope": {"shp_name": "DECLIV", "type": "float", "precision": 5, "unit": "m/m", "description": "Declividade"},
             "length": {"shp_name": "COMPRIM", "type": "float", "precision": 2, "unit": "m", "description": "Comprimento"},
+            "depth_average": {"shp_name": "PROF_MED", "type": "float", "precision": 2, "unit": "m", "description": "Profundidade média"},
             "velocity_max": {"shp_name": "VEL_MAX", "type": "float", "precision": 3, "unit": "m/s", "description": "Velocidade máxima"},
             "flow_max": {"shp_name": "VAZ_MAX", "type": "float", "precision": 3, "unit": "m³/s", "description": "Vazão máxima"},
-            "flooding_duration": {"shp_name": "ALAGAM", "type": "float", "precision": 0, "unit": "min", "description": "Duração alagamento"}
+            "flooding_duration": {"shp_name": "ALAGAM", "type": "float", "precision": 0, "unit": "min", "description": "Duração alagamento"},
+            "wbs_id": {"shp_name": "WBS_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID WBS do planejamento"},
+            "planned_start": {"shp_name": "INI_PLAN", "type": "date", "unit": null, "description": "Início planejado"},
+            "planned_end": {"shp_name": "FIM_PLAN", "type": "date", "unit": null, "description": "Fim planejado"},
+            "cost_conduit": {"shp_name": "CUSTO_CON", "type": "float", "precision": 2, "unit": "R$", "description": "Custo conduto"},
+            "cost_excavation": {"shp_name": "CUSTO_ESC", "type": "float", "precision": 2, "unit": "R$", "description": "Custo escavação"},
+            "cost_backfill": {"shp_name": "CUSTO_REA", "type": "float", "precision": 2, "unit": "R$", "description": "Custo reaterro"},
+            "cost_labor": {"shp_name": "CUSTO_MO", "type": "float", "precision": 2, "unit": "R$", "description": "Custo mão de obra"},
+            "cost_equipment": {"shp_name": "CUSTO_EQ", "type": "float", "precision": 2, "unit": "R$", "description": "Custo equipamentos"},
+            "cost_total": {"shp_name": "CUSTO_TOT", "type": "float", "precision": 2, "unit": "R$", "description": "Custo total do trecho"},
+            "cost_per_meter": {"shp_name": "CUSTO_M", "type": "float", "precision": 2, "unit": "R$/m", "description": "Custo por metro"}
         }
     },
 

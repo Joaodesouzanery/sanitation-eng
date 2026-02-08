@@ -1,7 +1,46 @@
 """
 Planning - Planejamento e Cronograma
+
+Implementa regra de conclusão no mesmo dia:
+- Todas as atividades de um segmento (escavação, nivelamento, assentamento,
+  bombeamento, escoramento, reaterro, base) devem concluir no MESMO DIA.
+- Cálculo de metros/dia baseado em profundidade, diâmetro e equipe.
+- Gráfico de Gantt consolidado por dia.
 """
 
-# TODO: Implementar módulo de planejamento
+from .schedule import (
+    SameDayScheduler,
+    ScheduleConfig,
+    SegmentSchedule,
+    calculate_daily_meters
+)
 
-__all__ = []
+from .resources import (
+    Resource,
+    ResourceType,
+    LaborResource,
+    EquipmentResource,
+    MaterialResource,
+    ResourceManager,
+    ResourceAllocation,
+    DEFAULT_LABOR_CATALOG,
+    DEFAULT_EQUIPMENT_CATALOG
+)
+
+__all__ = [
+    # Schedule
+    "SameDayScheduler",
+    "ScheduleConfig",
+    "SegmentSchedule",
+    "calculate_daily_meters",
+    # Resources
+    "Resource",
+    "ResourceType",
+    "LaborResource",
+    "EquipmentResource",
+    "MaterialResource",
+    "ResourceManager",
+    "ResourceAllocation",
+    "DEFAULT_LABOR_CATALOG",
+    "DEFAULT_EQUIPMENT_CATALOG",
+]

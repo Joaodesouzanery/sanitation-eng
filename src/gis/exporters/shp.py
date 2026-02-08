@@ -418,6 +418,275 @@ class ShapefileExporter:
 
         return filepath
 
+    def export_drainage_conduits(self, output_path: str) -> str:
+        """Exporta condutos de drenagem"""
+        layer_name = "drainage_conduits"
+        os.makedirs(output_path, exist_ok=True)
+
+        w = self._create_writer(output_path, layer_name, "LineString")
+        fields_config = self._get_field_config(layer_name)
+
+        drainage_links = [l for l in self.project.links.values()
+                         if l.system_type.value == "drainage"]
+
+        for link in drainage_links:
+            from_node = self.project.get_node(link.from_node_id)
+            to_node = self.project.get_node(link.to_node_id)
+
+            if not from_node or not to_node:
+                continue
+
+            x1, y1 = self._transform_coords(from_node.coordinates.x, from_node.coordinates.y)
+            x2, y2 = self._transform_coords(to_node.coordinates.x, to_node.coordinates.y)
+
+            coords = [[x1, y1]]
+            for v in link.vertices:
+                vx, vy = self._transform_coords(v.x, v.y)
+                coords.append([vx, vy])
+            coords.append([x2, y2])
+
+            w.line([coords])
+
+            record = []
+            for field_name in fields_config.keys():
+                value = self._get_field_value(link, field_name)
+                record.append(value)
+
+            w.record(*record)
+
+        w.close()
+
+        self._write_schema_csv(output_path, layer_name)
+        self._write_prj_file(output_path, layer_name)
+
+        filepath = os.path.join(output_path, f"{layer_name}.shp")
+        logger.info(f"Exportado: {filepath} ({len(drainage_links)} features)")
+
+        return filepath
+
+    def export_drainage_nodes(self, output_path: str) -> str:
+        """Exporta nós de drenagem"""
+        layer_name = "drainage_nodes"
+        os.makedirs(output_path, exist_ok=True)
+
+        w = self._create_writer(output_path, layer_name, "Point")
+        fields_config = self._get_field_config(layer_name)
+
+        drainage_nodes = [n for n in self.project.nodes.values()
+                         if n.system_type.value == "drainage"]
+
+        for node in drainage_nodes:
+            x, y = self._transform_coords(node.coordinates.x, node.coordinates.y)
+            w.point(x, y)
+
+            record = []
+            for field_name in fields_config.keys():
+                value = self._get_field_value(node, field_name)
+                record.append(value)
+
+            w.record(*record)
+
+        w.close()
+
+        self._write_schema_csv(output_path, layer_name)
+        self._write_prj_file(output_path, layer_name)
+
+        filepath = os.path.join(output_path, f"{layer_name}.shp")
+        logger.info(f"Exportado: {filepath} ({len(drainage_nodes)} features)")
+
+        return filepath
+
+    def export_epanet_results_nodes(self, output_path: str) -> str:
+        """Exporta resultados EPANET - nós"""
+        layer_name = "epanet_results_nodes"
+        os.makedirs(output_path, exist_ok=True)
+
+        w = self._create_writer(output_path, layer_name, "Point")
+        fields_config = self._get_field_config(layer_name)
+
+        # Nós de água com resultados EPANET
+        water_nodes = [n for n in self.project.nodes.values()
+                      if n.system_type.value == "water"]
+
+        for node in water_nodes:
+            x, y = self._transform_coords(node.coordinates.x, node.coordinates.y)
+            w.point(x, y)
+
+            record = []
+            for field_name in fields_config.keys():
+                value = self._get_field_value(node, field_name)
+                record.append(value)
+
+            w.record(*record)
+
+        w.close()
+
+        self._write_schema_csv(output_path, layer_name)
+        self._write_prj_file(output_path, layer_name)
+
+        filepath = os.path.join(output_path, f"{layer_name}.shp")
+        logger.info(f"Exportado: {filepath} ({len(water_nodes)} features)")
+
+        return filepath
+
+    def export_epanet_results_pipes(self, output_path: str) -> str:
+        """Exporta resultados EPANET - tubos"""
+        layer_name = "epanet_results_pipes"
+        os.makedirs(output_path, exist_ok=True)
+
+        w = self._create_writer(output_path, layer_name, "LineString")
+        fields_config = self._get_field_config(layer_name)
+
+        water_links = [l for l in self.project.links.values()
+                      if l.system_type.value == "water" and l.element_type.value == "pipe"]
+
+        for link in water_links:
+            from_node = self.project.get_node(link.from_node_id)
+            to_node = self.project.get_node(link.to_node_id)
+
+            if not from_node or not to_node:
+                continue
+
+            x1, y1 = self._transform_coords(from_node.coordinates.x, from_node.coordinates.y)
+            x2, y2 = self._transform_coords(to_node.coordinates.x, to_node.coordinates.y)
+
+            coords = [[x1, y1]]
+            for v in link.vertices:
+                vx, vy = self._transform_coords(v.x, v.y)
+                coords.append([vx, vy])
+            coords.append([x2, y2])
+
+            w.line([coords])
+
+            record = []
+            for field_name in fields_config.keys():
+                value = self._get_field_value(link, field_name)
+                record.append(value)
+
+            w.record(*record)
+
+        w.close()
+
+        self._write_schema_csv(output_path, layer_name)
+        self._write_prj_file(output_path, layer_name)
+
+        filepath = os.path.join(output_path, f"{layer_name}.shp")
+        logger.info(f"Exportado: {filepath} ({len(water_links)} features)")
+
+        return filepath
+
+    def export_swmm_results_nodes(self, output_path: str) -> str:
+        """Exporta resultados SWMM - nós"""
+        layer_name = "swmm_results_nodes"
+        os.makedirs(output_path, exist_ok=True)
+
+        w = self._create_writer(output_path, layer_name, "Point")
+        fields_config = self._get_field_config(layer_name)
+
+        # Nós de drenagem/esgoto com resultados SWMM
+        swmm_nodes = [n for n in self.project.nodes.values()
+                     if n.system_type.value in ("drainage", "sewer")]
+
+        for node in swmm_nodes:
+            x, y = self._transform_coords(node.coordinates.x, node.coordinates.y)
+            w.point(x, y)
+
+            record = []
+            for field_name in fields_config.keys():
+                value = self._get_field_value(node, field_name)
+                record.append(value)
+
+            w.record(*record)
+
+        w.close()
+
+        self._write_schema_csv(output_path, layer_name)
+        self._write_prj_file(output_path, layer_name)
+
+        filepath = os.path.join(output_path, f"{layer_name}.shp")
+        logger.info(f"Exportado: {filepath} ({len(swmm_nodes)} features)")
+
+        return filepath
+
+    def export_swmm_results_links(self, output_path: str) -> str:
+        """Exporta resultados SWMM - condutos"""
+        layer_name = "swmm_results_links"
+        os.makedirs(output_path, exist_ok=True)
+
+        w = self._create_writer(output_path, layer_name, "LineString")
+        fields_config = self._get_field_config(layer_name)
+
+        swmm_links = [l for l in self.project.links.values()
+                     if l.system_type.value in ("drainage", "sewer")]
+
+        for link in swmm_links:
+            from_node = self.project.get_node(link.from_node_id)
+            to_node = self.project.get_node(link.to_node_id)
+
+            if not from_node or not to_node:
+                continue
+
+            x1, y1 = self._transform_coords(from_node.coordinates.x, from_node.coordinates.y)
+            x2, y2 = self._transform_coords(to_node.coordinates.x, to_node.coordinates.y)
+
+            coords = [[x1, y1]]
+            for v in link.vertices:
+                vx, vy = self._transform_coords(v.x, v.y)
+                coords.append([vx, vy])
+            coords.append([x2, y2])
+
+            w.line([coords])
+
+            record = []
+            for field_name in fields_config.keys():
+                value = self._get_field_value(link, field_name)
+                record.append(value)
+
+            w.record(*record)
+
+        w.close()
+
+        self._write_schema_csv(output_path, layer_name)
+        self._write_prj_file(output_path, layer_name)
+
+        filepath = os.path.join(output_path, f"{layer_name}.shp")
+        logger.info(f"Exportado: {filepath} ({len(swmm_links)} features)")
+
+        return filepath
+
+    def export_peer_review_findings(self, output_path: str) -> str:
+        """Exporta achados da revisão por pares"""
+        layer_name = "peer_review_findings"
+        os.makedirs(output_path, exist_ok=True)
+
+        w = self._create_writer(output_path, layer_name, "Point")
+        fields_config = self._get_field_config(layer_name)
+
+        findings = getattr(self.project, 'peer_review_findings', [])
+
+        for finding in findings:
+            x = getattr(finding, 'x', 0) or 0
+            y = getattr(finding, 'y', 0) or 0
+            x, y = self._transform_coords(x, y)
+            w.point(x, y)
+
+            record = []
+            for field_name in fields_config.keys():
+                value = self._get_field_value(finding, field_name)
+                record.append(value)
+
+            w.record(*record)
+
+        w.close()
+
+        self._write_schema_csv(output_path, layer_name)
+        self._write_prj_file(output_path, layer_name)
+
+        filepath = os.path.join(output_path, f"{layer_name}.shp")
+        logger.info(f"Exportado: {filepath} ({len(findings)} features)")
+
+        return filepath
+
     def export_all(self, output_path: str) -> Dict[str, str]:
         """
         Exporta todas as 11 camadas obrigatórias
@@ -441,7 +710,13 @@ class ShapefileExporter:
             "water_nodes": self.export_water_nodes,
             "sewer_pipes": self.export_sewer_pipes,
             "sewer_structures": self.export_sewer_structures,
-            # Adicionar outros métodos conforme implementados
+            "drainage_conduits": self.export_drainage_conduits,
+            "drainage_nodes": self.export_drainage_nodes,
+            "epanet_results_nodes": self.export_epanet_results_nodes,
+            "epanet_results_pipes": self.export_epanet_results_pipes,
+            "swmm_results_nodes": self.export_swmm_results_nodes,
+            "swmm_results_links": self.export_swmm_results_links,
+            "peer_review_findings": self.export_peer_review_findings,
         }
 
         for layer_name in self.REQUIRED_LAYERS:
