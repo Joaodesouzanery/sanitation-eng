@@ -7893,30 +7893,117 @@ DATA;
         }
 
         function generatePlanning() {
+            // Try to get data from multiple sources
             if (planningData.input.length === 0) {
-                // Try to use existing network data
-                const { nodes, links } = getActiveNodesAndLinks();
-                if (links.length === 0) {
-                    alert('Carregue uma planilha ou calcule a rede primeiro.');
-                    return;
+                // First, try to use data loaded from platform
+                if (importedNodes.length > 0 && previewLinks.length > 0) {
+                    console.log('Usando dados importados diretamente:', importedNodes.length, 'nós,', previewLinks.length, 'trechos');
+                    planningData.input = convertLinksToPlanning(importedNodes, previewLinks);
+                } else {
+                    // Try to use network-specific data
+                    const { nodes, links } = getActiveNodesAndLinks();
+                    if (links.length > 0) {
+                        console.log('Usando dados de rede:', nodes.length, 'nós,', links.length, 'trechos');
+                        planningData.input = convertNetworkToPlanning(nodes, links);
+                    } else {
+                        alert('Nenhum dado encontrado!\n\nPor favor:\n1. Importe dados na aba "Importar Topografia"\n2. Ou clique em "Carregar Dados da Plataforma" na aba Planejamento\n3. Ou clique em "Carregar Demo" para testar');
+                        return;
+                    }
                 }
-                // Convert network data to planning input
-                planningData.input = convertNetworkToPlanning(nodes, links);
             }
+
+            if (planningData.input.length === 0) {
+                alert('Erro: Não foi possível converter os dados para planejamento.');
+                return;
+            }
+
+            console.log('Dados de entrada para planejamento:', planningData.input.length, 'itens');
 
             const numTeams = parseInt(document.getElementById('planning-num-teams')?.value) || 2;
             const teamConfig = getTeamConfig();
 
             // Generate WBS and schedule
             const wbs = generateWBS(planningData.input);
+            console.log('WBS gerado:', wbs.length, 'itens');
+
             const schedule = generateSchedule(wbs, numTeams, teamConfig);
+            console.log('Cronograma gerado:', schedule.length, 'atividades');
+
+            if (schedule.length === 0) {
+                alert('Erro ao gerar cronograma. Verifique os dados de entrada.');
+                return;
+            }
+
             const dailyPlan = generateDailyPlan(schedule, teamConfig);
+            console.log('Plano diário gerado:', dailyPlan.length, 'entradas');
 
             planningData.schedule = schedule;
             planningData.dailyPlan = dailyPlan;
 
             // Display results
             displayPlanningResults(schedule, dailyPlan, teamConfig);
+
+            alert(`Planejamento gerado com sucesso!\n\n` +
+                `Atividades: ${schedule.length}\n` +
+                `Dias totais: ${Math.max(...schedule.map(s => s.end_day))}\n` +
+                `Equipes: ${numTeams}`);
+        }
+
+        // Convert previewLinks to planning input format
+        function convertLinksToPlanning(nodes, links) {
+            const input = [];
+            links.forEach((link, idx) => {
+                const fromNode = nodes.find(n => n.id === link.from || n.name === link.from);
+                const toNode = nodes.find(n => n.id === link.to || n.name === link.to);
+
+                const length = link.length || link.comprimento || 50;
+                const dn = link.diameter || link.DN || link.dn || 150;
+                const profMont = link.depthUp || link.profMont || 1.5;
+                const profJus = link.depthDown || link.profJus || 1.5;
+                const avgProf = (profMont + profJus) / 2;
+
+                // Calculate quantities
+                const largura = Math.max(0.6, dn / 1000 + 0.4);
+                const volEsc = length * largura * avgProf;
+                const volReat = volEsc * 0.7;
+                const areaPav = length * (largura + 0.2);
+
+                const trechoId = `T${String(idx + 1).padStart(2, '0')}`;
+
+                input.push({
+                    trecho_id: trechoId,
+                    servico: 'Escavação',
+                    unidade: 'm³',
+                    quantidade: volEsc,
+                    profundidade: avgProf,
+                    diametro: dn
+                });
+                input.push({
+                    trecho_id: trechoId,
+                    servico: `Assentamento tubo DN${dn}`,
+                    unidade: 'm',
+                    quantidade: length,
+                    profundidade: avgProf,
+                    diametro: dn
+                });
+                input.push({
+                    trecho_id: trechoId,
+                    servico: 'Reaterro compactado',
+                    unidade: 'm³',
+                    quantidade: volReat,
+                    profundidade: avgProf,
+                    diametro: dn
+                });
+                input.push({
+                    trecho_id: trechoId,
+                    servico: 'Recomposição pavimento',
+                    unidade: 'm²',
+                    quantidade: areaPav,
+                    profundidade: avgProf,
+                    diametro: dn
+                });
+            });
+            return input;
         }
 
         function getTeamConfig() {
@@ -8101,10 +8188,20 @@ DATA;
         function displayPlanningResults(schedule, dailyPlan, teamConfig) {
             document.getElementById('planning-results').style.display = 'block';
 
-            const totalDays = Math.max(...schedule.map(s => s.end_day));
-            const startDate = new Date();
-            const endDate = new Date(startDate);
-            endDate.setDate(endDate.getDate() + totalDays);
+            const totalDays = Math.max(...schedule.map(s => s.end_day), 1);
+
+            // Use dates from planning config or calculate
+            let startDate, endDate;
+            const startInput = document.getElementById('planning-start-date')?.value;
+            if (startInput) {
+                startDate = new Date(startInput + 'T00:00:00');
+                endDate = new Date(startDate);
+                endDate.setDate(endDate.getDate() + totalDays);
+            } else {
+                startDate = new Date();
+                endDate = new Date(startDate);
+                endDate.setDate(endDate.getDate() + totalDays);
+            }
 
             document.getElementById('plan-total-days').textContent = totalDays;
             document.getElementById('plan-start-date').textContent = startDate.toLocaleDateString('pt-BR');
