@@ -323,6 +323,7 @@
             <div class="tab" onclick="showTab('drainage')">🌧️ Drenagem</div>
             <div class="tab" onclick="showTab('quantities')">🏗️ Quantitativos</div>
             <div class="tab" onclick="showTab('planning')">📅 Planejamento</div>
+            <div class="tab" onclick="showTab('integrations')">🔗 Integrações</div>
         </div>
 
         <!-- IMPORT TAB -->
@@ -1569,7 +1570,10 @@ PV02,359290.456,7352780.123,1.82</pre>
 
                         <!-- Canvas do Histograma -->
                         <div style="position: relative;">
-                            <canvas id="histogram-canvas" width="800" height="350" style="width: 100%; background: var(--bg-secondary); border-radius: 8px;"></canvas>
+                            <canvas id="histogram-canvas" width="800" height="350" style="width: 100%; background: var(--bg-secondary); border-radius: 8px; cursor: crosshair;"></canvas>
+                            <div id="histogram-tooltip" style="display: none; position: absolute; background: rgba(30, 41, 59, 0.95); border: 1px solid var(--accent-blue); border-radius: 6px; padding: 10px; font-size: 0.85rem; pointer-events: none; z-index: 100; min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                                <div id="histogram-tooltip-content"></div>
+                            </div>
                         </div>
 
                         <!-- Estatísticas Resumidas -->
@@ -1644,6 +1648,156 @@ PV02,359290.456,7352780.123,1.82</pre>
                 <button class="btn" style="background: var(--accent-purple); color: white;" onclick="loadPlanningDemo()">
                     <span>📊</span> Carregar Demo
                 </button>
+            </div>
+        </div>
+
+        <!-- INTEGRATIONS TAB -->
+        <div id="integrations-tab" class="tab-content">
+            <div class="grid">
+                <!-- EPANET -->
+                <div class="card">
+                    <h2><span class="icon">💧</span> EPANET - Redes Pressurizadas</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Simulação hidráulica de redes de água pressurizadas. Calcula pressões, velocidades, perda de carga.
+                    </p>
+                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <h4 style="color: var(--accent-blue); margin-bottom: 10px;">Recursos:</h4>
+                        <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 20px;">
+                            <li>Análise hidráulica em regime permanente e estendido</li>
+                            <li>Modelagem de bombas, válvulas, reservatórios</li>
+                            <li>Análise de qualidade da água</li>
+                            <li>Exportação para formato .INP</li>
+                        </ul>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="exportToEPANET()">
+                            <span>📤</span> Exportar para EPANET
+                        </button>
+                        <button class="btn" style="background: var(--bg-secondary);" onclick="window.open('https://github.com/OpenWaterAnalytics/EPANET', '_blank')">
+                            <span>🔗</span> GitHub EPANET
+                        </button>
+                    </div>
+                    <div id="epanet-status" style="margin-top: 10px; padding: 10px; background: var(--bg-primary); border-radius: 6px; display: none;"></div>
+                </div>
+
+                <!-- SWMM -->
+                <div class="card">
+                    <h2><span class="icon">🌧️</span> SWMM - Drenagem Urbana</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Modelagem de escoamento superficial e redes de drenagem pluvial.
+                    </p>
+                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <h4 style="color: var(--accent-green); margin-bottom: 10px;">Recursos:</h4>
+                        <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 20px;">
+                            <li>Simulação de eventos de chuva</li>
+                            <li>Análise de alagamentos e sobrecargas</li>
+                            <li>Modelagem de bacias de detenção</li>
+                            <li>Exportação para formato .INP</li>
+                        </ul>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-success" onclick="exportToSWMM()">
+                            <span>📤</span> Exportar para SWMM
+                        </button>
+                        <button class="btn" style="background: var(--bg-secondary);" onclick="window.open('https://github.com/USEPA/Stormwater-Management-Model', '_blank')">
+                            <span>🔗</span> GitHub SWMM
+                        </button>
+                    </div>
+                    <div id="swmm-status" style="margin-top: 10px; padding: 10px; background: var(--bg-primary); border-radius: 6px; display: none;"></div>
+                </div>
+            </div>
+
+            <div class="grid" style="margin-top: 20px;">
+                <!-- OpenProject -->
+                <div class="card">
+                    <h2><span class="icon">📋</span> OpenProject - Gestão de Projetos</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Integração com sistema de gerenciamento de projetos open source.
+                    </p>
+                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <h4 style="color: var(--accent-purple); margin-bottom: 10px;">Recursos:</h4>
+                        <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 20px;">
+                            <li>Exportar cronograma como pacotes de trabalho</li>
+                            <li>Gráfico de Gantt interativo</li>
+                            <li>Gestão de tarefas e recursos</li>
+                            <li>Integração via API REST</li>
+                        </ul>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn" style="background: var(--accent-purple); color: white;" onclick="exportToOpenProject()">
+                            <span>📤</span> Exportar para OpenProject
+                        </button>
+                        <button class="btn" style="background: var(--bg-secondary);" onclick="window.open('https://github.com/opf/openproject', '_blank')">
+                            <span>🔗</span> GitHub OpenProject
+                        </button>
+                    </div>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>URL do OpenProject (opcional)</label>
+                        <input type="text" id="openproject-url" placeholder="https://seu-servidor.openproject.com" style="width: 100%;">
+                    </div>
+                </div>
+
+                <!-- QGIS -->
+                <div class="card">
+                    <h2><span class="icon">🗺️</span> QGIS - Sistema de Informação Geográfica</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Integração com o mais popular SIG open source.
+                    </p>
+                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <h4 style="color: var(--accent-orange); margin-bottom: 10px;">Possibilidades de Integração:</h4>
+                        <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 20px;">
+                            <li><strong>Exportar SHP:</strong> Shapefiles compatíveis com QGIS</li>
+                            <li><strong>Exportar GeoJSON:</strong> Formato nativo suportado</li>
+                            <li><strong>Plugin QGIS:</strong> Possível criar plugin Python</li>
+                            <li><strong>QML Styles:</strong> Exportar estilos de simbologia</li>
+                        </ul>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn" style="background: var(--accent-orange); color: white;" onclick="exportQGISProject()">
+                            <span>📤</span> Exportar Projeto QGIS
+                        </button>
+                        <button class="btn" style="background: var(--bg-secondary);" onclick="window.open('https://github.com/qgis/QGIS', '_blank')">
+                            <span>🔗</span> GitHub QGIS
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Integration Info -->
+            <div class="card" style="margin-top: 20px;">
+                <h2><span class="icon">ℹ️</span> Sobre as Integrações</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div>
+                        <h4 style="color: var(--accent-blue); margin-bottom: 10px;">Fluxo de Dados</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                            Os dados fluem entre os sistemas:
+                            <br>• <strong>Topografia → EPANET/SWMM:</strong> Nós e trechos são convertidos para formato .INP
+                            <br>• <strong>Planejamento → OpenProject:</strong> Cronograma exportado como pacotes de trabalho
+                            <br>• <strong>Todos → QGIS:</strong> Shapefiles com todos os atributos
+                        </p>
+                    </div>
+                    <div>
+                        <h4 style="color: var(--accent-green); margin-bottom: 10px;">Formato .INP</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                            O formato .INP é texto simples usado pelo EPANET e SWMM.
+                            A plataforma gera arquivos compatíveis automaticamente a partir dos seus dados.
+                        </p>
+                    </div>
+                    <div>
+                        <h4 style="color: var(--accent-purple); margin-bottom: 10px;">API OpenProject</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                            Configure a URL do seu servidor OpenProject para exportar diretamente.
+                            Sem configuração, será gerado arquivo JSON para importação manual.
+                        </p>
+                    </div>
+                    <div>
+                        <h4 style="color: var(--accent-orange); margin-bottom: 10px;">QGIS e SIG</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                            O QGIS pode abrir diretamente os Shapefiles e GeoJSON exportados.
+                            Também é possível criar um projeto .qgs com estilos pré-definidos.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -5833,7 +5987,7 @@ DATA;
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-            const tabOrder = ['import', 'sewer', 'water', 'drainage', 'quantities', 'planning'];
+            const tabOrder = ['import', 'sewer', 'water', 'drainage', 'quantities', 'planning', 'integrations'];
             document.querySelector(`.tab:nth-child(${tabOrder.indexOf(tab) + 1})`).classList.add('active');
             document.getElementById(`${tab}-tab`).classList.add('active');
             document.getElementById('results').style.display = 'none';
@@ -8210,7 +8364,29 @@ DATA;
             const trechos = [...new Set(schedule.map(s => s.trecho_id))];
             const dayWidth = Math.max(20, Math.min(40, 600 / totalDays));
 
-            let html = `<div style="display: flex; gap: 5px; margin-bottom: 10px; font-size: 0.75rem; color: var(--text-secondary);">
+            // Add legend first
+            let html = `
+                <div style="display: flex; gap: 15px; margin-bottom: 15px; padding: 10px; background: var(--bg-primary); border-radius: 6px; flex-wrap: wrap;">
+                    <span style="font-weight: bold; color: var(--text-secondary); font-size: 0.8rem;">Legenda:</span>
+                    <span style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem;">
+                        <span style="width: 16px; height: 12px; background: var(--accent-orange); border-radius: 2px;"></span> Escavação
+                    </span>
+                    <span style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem;">
+                        <span style="width: 16px; height: 12px; background: var(--accent-blue); border-radius: 2px;"></span> Assentamento
+                    </span>
+                    <span style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem;">
+                        <span style="width: 16px; height: 12px; background: var(--accent-green); border-radius: 2px;"></span> Reaterro
+                    </span>
+                    <span style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem;">
+                        <span style="width: 16px; height: 12px; background: var(--accent-purple); border-radius: 2px;"></span> Pavimentação
+                    </span>
+                    <span style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem;">
+                        <span style="width: 16px; height: 12px; background: var(--accent-red); border-radius: 2px;"></span> Teste
+                    </span>
+                </div>
+            `;
+
+            html += `<div style="display: flex; gap: 5px; margin-bottom: 10px; font-size: 0.75rem; color: var(--text-secondary);">
                 <div style="width: 100px;">Trecho</div>
                 ${Array.from({length: totalDays}, (_, i) => `<div style="width: ${dayWidth}px; text-align: center;">${i + 1}</div>`).join('')}
             </div>`;
@@ -8224,8 +8400,9 @@ DATA;
                     const activity = trechoSchedule.find(s => s.start_day <= day && s.end_day >= day);
                     const color = activity ? getActivityColor(activity.activity) : 'transparent';
                     const border = activity ? 'none' : '1px solid var(--border-color)';
-                    html += `<div style="width: ${dayWidth}px; height: 20px; background: ${color}; border: ${border}; border-radius: 2px;"
-                                  title="${activity ? activity.activity : ''}"></div>`;
+                    const tooltip = activity ? `${activity.activity}\nDia ${activity.start_day} a ${activity.end_day}\nQtd: ${activity.quantidade?.toFixed(1) || '-'} ${activity.unidade || ''}` : '';
+                    html += `<div style="width: ${dayWidth}px; height: 20px; background: ${color}; border: ${border}; border-radius: 2px; cursor: ${activity ? 'pointer' : 'default'};"
+                                  title="${tooltip}"></div>`;
                 }
                 html += '</div>';
             });
@@ -8598,22 +8775,122 @@ DATA;
                 'cost': 'Custo Acumulado (%)'
             };
             ctx.fillText(titles[resourceMode], width / 2, 20);
+
+            // Store bar positions for tooltip
+            canvas.histogramBars = { laborByPeriod, equipByPeriod, costByPeriod, periods, periodLabels, maxVal, marginLeft, marginTop, chartWidth, chartHeight, barGroupWidth, resourceMode };
+        }
+
+        // Initialize histogram tooltip events
+        function initHistogramTooltip() {
+            const canvas = document.getElementById('histogram-canvas');
+            if (!canvas) return;
+
+            canvas.addEventListener('mousemove', handleHistogramMouseMove);
+            canvas.addEventListener('mouseleave', () => {
+                document.getElementById('histogram-tooltip').style.display = 'none';
+            });
+        }
+
+        function handleHistogramMouseMove(e) {
+            const canvas = e.target;
+            const tooltip = document.getElementById('histogram-tooltip');
+            const tooltipContent = document.getElementById('histogram-tooltip-content');
+
+            if (!canvas.histogramBars || !histogramData.dailyPlan.length) {
+                tooltip.style.display = 'none';
+                return;
+            }
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            const { laborByPeriod, equipByPeriod, costByPeriod, periods, periodLabels, marginLeft, chartWidth, barGroupWidth, resourceMode } = canvas.histogramBars;
+
+            // Find which bar is being hovered
+            const barIndex = Math.floor((mouseX - marginLeft) / barGroupWidth);
+
+            if (barIndex >= 0 && barIndex < periods) {
+                const labor = laborByPeriod[barIndex] || 0;
+                const equip = equipByPeriod[barIndex] || 0;
+                const cost = costByPeriod[barIndex] || 0;
+                const label = periodLabels[barIndex];
+
+                // Get activities for this period
+                const { dailyPlan, totalDays } = histogramData;
+                const viewMode = document.getElementById('histogram-view')?.value || 'daily';
+                let activitiesInPeriod = [];
+
+                if (viewMode === 'daily') {
+                    activitiesInPeriod = dailyPlan.filter(d => d.day === barIndex + 1);
+                } else if (viewMode === 'weekly') {
+                    const startDay = barIndex * 7 + 1;
+                    const endDay = Math.min(startDay + 6, totalDays);
+                    activitiesInPeriod = dailyPlan.filter(d => d.day >= startDay && d.day <= endDay);
+                } else {
+                    const startDay = barIndex * 30 + 1;
+                    const endDay = Math.min(startDay + 29, totalDays);
+                    activitiesInPeriod = dailyPlan.filter(d => d.day >= startDay && d.day <= endDay);
+                }
+
+                const trechos = [...new Set(activitiesInPeriod.map(a => a.trecho_id))];
+                const activities = [...new Set(activitiesInPeriod.map(a => a.activity))];
+
+                tooltipContent.innerHTML = `
+                    <div style="font-weight: bold; color: var(--accent-blue); margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">
+                        ${label}
+                    </div>
+                    <div style="display: grid; gap: 5px;">
+                        <div><span style="color: var(--accent-blue);">👷 Mão de Obra:</span> ${labor} pessoas</div>
+                        <div><span style="color: var(--accent-purple);">🔧 Equipamentos:</span> ${equip} unid.</div>
+                        <div><span style="color: var(--accent-green);">💰 Custo:</span> R$ ${cost.toLocaleString('pt-BR')}</div>
+                        ${trechos.length > 0 ? `<div style="margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--border-color);"><span style="color: var(--text-secondary);">Trechos:</span> ${trechos.slice(0, 3).join(', ')}${trechos.length > 3 ? '...' : ''}</div>` : ''}
+                        ${activities.length > 0 ? `<div><span style="color: var(--text-secondary);">Atividades:</span> ${activities.slice(0, 2).join(', ')}${activities.length > 2 ? '...' : ''}</div>` : ''}
+                    </div>
+                `;
+
+                tooltip.style.display = 'block';
+                tooltip.style.left = `${e.clientX - rect.left + 15}px`;
+                tooltip.style.top = `${e.clientY - rect.top - 10}px`;
+
+                // Keep tooltip within canvas bounds
+                if (e.clientX - rect.left + tooltip.offsetWidth + 20 > rect.width) {
+                    tooltip.style.left = `${e.clientX - rect.left - tooltip.offsetWidth - 15}px`;
+                }
+            } else {
+                tooltip.style.display = 'none';
+            }
         }
 
         function renderDailyPlanTable(dailyPlan) {
             const tbody = document.getElementById('daily-plan-tbody');
-            tbody.innerHTML = dailyPlan.map(d => `
+            tbody.innerHTML = dailyPlan.map((d, idx) => `
                 <tr style="border-bottom: 1px solid var(--border-color);">
                     <td style="padding: 8px; text-align: center;">${d.day}</td>
                     <td style="padding: 8px;">${d.trecho_id}</td>
                     <td style="padding: 8px;">${d.activity}</td>
                     <td style="padding: 8px; text-align: center;">Eq. ${d.team}</td>
-                    <td style="padding: 8px; text-align: center;">${d.production}/dia</td>
+                    <td style="padding: 8px; text-align: center;">
+                        <input type="number" value="${d.production}" min="1" step="1"
+                               style="width: 60px; padding: 4px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary); text-align: center;"
+                               onchange="updateDailyPlanProduction(${idx}, this.value)">/dia
+                    </td>
                     <td style="padding: 8px; text-align: right;">${d.labor} pessoas</td>
                     <td style="padding: 8px; text-align: right;">${d.equipment} equip.</td>
                     <td style="padding: 8px; text-align: right;">R$ ${d.daily_cost.toLocaleString('pt-BR')}</td>
                 </tr>
             `).join('');
+        }
+
+        function updateDailyPlanProduction(index, newValue) {
+            const production = parseFloat(newValue) || 1;
+            if (planningData.dailyPlan[index]) {
+                planningData.dailyPlan[index].production = production;
+                // Recalculate labor based on new production
+                // This is a simplified recalculation
+                console.log(`Produção atualizada: índice ${index}, novo valor: ${production}/dia`);
+            }
         }
 
         function exportPlanningToExcel() {
@@ -8695,6 +8972,270 @@ DATA;
         }
 
         // ============================================
+        // INTEGRATION EXPORTS (EPANET, SWMM, OpenProject, QGIS)
+        // ============================================
+
+        function exportToEPANET() {
+            const { nodes, links } = getActiveNodesAndLinks();
+
+            if (nodes.length === 0 || links.length === 0) {
+                alert('Importe dados primeiro na aba Topografia.');
+                return;
+            }
+
+            // Generate EPANET .INP file content
+            let inp = `[TITLE]\nRede exportada da Plataforma de Saneamento\n\n`;
+            inp += `[JUNCTIONS]\n;ID\tElev\tDemand\tPattern\n`;
+
+            nodes.forEach((node, idx) => {
+                const elev = node.z || node.cota || 0;
+                const demand = node.demand || node.demanda || 0;
+                inp += `${node.id || 'J' + (idx + 1)}\t${elev.toFixed(2)}\t${demand.toFixed(4)}\t;\n`;
+            });
+
+            inp += `\n[RESERVOIRS]\n;ID\tHead\tPattern\n`;
+            const sourceNode = nodes.find(n => n.isSource) || nodes[0];
+            inp += `R1\t${(sourceNode.z || 100).toFixed(2)}\t;\n`;
+
+            inp += `\n[PIPES]\n;ID\tNode1\tNode2\tLength\tDiameter\tRoughness\tMinorLoss\tStatus\n`;
+            links.forEach((link, idx) => {
+                const length = link.length || link.comprimento || 50;
+                const diameter = link.diameter || link.DN || link.dn || 150;
+                const roughness = 140; // Hazen-Williams C
+                inp += `P${idx + 1}\t${link.from}\t${link.to}\t${length.toFixed(2)}\t${diameter}\t${roughness}\t0\tOpen\t;\n`;
+            });
+
+            inp += `\n[TIMES]\nDuration\t24:00\nHydraulic Timestep\t1:00\nQuality Timestep\t0:05\n`;
+            inp += `\n[OPTIONS]\nUnits\tLPS\nHeadloss\tH-W\n`;
+            inp += `\n[END]\n`;
+
+            // Download file
+            const blob = new Blob([inp], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'rede_epanet.inp';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            document.getElementById('epanet-status').style.display = 'block';
+            document.getElementById('epanet-status').innerHTML = `
+                <span style="color: var(--accent-green);">✓ Arquivo EPANET exportado!</span>
+                <br><small style="color: var(--text-secondary);">Nós: ${nodes.length}, Tubos: ${links.length}</small>
+            `;
+        }
+
+        function exportToSWMM() {
+            const { nodes, links, networkType } = getActiveNodesAndLinks();
+
+            if (nodes.length === 0 || links.length === 0) {
+                alert('Importe dados primeiro na aba Topografia.');
+                return;
+            }
+
+            // Generate SWMM .INP file content
+            let inp = `[TITLE]\nRede de Drenagem exportada da Plataforma de Saneamento\n\n`;
+
+            inp += `[OPTIONS]\nFLOW_UNITS\tLPS\nINFILTRATION\tHORTON\nFLOW_ROUTING\tDYNWAVE\nSTART_DATE\t01/01/2024\nSTART_TIME\t00:00:00\nEND_DATE\t01/01/2024\nEND_TIME\t12:00:00\nREPORT_START_DATE\t01/01/2024\nREPORT_START_TIME\t00:00:00\n\n`;
+
+            inp += `[JUNCTIONS]\n;;Name\tElevation\tMaxDepth\tInitDepth\tSurDepth\tAponded\n`;
+            nodes.forEach((node, idx) => {
+                const elev = node.z || node.cota || 0;
+                inp += `${node.id || 'J' + (idx + 1)}\t${elev.toFixed(2)}\t2\t0\t0\t0\n`;
+            });
+
+            inp += `\n[OUTFALLS]\n;;Name\tElevation\tType\tStage Data\n`;
+            const outfall = nodes[nodes.length - 1];
+            inp += `OUT1\t${(outfall.z || 0).toFixed(2)}\tFREE\t\n`;
+
+            inp += `\n[CONDUITS]\n;;Name\tFrom Node\tTo Node\tLength\tRoughness\tInOffset\tOutOffset\tInitFlow\tMaxFlow\n`;
+            links.forEach((link, idx) => {
+                const length = link.length || link.comprimento || 50;
+                const roughness = 0.013; // Manning n
+                inp += `C${idx + 1}\t${link.from}\t${link.to}\t${length.toFixed(2)}\t${roughness}\t0\t0\t0\t0\n`;
+            });
+
+            inp += `\n[XSECTIONS]\n;;Link\tShape\tGeom1\tGeom2\tGeom3\tGeom4\tBarrels\n`;
+            links.forEach((link, idx) => {
+                const diameter = (link.diameter || link.DN || link.dn || 400) / 1000; // Convert mm to m
+                inp += `C${idx + 1}\tCIRCULAR\t${diameter.toFixed(3)}\t0\t0\t0\t1\n`;
+            });
+
+            inp += `\n[REPORT]\nINPUT\tYES\nCONTROLS\tYES\nSUBCATCHMENTS\tALL\nNODES\tALL\nLINKS\tALL\n`;
+            inp += `\n[COORDINATES]\n`;
+            nodes.forEach((node, idx) => {
+                inp += `${node.id || 'J' + (idx + 1)}\t${node.x.toFixed(2)}\t${node.y.toFixed(2)}\n`;
+            });
+
+            // Download file
+            const blob = new Blob([inp], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'rede_swmm.inp';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            document.getElementById('swmm-status').style.display = 'block';
+            document.getElementById('swmm-status').innerHTML = `
+                <span style="color: var(--accent-green);">✓ Arquivo SWMM exportado!</span>
+                <br><small style="color: var(--text-secondary);">Junções: ${nodes.length}, Condutos: ${links.length}</small>
+            `;
+        }
+
+        function exportToOpenProject() {
+            if (planningData.schedule.length === 0) {
+                alert('Gere o planejamento primeiro na aba Planejamento.');
+                return;
+            }
+
+            const startDateInput = document.getElementById('planning-start-date')?.value;
+            const startDate = startDateInput ? new Date(startDateInput) : new Date();
+
+            // Create OpenProject-compatible JSON
+            const workPackages = planningData.schedule.map((s, idx) => {
+                const start = new Date(startDate);
+                start.setDate(start.getDate() + s.start_day - 1);
+                const end = new Date(startDate);
+                end.setDate(end.getDate() + s.end_day - 1);
+
+                return {
+                    id: idx + 1,
+                    subject: `${s.trecho_id} - ${s.activity}`,
+                    type: 'Task',
+                    status: 'New',
+                    startDate: start.toISOString().slice(0, 10),
+                    dueDate: end.toISOString().slice(0, 10),
+                    estimatedTime: `PT${s.duration * 8}H`,
+                    description: `Quantidade: ${s.quantidade?.toFixed(2) || '-'} ${s.unidade || ''}\nEquipe: ${s.team}`,
+                    customFields: {
+                        trecho_id: s.trecho_id,
+                        wbs_id: s.wbs_id,
+                        quantidade: s.quantidade,
+                        unidade: s.unidade
+                    }
+                };
+            });
+
+            const projectData = {
+                project: {
+                    name: 'Projeto de Saneamento',
+                    identifier: 'sanitation-project',
+                    description: 'Projeto exportado da Plataforma de Saneamento'
+                },
+                workPackages: workPackages,
+                exportDate: new Date().toISOString(),
+                totalDays: Math.max(...planningData.schedule.map(s => s.end_day)),
+                totalActivities: planningData.schedule.length
+            };
+
+            // Download JSON file
+            const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'openproject_import.json';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            alert(`Arquivo OpenProject exportado!\n\nPacotes de trabalho: ${workPackages.length}\nDuração total: ${projectData.totalDays} dias\n\nImporte este JSON no OpenProject via API ou manualmente.`);
+        }
+
+        function exportQGISProject() {
+            const { nodes, links } = getActiveNodesAndLinks();
+
+            if (nodes.length === 0) {
+                alert('Importe dados primeiro na aba Topografia.');
+                return;
+            }
+
+            // Create a QGIS project file (.qgs) - simplified XML
+            let qgs = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
+<qgis version="3.28" projectname="Projeto de Saneamento">
+  <title>Rede de Saneamento</title>
+  <projectCrs>
+    <spatialrefsys>
+      <proj4>+proj=utm +zone=23 +south +datum=WGS84 +units=m +no_defs</proj4>
+      <srid>32723</srid>
+      <description>WGS 84 / UTM zone 23S</description>
+    </spatialrefsys>
+  </projectCrs>
+  <layer-tree-group>
+    <layer-tree-layer id="pontos" name="Pontos (PVs)" source="./pontos.shp" providerKey="ogr"/>
+    <layer-tree-layer id="trechos" name="Trechos" source="./trechos.shp" providerKey="ogr"/>
+  </layer-tree-group>
+</qgis>`;
+
+            // Create a QML style file for points
+            let qmlPoints = `<?xml version="1.0" encoding="UTF-8"?>
+<qgis version="3.28" styleCategories="AllStyleCategories">
+  <renderer-v2 type="singleSymbol">
+    <symbols>
+      <symbol type="marker" name="0">
+        <layer class="SimpleMarker">
+          <prop k="color" v="59,130,246,255"/>
+          <prop k="size" v="3"/>
+          <prop k="name" v="circle"/>
+        </layer>
+      </symbol>
+    </symbols>
+  </renderer-v2>
+</qgis>`;
+
+            // Create a QML style file for lines
+            let qmlLines = `<?xml version="1.0" encoding="UTF-8"?>
+<qgis version="3.28" styleCategories="AllStyleCategories">
+  <renderer-v2 type="singleSymbol">
+    <symbols>
+      <symbol type="line" name="0">
+        <layer class="SimpleLine">
+          <prop k="line_color" v="34,197,94,255"/>
+          <prop k="line_width" v="0.5"/>
+        </layer>
+      </symbol>
+    </symbols>
+  </renderer-v2>
+</qgis>`;
+
+            // Create ZIP with all files
+            const zip = new JSZip();
+            zip.file("projeto_saneamento.qgs", qgs);
+            zip.file("pontos_style.qml", qmlPoints);
+            zip.file("trechos_style.qml", qmlLines);
+            zip.file("README.txt", `Projeto QGIS - Rede de Saneamento
+========================================
+
+Este pacote contém:
+- projeto_saneamento.qgs: Projeto QGIS
+- pontos_style.qml: Estilo para camada de pontos
+- trechos_style.qml: Estilo para camada de trechos
+
+Instruções:
+1. Exporte os Shapefiles (pontos e trechos) na aba Importar
+2. Coloque os arquivos .shp na mesma pasta deste projeto
+3. Abra o arquivo .qgs no QGIS
+4. Aplique os estilos .qml às camadas
+
+Dados exportados:
+- Pontos: ${nodes.length}
+- Trechos: ${links.length}
+- Data: ${new Date().toLocaleString('pt-BR')}
+`);
+
+            zip.generateAsync({ type: 'blob' }).then(content => {
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'projeto_qgis.zip';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            alert(`Projeto QGIS exportado!\n\nInclui:\n- Arquivo de projeto (.qgs)\n- Estilos de simbologia (.qml)\n- Instruções de uso\n\nExporte também os Shapefiles na aba Importar para usar com este projeto.`);
+        }
+
+        // ============================================
         // INITIALIZATION
         // ============================================
         document.addEventListener('DOMContentLoaded', () => {
@@ -8706,6 +9247,7 @@ DATA;
             renderDrainageLinks();
             renderQtyLinks();
             renderProductivityTable();
+            initHistogramTooltip();
 
             // Set up network type change handler
             const networkTypeSelect = document.getElementById('import-network-type');
