@@ -2171,235 +2171,511 @@ PV02,359290.456,7352780.123,1.82</pre>
 
         <!-- EPANET MODULE TAB -->
         <div id="epanet-tab" class="tab-content">
-            <!-- Data Status Panel -->
-            <div id="epanet-data-panel" class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));">
-                <h2><span class="icon">📊</span> Dados da Rede Carregados</h2>
-                <div class="summary-cards" style="margin-top: 15px;">
-                    <div class="summary-card blue">
-                        <div class="icon">📍</div>
-                        <div class="value" id="epanet-loaded-nodes">0</div>
-                        <div class="label">Nós Carregados</div>
-                    </div>
-                    <div class="summary-card green">
-                        <div class="icon">🔗</div>
-                        <div class="value" id="epanet-loaded-links">0</div>
-                        <div class="label">Trechos Carregados</div>
-                    </div>
-                    <div class="summary-card orange">
-                        <div class="icon">📏</div>
-                        <div class="value" id="epanet-total-length">0</div>
-                        <div class="label">Extensão Total (m)</div>
-                    </div>
-                    <div class="summary-card purple">
-                        <div class="icon">🌐</div>
-                        <div class="value" id="epanet-network-type">--</div>
-                        <div class="label">Tipo de Rede</div>
-                    </div>
-                </div>
-                <div id="epanet-no-data-warning" style="display: none; margin-top: 15px; padding: 15px; background: rgba(239, 68, 68, 0.2); border-radius: 8px; border: 1px solid var(--accent-red);">
-                    <span style="color: var(--accent-red);">⚠️ Nenhum dado importado.</span>
-                    <span style="color: var(--text-secondary);">Importe dados na aba "Importar" para usar este módulo.</span>
-                </div>
-            </div>
+            <!-- EPANET Full Module Interface -->
+            <div class="epanet-module" style="display: flex; gap: 20px; min-height: calc(100vh - 250px);">
 
-            <div class="grid">
-                <!-- EPANET Configuration -->
-                <div class="card">
-                    <h2><span class="icon">💧</span> EPANET - Análise Hidráulica</h2>
-                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
-                        Simulação hidráulica de redes de água pressurizadas com análise em regime permanente e estendido.
-                    </p>
-
-                    <div class="form-group">
-                        <label>Tipo de Análise</label>
-                        <select id="epanet-analysis-type">
-                            <option value="steady">Regime Permanente (Steady-State)</option>
-                            <option value="extended">Regime Estendido (Extended Period)</option>
-                            <option value="quality">Qualidade da Água</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Unidades de Vazão</label>
-                        <select id="epanet-flow-units">
-                            <option value="LPS">LPS (litros/segundo)</option>
-                            <option value="CMH">CMH (m³/hora)</option>
-                            <option value="CMD">CMD (m³/dia)</option>
-                            <option value="GPM">GPM (galões/minuto)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Fórmula de Perda de Carga</label>
-                        <select id="epanet-headloss">
-                            <option value="H-W">Hazen-Williams</option>
-                            <option value="D-W">Darcy-Weisbach</option>
-                            <option value="C-M">Chezy-Manning</option>
-                        </select>
-                    </div>
-
-                    <div id="epanet-extended-options" style="display: none;">
-                        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
-                        <h4 style="color: var(--accent-blue); margin-bottom: 10px;">Opções de Simulação Estendida</h4>
-
-                        <div class="form-group">
-                            <label>Duração da Simulação (horas)</label>
-                            <input type="number" id="epanet-duration" value="24" min="1" max="168">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Passo de Tempo Hidráulico (minutos)</label>
-                            <input type="number" id="epanet-hydraulic-step" value="60" min="1" max="360">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Padrão de Demanda</label>
-                            <select id="epanet-demand-pattern">
-                                <option value="residential">Residencial (pico manhã/noite)</option>
-                                <option value="commercial">Comercial (pico diurno)</option>
-                                <option value="industrial">Industrial (constante)</option>
-                                <option value="custom">Personalizado</option>
-                            </select>
+                <!-- Left Sidebar - Tools & Elements -->
+                <div class="epanet-sidebar" style="width: 280px; flex-shrink: 0;">
+                    <!-- Toolbar -->
+                    <div class="card" style="padding: 16px; margin-bottom: 16px;">
+                        <h3 style="font-size: 0.9rem; margin-bottom: 12px; color: var(--text-secondary);">Ferramentas</h3>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                            <button class="epanet-tool-btn active" onclick="setEpanetTool('select')" title="Selecionar" id="epanet-tool-select">
+                                <span>🔍</span>
+                            </button>
+                            <button class="epanet-tool-btn" onclick="setEpanetTool('junction')" title="Adicionar Junção" id="epanet-tool-junction">
+                                <span>📍</span>
+                            </button>
+                            <button class="epanet-tool-btn" onclick="setEpanetTool('reservoir')" title="Adicionar Reservatório" id="epanet-tool-reservoir">
+                                <span>🏊</span>
+                            </button>
+                            <button class="epanet-tool-btn" onclick="setEpanetTool('tank')" title="Adicionar Tanque" id="epanet-tool-tank">
+                                <span>🛢️</span>
+                            </button>
+                            <button class="epanet-tool-btn" onclick="setEpanetTool('pipe')" title="Adicionar Tubo" id="epanet-tool-pipe">
+                                <span>➖</span>
+                            </button>
+                            <button class="epanet-tool-btn" onclick="setEpanetTool('pump')" title="Adicionar Bomba" id="epanet-tool-pump">
+                                <span>⚡</span>
+                            </button>
+                            <button class="epanet-tool-btn" onclick="setEpanetTool('valve')" title="Adicionar Válvula" id="epanet-tool-valve">
+                                <span>🔧</span>
+                            </button>
+                            <button class="epanet-tool-btn" onclick="setEpanetTool('delete')" title="Excluir" id="epanet-tool-delete">
+                                <span>🗑️</span>
+                            </button>
                         </div>
                     </div>
 
-                    <div id="epanet-quality-options" style="display: none;">
-                        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
-                        <h4 style="color: var(--accent-green); margin-bottom: 10px;">Opções de Qualidade da Água</h4>
+                    <!-- Network Elements Tree -->
+                    <div class="card" style="padding: 16px; margin-bottom: 16px; max-height: 300px; overflow-y: auto;">
+                        <h3 style="font-size: 0.9rem; margin-bottom: 12px; color: var(--text-secondary);">Elementos da Rede</h3>
+                        <div class="epanet-tree">
+                            <div class="epanet-tree-item" onclick="toggleEpanetTree(this)">
+                                <span>📍</span> Junções (<span id="epanet-junction-count">0</span>)
+                            </div>
+                            <div class="epanet-tree-children" id="epanet-junctions-list"></div>
 
-                        <div class="form-group">
-                            <label>Parâmetro de Qualidade</label>
-                            <select id="epanet-quality-param">
-                                <option value="chlorine">Cloro Residual</option>
-                                <option value="age">Idade da Água</option>
-                                <option value="trace">Rastreamento de Fonte</option>
+                            <div class="epanet-tree-item" onclick="toggleEpanetTree(this)">
+                                <span>🏊</span> Reservatórios (<span id="epanet-reservoir-count">0</span>)
+                            </div>
+                            <div class="epanet-tree-children" id="epanet-reservoirs-tree"></div>
+
+                            <div class="epanet-tree-item" onclick="toggleEpanetTree(this)">
+                                <span>🛢️</span> Tanques (<span id="epanet-tank-count">0</span>)
+                            </div>
+                            <div class="epanet-tree-children" id="epanet-tanks-tree"></div>
+
+                            <div class="epanet-tree-item" onclick="toggleEpanetTree(this)">
+                                <span>➖</span> Tubos (<span id="epanet-pipe-count">0</span>)
+                            </div>
+                            <div class="epanet-tree-children" id="epanet-pipes-tree"></div>
+
+                            <div class="epanet-tree-item" onclick="toggleEpanetTree(this)">
+                                <span>⚡</span> Bombas (<span id="epanet-pump-count">0</span>)
+                            </div>
+                            <div class="epanet-tree-children" id="epanet-pumps-tree"></div>
+
+                            <div class="epanet-tree-item" onclick="toggleEpanetTree(this)">
+                                <span>🔧</span> Válvulas (<span id="epanet-valve-count">0</span>)
+                            </div>
+                            <div class="epanet-tree-children" id="epanet-valves-tree"></div>
+                        </div>
+                    </div>
+
+                    <!-- Simulation Settings -->
+                    <div class="card" style="padding: 16px;">
+                        <h3 style="font-size: 0.9rem; margin-bottom: 12px; color: var(--text-secondary);">Configurações</h3>
+
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 0.8rem;">Tipo de Análise</label>
+                            <select id="epanet-analysis-type" style="padding: 8px; font-size: 0.85rem;">
+                                <option value="steady">Regime Permanente</option>
+                                <option value="extended">Período Estendido</option>
+                                <option value="quality">Qualidade da Água</option>
                             </select>
                         </div>
 
-                        <div class="form-group">
-                            <label>Concentração Inicial (mg/L)</label>
-                            <input type="number" id="epanet-initial-quality" value="1.0" min="0" max="10" step="0.1">
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 0.8rem;">Unidades de Vazão</label>
+                            <select id="epanet-flow-units" style="padding: 8px; font-size: 0.85rem;">
+                                <option value="LPS">LPS (L/s)</option>
+                                <option value="CMH">CMH (m³/h)</option>
+                                <option value="GPM">GPM</option>
+                            </select>
                         </div>
 
-                        <div class="form-group">
-                            <label>Taxa de Decaimento (1/dia)</label>
-                            <input type="number" id="epanet-decay-rate" value="0.5" min="0" max="5" step="0.1">
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 0.8rem;">Perda de Carga</label>
+                            <select id="epanet-headloss" style="padding: 8px; font-size: 0.85rem;">
+                                <option value="H-W">Hazen-Williams</option>
+                                <option value="D-W">Darcy-Weisbach</option>
+                                <option value="C-M">Chezy-Manning</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 0.8rem;">Duração (horas)</label>
+                            <input type="number" id="epanet-duration" value="24" min="1" max="720" style="padding: 8px; font-size: 0.85rem;">
                         </div>
                     </div>
                 </div>
 
-                <!-- Pumps, Valves, Reservoirs -->
-                <div class="card">
-                    <h2><span class="icon">⚙️</span> Elementos Especiais</h2>
+                <!-- Center - Canvas & Visualization -->
+                <div class="epanet-main" style="flex: 1; display: flex; flex-direction: column; gap: 16px;">
+                    <!-- Canvas Toolbar -->
+                    <div class="card" style="padding: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button class="btn btn-small" onclick="epanetZoomIn()" title="Zoom In">➕</button>
+                                <button class="btn btn-small" onclick="epanetZoomOut()" title="Zoom Out">➖</button>
+                                <button class="btn btn-small" onclick="epanetZoomFit()" title="Ajustar">🔲</button>
+                                <span style="color: var(--text-secondary); font-size: 0.85rem; margin-left: 8px;">
+                                    Zoom: <span id="epanet-zoom-level">100</span>%
+                                </span>
+                            </div>
 
-                    <!-- Reservoirs -->
-                    <h4 style="color: var(--accent-blue); margin-bottom: 10px;">Reservatórios</h4>
-                    <div id="epanet-reservoirs-list" class="node-list" style="max-height: 150px;">
-                        <div class="node-item">
-                            <input type="text" placeholder="ID" value="R1" style="width: 60px;">
-                            <input type="number" placeholder="Cota (m)" value="100" step="0.1">
-                            <input type="number" placeholder="Nível Inicial (m)" value="5" step="0.1">
-                            <input type="number" placeholder="Volume (m³)" value="1000" step="10">
-                            <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-primary btn-small" onclick="runEpanetSimulation()">
+                                    ▶️ Simular
+                                </button>
+                                <button class="btn btn-success btn-small" onclick="exportToEPANET()">
+                                    📤 Exportar .INP
+                                </button>
+                                <button class="btn btn-small" onclick="importEpanetINP()">
+                                    📥 Importar .INP
+                                </button>
+                                <button class="btn btn-small" onclick="loadNetworkToEpanet()">
+                                    📂 Carregar Rede
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <button class="btn btn-small btn-add" onclick="addEpanetReservoir()" style="margin-top: 10px;">+ Adicionar Reservatório</button>
 
-                    <!-- Pumps -->
-                    <h4 style="color: var(--accent-green); margin-bottom: 10px; margin-top: 20px;">Bombas</h4>
-                    <div id="epanet-pumps-list" class="node-list" style="max-height: 150px;"></div>
-                    <button class="btn btn-small btn-add" onclick="addEpanetPump()" style="margin-top: 10px;">+ Adicionar Bomba</button>
+                    <!-- Network Canvas -->
+                    <div class="card" style="flex: 1; padding: 0; position: relative; overflow: hidden; min-height: 400px;">
+                        <canvas id="epanet-network-canvas" style="width: 100%; height: 100%; cursor: crosshair;"></canvas>
+                        <div id="epanet-canvas-tooltip" style="display: none; position: absolute; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; font-size: 0.8rem; pointer-events: none; box-shadow: var(--shadow-md); z-index: 100;"></div>
+                    </div>
 
-                    <!-- Valves -->
-                    <h4 style="color: var(--accent-purple); margin-bottom: 10px; margin-top: 20px;">Válvulas</h4>
-                    <div id="epanet-valves-list" class="node-list" style="max-height: 150px;"></div>
-                    <button class="btn btn-small btn-add" onclick="addEpanetValve()" style="margin-top: 10px;">+ Adicionar Válvula</button>
+                    <!-- Results Tabs -->
+                    <div class="card" style="padding: 16px;" id="epanet-results-panel">
+                        <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                            <button class="epanet-result-tab active" onclick="showEpanetResultTab('summary')">📊 Resumo</button>
+                            <button class="epanet-result-tab" onclick="showEpanetResultTab('nodes')">📍 Nós</button>
+                            <button class="epanet-result-tab" onclick="showEpanetResultTab('links')">➖ Trechos</button>
+                            <button class="epanet-result-tab" onclick="showEpanetResultTab('charts')">📈 Gráficos</button>
+                        </div>
+
+                        <!-- Summary Tab -->
+                        <div id="epanet-result-summary" class="epanet-result-content active">
+                            <div class="summary-cards" style="margin-bottom: 0;">
+                                <div class="summary-card blue">
+                                    <div class="icon">💧</div>
+                                    <div class="value" id="epanet-total-demand">--</div>
+                                    <div class="label">Demanda Total (L/s)</div>
+                                </div>
+                                <div class="summary-card green">
+                                    <div class="icon">📈</div>
+                                    <div class="value" id="epanet-min-pressure">--</div>
+                                    <div class="label">Pressão Mín (mca)</div>
+                                </div>
+                                <div class="summary-card orange">
+                                    <div class="icon">📉</div>
+                                    <div class="value" id="epanet-max-velocity">--</div>
+                                    <div class="label">Velocidade Máx (m/s)</div>
+                                </div>
+                                <div class="summary-card purple">
+                                    <div class="icon">⚡</div>
+                                    <div class="value" id="epanet-total-headloss">--</div>
+                                    <div class="label">Perda Carga (m)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Nodes Tab -->
+                        <div id="epanet-result-nodes" class="epanet-result-content" style="display: none;">
+                            <div class="table-container" style="max-height: 250px; overflow-y: auto;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Tipo</th>
+                                            <th>Cota (m)</th>
+                                            <th>Demanda (L/s)</th>
+                                            <th>Carga (m)</th>
+                                            <th>Pressão (mca)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="epanet-nodes-results"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Links Tab -->
+                        <div id="epanet-result-links" class="epanet-result-content" style="display: none;">
+                            <div class="table-container" style="max-height: 250px; overflow-y: auto;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>De → Para</th>
+                                            <th>Comp. (m)</th>
+                                            <th>DN (mm)</th>
+                                            <th>Vazão (L/s)</th>
+                                            <th>Veloc. (m/s)</th>
+                                            <th>Perda (m/km)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="epanet-links-results"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Charts Tab -->
+                        <div id="epanet-result-charts" class="epanet-result-content" style="display: none;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div>
+                                    <h4 style="margin-bottom: 12px; font-size: 0.9rem;">Pressões nos Nós</h4>
+                                    <canvas id="epanet-pressure-chart" height="200"></canvas>
+                                </div>
+                                <div>
+                                    <h4 style="margin-bottom: 12px; font-size: 0.9rem;">Vazões nos Trechos</h4>
+                                    <canvas id="epanet-flow-chart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar - Properties Panel -->
+                <div class="epanet-properties" style="width: 300px; flex-shrink: 0;">
+                    <div class="card" style="padding: 16px;">
+                        <h3 style="font-size: 0.9rem; margin-bottom: 12px; color: var(--text-secondary);">
+                            Propriedades
+                            <span id="epanet-selected-type" style="color: var(--accent-blue);"></span>
+                        </h3>
+
+                        <div id="epanet-properties-empty" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                            <span style="font-size: 2rem;">🔍</span>
+                            <p style="margin-top: 12px;">Selecione um elemento<br>para ver suas propriedades</p>
+                        </div>
+
+                        <!-- Junction Properties -->
+                        <div id="epanet-props-junction" class="epanet-props-panel" style="display: none;">
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">ID</label>
+                                <input type="text" id="epanet-prop-junction-id" style="padding: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Coordenada X</label>
+                                <input type="number" id="epanet-prop-junction-x" step="0.01" style="padding: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Coordenada Y</label>
+                                <input type="number" id="epanet-prop-junction-y" step="0.01" style="padding: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Elevação (m)</label>
+                                <input type="number" id="epanet-prop-junction-elev" step="0.1" style="padding: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Demanda Base (L/s)</label>
+                                <input type="number" id="epanet-prop-junction-demand" step="0.01" value="0" style="padding: 8px;">
+                            </div>
+                            <button class="btn btn-primary btn-small" onclick="applyEpanetJunctionProps()" style="width: 100%; margin-top: 12px;">Aplicar</button>
+                        </div>
+
+                        <!-- Pipe Properties -->
+                        <div id="epanet-props-pipe" class="epanet-props-panel" style="display: none;">
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">ID</label>
+                                <input type="text" id="epanet-prop-pipe-id" style="padding: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Nó Inicial</label>
+                                <select id="epanet-prop-pipe-start" style="padding: 8px;"></select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Nó Final</label>
+                                <select id="epanet-prop-pipe-end" style="padding: 8px;"></select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Comprimento (m)</label>
+                                <input type="number" id="epanet-prop-pipe-length" step="0.1" style="padding: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Diâmetro (mm)</label>
+                                <select id="epanet-prop-pipe-diameter" style="padding: 8px;">
+                                    <option value="50">DN 50</option>
+                                    <option value="75">DN 75</option>
+                                    <option value="100">DN 100</option>
+                                    <option value="150" selected>DN 150</option>
+                                    <option value="200">DN 200</option>
+                                    <option value="250">DN 250</option>
+                                    <option value="300">DN 300</option>
+                                    <option value="400">DN 400</option>
+                                    <option value="500">DN 500</option>
+                                    <option value="600">DN 600</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Rugosidade (C)</label>
+                                <input type="number" id="epanet-prop-pipe-roughness" value="140" step="1" style="padding: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Material</label>
+                                <select id="epanet-prop-pipe-material" style="padding: 8px;">
+                                    <option value="PVC">PVC</option>
+                                    <option value="PEAD">PEAD</option>
+                                    <option value="FoFo">Ferro Fundido</option>
+                                    <option value="Aco">Aço</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Status</label>
+                                <select id="epanet-prop-pipe-status" style="padding: 8px;">
+                                    <option value="Open">Aberto</option>
+                                    <option value="Closed">Fechado</option>
+                                    <option value="CV">Check Valve</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary btn-small" onclick="applyEpanetPipeProps()" style="width: 100%; margin-top: 12px;">Aplicar</button>
+                        </div>
+
+                        <!-- Reservoir Properties -->
+                        <div id="epanet-props-reservoir" class="epanet-props-panel" style="display: none;">
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">ID</label>
+                                <input type="text" id="epanet-prop-reservoir-id" style="padding: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Carga Total (m)</label>
+                                <input type="number" id="epanet-prop-reservoir-head" step="0.1" style="padding: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Padrão de Carga</label>
+                                <select id="epanet-prop-reservoir-pattern" style="padding: 8px;">
+                                    <option value="">Nenhum</option>
+                                    <option value="PAT1">Padrão 1</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary btn-small" onclick="applyEpanetReservoirProps()" style="width: 100%; margin-top: 12px;">Aplicar</button>
+                        </div>
+
+                        <!-- Pump Properties -->
+                        <div id="epanet-props-pump" class="epanet-props-panel" style="display: none;">
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">ID</label>
+                                <input type="text" id="epanet-prop-pump-id" style="padding: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Nó Inicial</label>
+                                <select id="epanet-prop-pump-start" style="padding: 8px;"></select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Nó Final</label>
+                                <select id="epanet-prop-pump-end" style="padding: 8px;"></select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Potência (kW)</label>
+                                <input type="number" id="epanet-prop-pump-power" step="0.1" style="padding: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">Curva da Bomba</label>
+                                <select id="epanet-prop-pump-curve" style="padding: 8px;">
+                                    <option value="">Potência Constante</option>
+                                    <option value="PUMP1">Curva 1</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary btn-small" onclick="applyEpanetPumpProps()" style="width: 100%; margin-top: 12px;">Aplicar</button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="card" style="padding: 16px; margin-top: 16px;">
+                        <h3 style="font-size: 0.9rem; margin-bottom: 12px; color: var(--text-secondary);">Estatísticas da Rede</h3>
+                        <div style="display: grid; gap: 8px; font-size: 0.85rem;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Junções:</span>
+                                <strong id="epanet-stat-junctions">0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Reservatórios:</span>
+                                <strong id="epanet-stat-reservoirs">0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Tanques:</span>
+                                <strong id="epanet-stat-tanks">0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Tubos:</span>
+                                <strong id="epanet-stat-pipes">0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Bombas:</span>
+                                <strong id="epanet-stat-pumps">0</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Válvulas:</span>
+                                <strong id="epanet-stat-valves">0</strong>
+                            </div>
+                            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 8px 0;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Extensão Total:</span>
+                                <strong><span id="epanet-stat-length">0</span> m</strong>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- EPANET Actions -->
-            <div class="card" style="margin-top: 20px;">
-                <h2><span class="icon">🔬</span> Simulação e Resultados</h2>
-                <div class="actions" style="justify-content: flex-start; margin: 0;">
-                    <button class="btn btn-primary" onclick="runEpanetSimulation()">
-                        <span>▶️</span> Executar Simulação
-                    </button>
-                    <button class="btn btn-success" onclick="exportToEPANET()">
-                        <span>📤</span> Exportar .INP
-                    </button>
-                    <button class="btn" style="background: var(--bg-secondary);" onclick="importEpanetINP()">
-                        <span>📥</span> Importar .INP
-                    </button>
-                </div>
-                <div id="epanet-status" style="margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px; display: none;"></div>
-            </div>
+            <!-- EPANET Module Styles -->
+            <style>
+                .epanet-tool-btn {
+                    width: 40px;
+                    height: 40px;
+                    border: 2px solid var(--border-color);
+                    border-radius: var(--radius-md);
+                    background: var(--bg-secondary);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.1rem;
+                    transition: var(--transition-fast);
+                }
+                .epanet-tool-btn:hover {
+                    border-color: var(--accent-blue);
+                    background: var(--accent-blue-light);
+                }
+                .epanet-tool-btn.active {
+                    border-color: var(--accent-blue);
+                    background: var(--accent-blue);
+                    color: white;
+                }
+                .epanet-tree-item {
+                    padding: 8px 12px;
+                    cursor: pointer;
+                    border-radius: var(--radius-sm);
+                    font-size: 0.85rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .epanet-tree-item:hover {
+                    background: var(--bg-hover);
+                }
+                .epanet-tree-children {
+                    display: none;
+                    padding-left: 24px;
+                    font-size: 0.8rem;
+                }
+                .epanet-tree-children.open {
+                    display: block;
+                }
+                .epanet-tree-child {
+                    padding: 4px 8px;
+                    cursor: pointer;
+                    border-radius: var(--radius-sm);
+                }
+                .epanet-tree-child:hover {
+                    background: var(--bg-hover);
+                }
+                .epanet-result-tab {
+                    padding: 8px 16px;
+                    border: none;
+                    background: transparent;
+                    cursor: pointer;
+                    font-size: 0.85rem;
+                    color: var(--text-secondary);
+                    border-radius: var(--radius-sm);
+                    transition: var(--transition-fast);
+                }
+                .epanet-result-tab:hover {
+                    background: var(--bg-hover);
+                }
+                .epanet-result-tab.active {
+                    background: var(--accent-blue);
+                    color: white;
+                }
+                .epanet-result-content {
+                    display: none;
+                }
+                .epanet-result-content.active {
+                    display: block;
+                }
 
-            <!-- EPANET Results -->
-            <div id="epanet-results" class="card" style="margin-top: 20px; display: none;">
-                <h2><span class="icon">📊</span> Resultados da Simulação</h2>
-
-                <div class="summary-cards" style="margin-bottom: 20px;">
-                    <div class="summary-card blue">
-                        <div class="icon">💧</div>
-                        <div class="value" id="epanet-total-demand">--</div>
-                        <div class="label">Demanda Total (L/s)</div>
-                    </div>
-                    <div class="summary-card green">
-                        <div class="icon">📈</div>
-                        <div class="value" id="epanet-min-pressure">--</div>
-                        <div class="label">Pressão Mínima (mca)</div>
-                    </div>
-                    <div class="summary-card orange">
-                        <div class="icon">📉</div>
-                        <div class="value" id="epanet-max-velocity">--</div>
-                        <div class="label">Velocidade Máx (m/s)</div>
-                    </div>
-                    <div class="summary-card purple">
-                        <div class="icon">⚡</div>
-                        <div class="value" id="epanet-total-headloss">--</div>
-                        <div class="label">Perda de Carga Total (m)</div>
-                    </div>
-                </div>
-
-                <div class="chart-container">
-                    <h3>Pressões na Rede</h3>
-                    <canvas id="epanet-pressure-chart"></canvas>
-                </div>
-
-                <div class="table-container" style="margin-top: 20px;">
-                    <h3 style="margin-bottom: 15px;">Resultados por Nó</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Cota (m)</th>
-                                <th>Demanda (L/s)</th>
-                                <th>Carga (m)</th>
-                                <th>Pressão (mca)</th>
-                                <th>Qualidade</th>
-                            </tr>
-                        </thead>
-                        <tbody id="epanet-nodes-results"></tbody>
-                    </table>
-                </div>
-
-                <div class="table-container" style="margin-top: 20px;">
-                    <h3 style="margin-bottom: 15px;">Resultados por Trecho</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>De → Para</th>
-                                <th>Vazão (L/s)</th>
-                                <th>Velocidade (m/s)</th>
-                                <th>Perda Unit. (m/km)</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="epanet-links-results"></tbody>
-                    </table>
-                </div>
-            </div>
+                /* Responsive for EPANET Module */
+                @media (max-width: 1200px) {
+                    .epanet-module {
+                        flex-direction: column;
+                    }
+                    .epanet-sidebar, .epanet-properties {
+                        width: 100% !important;
+                    }
+                }
+            </style>
         </div>
 
         <!-- SWMM MODULE TAB -->
