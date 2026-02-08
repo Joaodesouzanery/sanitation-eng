@@ -2791,6 +2791,27 @@ PV02,359290.456,7352780.123,1.82</pre>
                     const reat = reatItem ? reatItem.quantidade : 0;
                     const pav = pavItem ? pavItem.quantidade : 0;
 
+                    // Determine shoring text
+                    let escoradoText = 'NAO';
+                    if (costData.escorado) {
+                        const tipoEsc = costData.tipoEscoramento || 'continuo';
+                        const tipoMap = {
+                            'continuo': 'CONT_MAD',
+                            'pontaletes': 'PONTAL',
+                            'metalico': 'METALICO',
+                            'estacas': 'EST_PRAN'
+                        };
+                        escoradoText = tipoMap[tipoEsc] || 'SIM';
+                    }
+
+                    // Determine soil type text
+                    const soloMap = {
+                        '1cat': '1a CAT',
+                        '2cat': '2a CAT',
+                        '3cat': '3a CAT'
+                    };
+                    const soloText = soloMap[costData.tipoSolo] || '1a CAT';
+
                     dbfRecords.push({
                         TRECHO: `T${String(idx+1).padStart(2,'0')}`,
                         DE: link.from.substring(0, 20),
@@ -2798,6 +2819,8 @@ PV02,359290.456,7352780.123,1.82</pre>
                         COMP_M: link.length,
                         DN_MM: costData.dn || 150,
                         PROF_M: costData.profMedia || 1.5,
+                        SOLO: soloText,
+                        ESCORADO: escoradoText,
                         ESCAV_M3: escav,
                         REAT_M3: reat,
                         PAV_M2: pav,
@@ -2812,6 +2835,8 @@ PV02,359290.456,7352780.123,1.82</pre>
                         COMP_M: link.length,
                         DN_MM: 150,
                         PROF_M: 1.5,
+                        SOLO: '1a CAT',
+                        ESCORADO: 'NAO',
                         ESCAV_M3: 0,
                         REAT_M3: 0,
                         PAV_M2: 0,
@@ -2842,7 +2867,7 @@ PV02,359290.456,7352780.123,1.82</pre>
                 offset += part.byteLength;
             });
 
-            // DBF fields matching the table: Trecho, De, Para, Comp(m), DN(mm), Prof(m), Escav(m³), Reat(m³), Pav(m²), Custo(R$)
+            // DBF fields: Trecho, De, Para, Comp, DN, Prof, Solo, Escorado, Escav, Reat, Pav, Custo
             const dbf = createDBF(dbfRecords, [
                 { name: 'TRECHO', type: 'C', length: 10 },
                 { name: 'DE', type: 'C', length: 20 },
@@ -2850,6 +2875,8 @@ PV02,359290.456,7352780.123,1.82</pre>
                 { name: 'COMP_M', type: 'N', length: 12, decimals: 2 },
                 { name: 'DN_MM', type: 'N', length: 6, decimals: 0 },
                 { name: 'PROF_M', type: 'N', length: 10, decimals: 2 },
+                { name: 'SOLO', type: 'C', length: 10 },
+                { name: 'ESCORADO', type: 'C', length: 10 },
                 { name: 'ESCAV_M3', type: 'N', length: 12, decimals: 2 },
                 { name: 'REAT_M3', type: 'N', length: 12, decimals: 2 },
                 { name: 'PAV_M2', type: 'N', length: 12, decimals: 2 },
@@ -2918,44 +2945,91 @@ PV02,359290.456,7352780.123,1.82</pre>
             return bytes;
         }
 
+        // Função auxiliar para obter nós e links ativos baseado no tipo de rede
+        function getActiveNodesAndLinks() {
+            const networkType = document.getElementById('import-network-type')?.value || 'sewer';
+
+            let nodes = [];
+            let links = [];
+
+            // Verificar qual aba está ativa ou qual tem dados
+            if (networkType === 'sewer' && sewerNodes.length > 0) {
+                nodes = sewerNodes;
+                links = sewerLinks;
+                console.log('Usando dados de Esgoto:', nodes.length, 'nós,', links.length, 'trechos');
+            } else if (networkType === 'water' && waterNodes.length > 0) {
+                nodes = waterNodes;
+                links = waterLinks;
+                console.log('Usando dados de Água:', nodes.length, 'nós,', links.length, 'trechos');
+            } else if (networkType === 'drainage' && drainageNodes.length > 0) {
+                nodes = drainageNodes;
+                links = drainageLinks;
+                console.log('Usando dados de Drenagem:', nodes.length, 'nós,', links.length, 'trechos');
+            } else if (importedNodes.length > 0) {
+                nodes = importedNodes;
+                links = previewLinks.length > 0 ? previewLinks : generateLinksFromNodes(importedNodes, 'sequential');
+                console.log('Usando dados importados:', nodes.length, 'nós,', links.length, 'trechos');
+            }
+
+            return { nodes, links, networkType };
+        }
+
         async function exportToSHP() {
-            if (importedNodes.length === 0) {
-                alert('Importe dados primeiro.');
+            const { nodes, links, networkType } = getActiveNodesAndLinks();
+
+            if (nodes.length === 0) {
+                alert('Importe dados ou adicione nós primeiro.');
                 return;
             }
 
-            if (previewLinks.length === 0) {
-                generatePreviewLinks();
+            if (links.length === 0) {
+                alert('Adicione trechos primeiro ou clique em "Gerar Trechos".');
+                return;
             }
 
             try {
                 const zip = new JSZip();
 
+                // Get execution parameters for shoring info
+                const execParams = getExecutionParams();
+
                 // Calculate costs for export
-                const networkType = document.getElementById('import-network-type').value;
-                const linksWithData = previewLinks.map((link, idx) => {
-                    const fromNode = importedNodes.find(n => n.id === link.from);
-                    const toNode = importedNodes.find(n => n.id === link.to);
+                const linksWithData = links.map((link, idx) => {
+                    const fromNode = nodes.find(n => n.id === link.from);
+                    const toNode = nodes.find(n => n.id === link.to);
                     const dz = fromNode && toNode ? Math.abs(fromNode.z - toNode.z) : 0;
                     let dn = networkType === 'drainage' ? 400 : (networkType === 'water' ? 75 : 150 + Math.floor(idx / 3) * 50);
+                    const profUp = 1.0 + (Math.random() * 0.3);
+                    const profDown = 1.3 + dz * 0.5;
+                    const profMedia = (profUp + profDown) / 2;
+
                     return {
                         ...link,
                         DN: Math.min(dn, 400),
-                        profUp: 1.0 + (Math.random() * 0.3),
-                        profDown: 1.3 + dz * 0.5
+                        profUp: profUp,
+                        profDown: profDown,
+                        profMedia: profMedia,
+                        escorado: execParams.shoringEnabled && profMedia > execParams.shoringMinDepth
                     };
                 });
                 const custos = calculateAllCosts(linksWithData, networkType);
 
+                // Add shoring info to cost data
+                custos.trechos.forEach((t, idx) => {
+                    t.escorado = linksWithData[idx]?.escorado || false;
+                    t.tipoEscoramento = execParams.shoringEnabled ? execParams.shoringType : 'nenhum';
+                    t.tipoSolo = execParams.soilType;
+                });
+
                 // Create points shapefile
-                const points = createShapefilePoints(importedNodes);
+                const points = createShapefilePoints(nodes);
                 zip.file("pontos_rede.shp", points.shp);
                 zip.file("pontos_rede.shx", points.shx);
                 zip.file("pontos_rede.dbf", points.dbf);
                 zip.file("pontos_rede.prj", points.prj);
 
                 // Create lines shapefile with costs
-                const lines = createShapefileLines(importedNodes, previewLinks, custos.trechos);
+                const lines = createShapefileLines(nodes, links, custos.trechos);
                 zip.file("trechos_rede.shp", lines.shp);
                 zip.file("trechos_rede.shx", lines.shx);
                 zip.file("trechos_rede.dbf", lines.dbf);
@@ -2973,21 +3047,23 @@ PV02,359290.456,7352780.123,1.82</pre>
         }
 
         function exportToIFC() {
-            if (importedNodes.length === 0) {
-                alert('Importe dados primeiro.');
+            const { nodes, links, networkType } = getActiveNodesAndLinks();
+
+            if (nodes.length === 0) {
+                alert('Importe dados ou adicione nós primeiro.');
                 return;
             }
 
             // Generate links if not done
-            if (previewLinks.length === 0) {
-                generatePreviewLinks();
+            if (links.length === 0) {
+                alert('Adicione trechos primeiro.');
+                return;
             }
 
             // Calculate costs for export
-            const networkType = document.getElementById('import-network-type').value;
-            const linksWithData = previewLinks.map((link, idx) => {
-                const fromNode = importedNodes.find(n => n.id === link.from);
-                const toNode = importedNodes.find(n => n.id === link.to);
+            const linksWithData = links.map((link, idx) => {
+                const fromNode = nodes.find(n => n.id === link.from);
+                const toNode = nodes.find(n => n.id === link.to);
                 return {
                     from: link.from,
                     to: link.to,
