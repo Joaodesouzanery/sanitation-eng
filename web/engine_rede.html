@@ -3257,6 +3257,14 @@ PV02,359290.456,7352780.123,1.82</pre>
                 </div>
             </div>
 
+            <!-- SWMM Network Visualization -->
+            <div class="card" style="margin-top: 20px;">
+                <h2><span class="icon">🗺️</span> Visualização da Rede de Drenagem</h2>
+                <div style="position: relative; width: 100%; height: 400px; background: #0f172a; border-radius: 8px; overflow: hidden;">
+                    <canvas id="swmm-network-canvas" style="width: 100%; height: 100%;"></canvas>
+                </div>
+            </div>
+
             <!-- SWMM Actions -->
             <div class="card" style="margin-top: 20px;">
                 <h2><span class="icon">🔬</span> Simulação e Resultados</h2>
@@ -8428,12 +8436,15 @@ DATA;
             } else if (tab === 'epanet') {
                 // Load platform data into EPANET module
                 loadEpanetModuleData();
+                setTimeout(renderEpanetCanvas, 150);
             } else if (tab === 'swmm') {
                 // Load platform data into SWMM module
                 loadSwmmModuleData();
+                setTimeout(renderSwmmCanvas, 150);
             } else if (tab === 'openproject') {
                 // Load planning data and render Gantt chart
                 loadOpenProjectModuleData();
+                setTimeout(renderGanttChart, 150);
             } else if (tab === 'qgis') {
                 // Load all data for QGIS export
                 loadQgisModuleData();
@@ -10661,60 +10672,161 @@ DATA;
             return wbs;
         }
 
+        // ============================================
+        // CRONOGRAMA POR METRO - SAME-DAY COMPLETION
+        // ============================================
+        // REGRA FUNDAMENTAL: Em obras de saneamento, não se pode deixar vala aberta.
+        // Cada segmento escavado DEVE ser completado no mesmo dia:
+        // Escavação → Nivelamento → Assentamento → Escoramento → Reaterro → Base
+
         function generateSchedule(wbs, numTeams, teamConfig) {
             const schedule = [];
-            let currentDay = 1;
             let teamAssignments = Array(numTeams).fill(0); // Day each team is free
 
-            // Get productivity lookup
-            const prodLookup = {};
-            planningData.productivity.forEach(p => {
-                prodLookup[p.servico.toLowerCase()] = p.produtividade;
-            });
+            // Produtividade por metro linear (considerando todas as atividades do ciclo)
+            // Baseado em equipe padrão: 1 encarregado, 2 oficiais, 4 ajudantes, 1 operador
+            const getMetrosDiarios = (profundidade, diametro, teamConfig) => {
+                // Base: metros/dia que uma equipe consegue completar o ciclo inteiro
+                let baseMetros = 12; // metros/dia em condições normais (prof < 1.5m, DN150)
 
-            // Group WBS by trecho
-            const byTrecho = {};
+                // Ajuste por profundidade (quanto mais fundo, mais lento)
+                if (profundidade > 3.0) baseMetros *= 0.5;      // Muito profundo
+                else if (profundidade > 2.5) baseMetros *= 0.6; // Profundo
+                else if (profundidade > 2.0) baseMetros *= 0.7; // Médio-profundo
+                else if (profundidade > 1.5) baseMetros *= 0.85; // Médio
+
+                // Ajuste por diâmetro (tubos maiores = mais lento)
+                if (diametro > 400) baseMetros *= 0.6;
+                else if (diametro > 300) baseMetros *= 0.75;
+                else if (diametro > 200) baseMetros *= 0.9;
+
+                // Ajuste por equipamentos
+                if (!teamConfig.hasRetro) baseMetros *= 0.4; // Sem retroescavadeira = muito lento
+                if (!teamConfig.hasCompactor) baseMetros *= 0.8; // Sem compactador
+                if (teamConfig.hasPump) baseMetros *= 1.1; // Com bomba para rebaixamento
+
+                // Ajuste por tamanho da equipe
+                const oficiais = teamConfig.oficiais || 2;
+                const ajudantes = teamConfig.ajudantes || 4;
+                if (oficiais >= 3 && ajudantes >= 6) baseMetros *= 1.2;
+                else if (oficiais < 2 || ajudantes < 3) baseMetros *= 0.7;
+
+                return Math.max(3, Math.round(baseMetros)); // Mínimo 3 metros/dia
+            };
+
+            // Agrupa WBS por trecho e extrai info do trecho
+            const trechosInfo = {};
             wbs.forEach(item => {
-                if (!byTrecho[item.trecho_id]) byTrecho[item.trecho_id] = [];
-                byTrecho[item.trecho_id].push(item);
+                if (!trechosInfo[item.trecho_id]) {
+                    trechosInfo[item.trecho_id] = {
+                        trecho_id: item.trecho_id,
+                        items: [],
+                        comprimento: 0,
+                        profundidade: item.profundidade || 1.5,
+                        diametro: item.diametro || 150
+                    };
+                }
+                trechosInfo[item.trecho_id].items.push(item);
+                // Pega comprimento do assentamento
+                if (item.activity.toLowerCase().includes('assenta') && item.unidade === 'm') {
+                    trechosInfo[item.trecho_id].comprimento = item.quantidade;
+                }
             });
 
-            Object.values(byTrecho).forEach(trechoItems => {
-                // Find next available team
+            // Processa cada trecho
+            Object.values(trechosInfo).forEach(trecho => {
+                const comprimento = trecho.comprimento || 50;
+                const profundidade = trecho.profundidade;
+                const diametro = trecho.diametro;
+
+                // Calcula metros por dia para este trecho
+                const metrosDia = getMetrosDiarios(profundidade, diametro, teamConfig);
+
+                // Calcula quantos dias são necessários para este trecho
+                const diasNecessarios = Math.ceil(comprimento / metrosDia);
+
+                // Encontra próxima equipe disponível
                 const teamIdx = teamAssignments.indexOf(Math.min(...teamAssignments));
-                let trechoStartDay = teamAssignments[teamIdx];
+                const startDay = teamAssignments[teamIdx] + 1;
 
-                trechoItems.forEach(item => {
-                    // Find productivity
-                    let productivity = 10; // default
-                    for (const [key, prod] of Object.entries(prodLookup)) {
-                        if (item.activity.toLowerCase().includes(key.split(' ')[0])) {
-                            productivity = prod;
-                            break;
-                        }
-                    }
+                // Cria um registro por dia de trabalho neste trecho
+                for (let dia = 0; dia < diasNecessarios; dia++) {
+                    const metrosHoje = (dia === diasNecessarios - 1)
+                        ? comprimento - (dia * metrosDia) // Último dia: metros restantes
+                        : metrosDia;
 
-                    // Calculate duration
-                    const efficiency = item.profundidade > 2 ? 0.8 : 1.0;
-                    const duration = Math.ceil(item.quantidade / (productivity * efficiency));
+                    const dayNumber = startDay + dia;
+                    const segmentoId = `${trecho.trecho_id}.D${dia + 1}`;
 
-                    schedule.push({
-                        wbs_id: item.wbs_id,
-                        trecho_id: item.trecho_id,
-                        activity: item.activity,
-                        quantidade: item.quantidade,
-                        unidade: item.unidade,
-                        start_day: trechoStartDay + 1,
-                        end_day: trechoStartDay + duration,
-                        duration: duration,
-                        team: teamIdx + 1,
-                        productivity: productivity
+                    // Calcula quantidades proporcionais aos metros do dia
+                    const proporcao = metrosHoje / comprimento;
+                    const larguraVala = Math.max(0.6, diametro / 1000 + 0.4);
+                    const volEscDia = metrosHoje * larguraVala * profundidade;
+                    const volReatDia = volEscDia * 0.7;
+                    const areaPavDia = metrosHoje * (larguraVala + 0.2);
+
+                    // TODAS as atividades acontecem NO MESMO DIA para este segmento
+                    const atividadesDia = [
+                        { nome: 'Escavação', qtd: volEscDia, und: 'm³', ordem: 1 },
+                        { nome: 'Nivelamento fundo', qtd: metrosHoje, und: 'm', ordem: 2 },
+                        { nome: `Assentamento DN${diametro}`, qtd: metrosHoje, und: 'm', ordem: 3 },
+                        { nome: 'Escoramento', qtd: metrosHoje * 2, und: 'm²', ordem: 4 },
+                        { nome: 'Reaterro compactado', qtd: volReatDia, und: 'm³', ordem: 5 },
+                        { nome: 'Base/Berço', qtd: metrosHoje, und: 'm', ordem: 6 }
+                    ];
+
+                    atividadesDia.forEach(ativ => {
+                        schedule.push({
+                            wbs_id: `${segmentoId}.${ativ.ordem}`,
+                            trecho_id: trecho.trecho_id,
+                            segmento_id: segmentoId,
+                            activity: ativ.nome,
+                            quantidade: ativ.qtd,
+                            unidade: ativ.und,
+                            metros_dia: metrosHoje,
+                            start_day: dayNumber,
+                            end_day: dayNumber, // MESMO DIA - regra fundamental
+                            duration: 1,
+                            team: teamIdx + 1,
+                            profundidade: profundidade,
+                            diametro: diametro,
+                            ordem_execucao: ativ.ordem
+                        });
                     });
+                }
 
-                    trechoStartDay += duration;
+                // Atualiza quando esta equipe estará livre
+                teamAssignments[teamIdx] = startDay + diasNecessarios - 1;
+            });
+
+            // Adiciona atividades de teste hidrostático (após conclusão de cada trecho)
+            const trechosConcluidos = {};
+            schedule.forEach(s => {
+                if (!trechosConcluidos[s.trecho_id] || s.end_day > trechosConcluidos[s.trecho_id]) {
+                    trechosConcluidos[s.trecho_id] = s.end_day;
+                }
+            });
+
+            Object.entries(trechosConcluidos).forEach(([trechoId, lastDay]) => {
+                schedule.push({
+                    wbs_id: `${trechoId}.TESTE`,
+                    trecho_id: trechoId,
+                    activity: 'Teste hidrostático',
+                    quantidade: 1,
+                    unidade: 'vb',
+                    start_day: lastDay + 1,
+                    end_day: lastDay + 1,
+                    duration: 1,
+                    team: 0, // Equipe especial
+                    ordem_execucao: 99
                 });
+            });
 
-                teamAssignments[teamIdx] = trechoStartDay;
+            // Ordena por dia e ordem de execução
+            schedule.sort((a, b) => {
+                if (a.start_day !== b.start_day) return a.start_day - b.start_day;
+                if (a.trecho_id !== b.trecho_id) return a.trecho_id.localeCompare(b.trecho_id);
+                return (a.ordem_execucao || 0) - (b.ordem_execucao || 0);
             });
 
             return schedule;
@@ -10722,23 +10834,51 @@ DATA;
 
         function generateDailyPlan(schedule, teamConfig) {
             const dailyPlan = [];
-            const totalDays = Math.max(...schedule.map(s => s.end_day));
+            const totalDays = Math.max(...schedule.map(s => s.end_day), 1);
+
+            // Agrupa por dia
+            const byDay = {};
+            schedule.forEach(s => {
+                if (!byDay[s.start_day]) byDay[s.start_day] = [];
+                byDay[s.start_day].push(s);
+            });
+
+            // Calcula custos da equipe
+            const laborCount = (teamConfig.encarregado || 1) + (teamConfig.oficiais || 2) +
+                              (teamConfig.ajudantes || 4) + (teamConfig.operador || 1);
+            const laborCost = laborCount * 180; // Custo médio diário por trabalhador
+            const equipCost = (teamConfig.hasRetro ? 450 : 0) + (teamConfig.hasCompactor ? 120 : 0) +
+                              (teamConfig.hasTruck ? 350 : 0) + (teamConfig.hasPump ? 200 : 0);
 
             for (let day = 1; day <= totalDays; day++) {
-                const dayActivities = schedule.filter(s => s.start_day <= day && s.end_day >= day);
+                const dayActivities = byDay[day] || [];
 
+                // Agrupa por trecho/segmento para mostrar resumo do dia
+                const segmentos = {};
                 dayActivities.forEach(act => {
-                    const laborCount = teamConfig.encarregado + teamConfig.oficiais + teamConfig.ajudantes + teamConfig.operador;
-                    const laborCost = laborCount * 180; // Average daily cost per worker
-                    const equipCost = (teamConfig.hasRetro ? 450 : 0) + (teamConfig.hasCompactor ? 120 : 0) +
-                                      (teamConfig.hasTruck ? 350 : 0) + (teamConfig.hasPump ? 200 : 0);
+                    const segId = act.segmento_id || act.trecho_id;
+                    if (!segmentos[segId]) {
+                        segmentos[segId] = {
+                            trecho_id: act.trecho_id,
+                            segmento_id: segId,
+                            metros: act.metros_dia || 0,
+                            activities: [],
+                            team: act.team
+                        };
+                    }
+                    segmentos[segId].activities.push(act.activity);
+                });
 
+                // Cria entrada consolidada por segmento
+                Object.values(segmentos).forEach(seg => {
                     dailyPlan.push({
                         day: day,
-                        trecho_id: act.trecho_id,
-                        activity: act.activity,
-                        team: act.team,
-                        production: act.productivity,
+                        trecho_id: seg.trecho_id,
+                        segmento_id: seg.segmento_id,
+                        activity: `Ciclo completo (${seg.metros.toFixed(1)}m)`,
+                        activities_detail: seg.activities,
+                        metros_executados: seg.metros,
+                        team: seg.team,
                         labor: laborCount,
                         equipment: Object.entries(teamConfig).filter(([k, v]) => k.startsWith('has') && v).length,
                         daily_cost: laborCost + equipCost
@@ -10789,51 +10929,119 @@ DATA;
 
         function renderSimpleGantt(schedule, totalDays) {
             const container = document.getElementById('schedule-gantt');
-            const trechos = [...new Set(schedule.map(s => s.trecho_id))];
-            const dayWidth = Math.max(20, Math.min(40, 600 / totalDays));
+            if (!container) return;
 
-            // Add legend first
+            const trechos = [...new Set(schedule.map(s => s.trecho_id))];
+            const dayWidth = Math.max(25, Math.min(45, 800 / totalDays));
+
+            // Agrupa por trecho e dia para mostrar ciclo completo
+            const trechosDias = {};
+            schedule.forEach(s => {
+                const key = `${s.trecho_id}_${s.start_day}`;
+                if (!trechosDias[key]) {
+                    trechosDias[key] = {
+                        trecho_id: s.trecho_id,
+                        day: s.start_day,
+                        metros: s.metros_dia || 0,
+                        activities: [],
+                        team: s.team
+                    };
+                }
+                if (!trechosDias[key].activities.includes(s.activity)) {
+                    trechosDias[key].activities.push(s.activity);
+                }
+                if (s.metros_dia) trechosDias[key].metros = s.metros_dia;
+            });
+
+            // Nova legenda para modelo de ciclo completo
             let html = `
-                <div style="display: flex; gap: 15px; margin-bottom: 15px; padding: 10px; background: var(--bg-primary); border-radius: 6px; flex-wrap: wrap;">
-                    <span style="font-weight: bold; color: var(--text-secondary); font-size: 0.8rem;">Legenda:</span>
-                    <span style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem;">
-                        <span style="width: 16px; height: 12px; background: var(--accent-orange); border-radius: 2px;"></span> Escavação
+                <div style="display: flex; gap: 15px; margin-bottom: 15px; padding: 12px; background: var(--bg-primary); border-radius: 8px; flex-wrap: wrap; align-items: center;">
+                    <span style="font-weight: bold; color: var(--text-secondary); font-size: 0.85rem;">Legenda (Ciclo Completo/Dia):</span>
+                    <span style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;">
+                        <span style="width: 20px; height: 16px; background: linear-gradient(90deg, var(--accent-orange), var(--accent-blue), var(--accent-green)); border-radius: 3px;"></span>
+                        Execução (Esc→Ass→Reat)
                     </span>
-                    <span style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem;">
-                        <span style="width: 16px; height: 12px; background: var(--accent-blue); border-radius: 2px;"></span> Assentamento
+                    <span style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;">
+                        <span style="width: 20px; height: 16px; background: var(--accent-red); border-radius: 3px;"></span>
+                        Teste Hidrostático
                     </span>
-                    <span style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem;">
-                        <span style="width: 16px; height: 12px; background: var(--accent-green); border-radius: 2px;"></span> Reaterro
-                    </span>
-                    <span style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem;">
-                        <span style="width: 16px; height: 12px; background: var(--accent-purple); border-radius: 2px;"></span> Pavimentação
-                    </span>
-                    <span style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem;">
-                        <span style="width: 16px; height: 12px; background: var(--accent-red); border-radius: 2px;"></span> Teste
+                    <span style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; margin-left: auto; padding: 4px 10px; background: var(--accent-blue-light); border-radius: 4px;">
+                        ⚠️ Vala fechada no mesmo dia
                     </span>
                 </div>
             `;
 
-            html += `<div style="display: flex; gap: 5px; margin-bottom: 10px; font-size: 0.75rem; color: var(--text-secondary);">
-                <div style="width: 100px;">Trecho</div>
-                ${Array.from({length: totalDays}, (_, i) => `<div style="width: ${dayWidth}px; text-align: center;">${i + 1}</div>`).join('')}
+            // Cabeçalho com dias
+            html += `<div style="display: flex; gap: 3px; margin-bottom: 8px; font-size: 0.75rem; color: var(--text-secondary); position: sticky; top: 0; background: var(--bg-card); padding: 8px 0; z-index: 10;">
+                <div style="width: 90px; font-weight: bold;">Trecho</div>
+                <div style="width: 60px; text-align: center; font-weight: bold;">Metros</div>
+                ${Array.from({length: totalDays}, (_, i) => `<div style="width: ${dayWidth}px; text-align: center; font-weight: ${(i+1) % 5 === 0 ? 'bold' : 'normal'};">${i + 1}</div>`).join('')}
             </div>`;
 
-            trechos.forEach(trecho => {
-                const trechoSchedule = schedule.filter(s => s.trecho_id === trecho);
-                html += `<div style="display: flex; gap: 5px; margin-bottom: 3px; align-items: center;">
-                    <div style="width: 100px; font-size: 0.8rem; font-weight: bold;">${trecho}</div>`;
+            // Linhas por trecho
+            trechos.forEach((trecho, idx) => {
+                const trechoDias = Object.values(trechosDias).filter(t => t.trecho_id === trecho);
+                const totalMetros = trechoDias.reduce((sum, t) => sum + (t.metros || 0), 0);
+                const bgColor = idx % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-card)';
+
+                html += `<div style="display: flex; gap: 3px; margin-bottom: 2px; align-items: center; padding: 4px; border-radius: 4px; background: ${bgColor};">
+                    <div style="width: 90px; font-size: 0.85rem; font-weight: bold; color: var(--accent-blue);">${trecho}</div>
+                    <div style="width: 60px; text-align: center; font-size: 0.8rem; color: var(--text-secondary);">${totalMetros.toFixed(0)}m</div>`;
 
                 for (let day = 1; day <= totalDays; day++) {
-                    const activity = trechoSchedule.find(s => s.start_day <= day && s.end_day >= day);
-                    const color = activity ? getActivityColor(activity.activity) : 'transparent';
-                    const border = activity ? 'none' : '1px solid var(--border-color)';
-                    const tooltip = activity ? `${activity.activity}\nDia ${activity.start_day} a ${activity.end_day}\nQtd: ${activity.quantidade?.toFixed(1) || '-'} ${activity.unidade || ''}` : '';
-                    html += `<div style="width: ${dayWidth}px; height: 20px; background: ${color}; border: ${border}; border-radius: 2px; cursor: ${activity ? 'pointer' : 'default'};"
-                                  title="${tooltip}"></div>`;
+                    const dayData = trechoDias.find(t => t.day === day);
+
+                    if (dayData) {
+                        const isTeste = dayData.activities.some(a => a.toLowerCase().includes('teste'));
+                        const metros = dayData.metros || 0;
+
+                        if (isTeste) {
+                            // Teste hidrostático
+                            html += `<div style="width: ${dayWidth}px; height: 24px; background: var(--accent-red); border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center;"
+                                          title="Teste Hidrostático - Dia ${day}">
+                                <span style="font-size: 0.65rem; color: white;">T</span>
+                            </div>`;
+                        } else {
+                            // Ciclo completo - gradiente representando todas as atividades
+                            const tooltip = `Dia ${day} - Ciclo Completo\\n${metros.toFixed(1)}m executados\\n\\nAtividades:\\n${dayData.activities.join('\\n')}\\n\\nEquipe: ${dayData.team}`;
+                            html += `<div style="width: ${dayWidth}px; height: 24px; background: linear-gradient(90deg, var(--accent-orange) 0%, var(--accent-orange) 33%, var(--accent-blue) 33%, var(--accent-blue) 66%, var(--accent-green) 66%, var(--accent-green) 100%); border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"
+                                          title="${tooltip}">
+                                <span style="font-size: 0.6rem; color: white; text-shadow: 0 0 2px rgba(0,0,0,0.5); font-weight: bold;">${metros.toFixed(0)}</span>
+                            </div>`;
+                        }
+                    } else {
+                        // Dia sem atividade
+                        html += `<div style="width: ${dayWidth}px; height: 24px; background: transparent; border: 1px solid var(--border-color); border-radius: 3px; opacity: 0.3;"></div>`;
+                    }
                 }
                 html += '</div>';
             });
+
+            // Resumo
+            const totalMetrosGeral = Object.values(trechosDias).reduce((sum, t) => sum + (t.metros || 0), 0);
+            const diasUteis = new Set(Object.values(trechosDias).map(t => t.day)).size;
+            const mediaMetrosDia = diasUteis > 0 ? totalMetrosGeral / diasUteis : 0;
+
+            html += `
+                <div style="display: flex; gap: 20px; margin-top: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 8px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;">Total de Trechos:</span>
+                        <span style="font-weight: 600; color: var(--accent-blue);">${trechos.length}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;">Total de Metros:</span>
+                        <span style="font-weight: 600; color: var(--accent-green);">${totalMetrosGeral.toFixed(0)}m</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;">Dias de Obra:</span>
+                        <span style="font-weight: 600; color: var(--accent-orange);">${totalDays}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;">Média:</span>
+                        <span style="font-weight: 600; color: var(--accent-purple);">${mediaMetrosDia.toFixed(1)} m/dia</span>
+                    </div>
+                </div>
+            `;
 
             container.innerHTML = html;
         }
@@ -11566,16 +11774,19 @@ DATA;
                     moduleData.epanet.nodes = [...nodes];
                     moduleData.epanet.links = [...links];
                     updateEpanetUI();
+                    setTimeout(renderEpanetCanvas, 100);
                     ToastSystem.success(`${nodes.length} nós e ${links.length} trechos carregados no EPANET!`);
                     break;
                 case 'swmm':
                     moduleData.swmm.nodes = [...nodes];
                     moduleData.swmm.links = [...links];
                     updateSwmmUI();
+                    setTimeout(renderSwmmCanvas, 100);
                     ToastSystem.success(`${nodes.length} nós e ${links.length} trechos carregados no SWMM!`);
                     break;
                 case 'openproject':
                     loadOpenProjectModuleData();
+                    renderGanttChart();
                     ToastSystem.success('Dados do planejamento carregados!');
                     break;
                 case 'qgis':
@@ -11599,6 +11810,7 @@ DATA;
 
                 moduleData.epanet = data;
                 updateEpanetUI();
+                setTimeout(renderEpanetCanvas, 100);
 
                 document.getElementById('epanet-import-status').style.display = 'block';
                 ToastSystem.success(`Importado: ${data.nodes.length} nós, ${data.links.length} tubos`);
@@ -11742,6 +11954,7 @@ DATA;
                 const data = parseSwmmINP(content);
                 moduleData.swmm = data;
                 updateSwmmUI();
+                setTimeout(renderSwmmCanvas, 100);
                 document.getElementById('swmm-import-status').style.display = 'block';
                 ToastSystem.success(`Importado: ${data.nodes.length} nós, ${data.links.length} condutos, ${data.subcatchments.length} sub-bacias`);
             } catch (error) {
@@ -12218,6 +12431,379 @@ DATA;
             updateQgisUI();
             document.getElementById('qgis-import-status').style.display = 'none';
             ToastSystem.info('Dados QGIS limpos');
+        }
+
+        // ============================================
+        // CANVAS RENDERING FOR MODULES
+        // ============================================
+
+        // EPANET Canvas Rendering
+        function renderEpanetCanvas() {
+            const canvas = document.getElementById('epanet-network-canvas');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const data = moduleData.epanet;
+
+            // Set canvas size to match container
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth || 800;
+            canvas.height = container.clientHeight || 500;
+
+            const width = canvas.width;
+            const height = canvas.height;
+
+            // Clear canvas
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw grid
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            for (let x = 0; x < width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+
+            if (!data.nodes || data.nodes.length === 0) {
+                // Show placeholder message
+                ctx.fillStyle = '#64748b';
+                ctx.font = '16px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Importe dados para visualizar a rede', width / 2, height / 2 - 20);
+                ctx.font = '14px Inter, sans-serif';
+                ctx.fillText('Use os botões acima para importar arquivos', width / 2, height / 2 + 10);
+                return;
+            }
+
+            // Calculate bounds
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            data.nodes.forEach(n => {
+                const x = n.x || 0;
+                const y = n.y || 0;
+                minX = Math.min(minX, x);
+                maxX = Math.max(maxX, x);
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y);
+            });
+
+            // Add padding
+            const padding = 60;
+            const scaleX = (width - 2 * padding) / (maxX - minX || 1);
+            const scaleY = (height - 2 * padding) / (maxY - minY || 1);
+            const scale = Math.min(scaleX, scaleY);
+
+            const offsetX = padding + (width - 2 * padding - (maxX - minX) * scale) / 2;
+            const offsetY = padding + (height - 2 * padding - (maxY - minY) * scale) / 2;
+
+            const transform = (x, y) => ({
+                x: offsetX + (x - minX) * scale,
+                y: height - (offsetY + (y - minY) * scale) // Flip Y
+            });
+
+            // Create node lookup
+            const nodeLookup = {};
+            data.nodes.forEach(n => {
+                nodeLookup[n.id] = n;
+            });
+
+            // Draw links/pipes
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 3;
+            data.links.forEach(link => {
+                const fromNode = nodeLookup[link.from] || nodeLookup[link.fromNode];
+                const toNode = nodeLookup[link.to] || nodeLookup[link.toNode];
+
+                if (fromNode && toNode) {
+                    const from = transform(fromNode.x || 0, fromNode.y || 0);
+                    const to = transform(toNode.x || 0, toNode.y || 0);
+
+                    ctx.beginPath();
+                    ctx.moveTo(from.x, from.y);
+                    ctx.lineTo(to.x, to.y);
+                    ctx.stroke();
+
+                    // Draw flow direction arrow
+                    const midX = (from.x + to.x) / 2;
+                    const midY = (from.y + to.y) / 2;
+                    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.beginPath();
+                    ctx.moveTo(midX + 8 * Math.cos(angle), midY + 8 * Math.sin(angle));
+                    ctx.lineTo(midX - 5 * Math.cos(angle - 0.5), midY - 5 * Math.sin(angle - 0.5));
+                    ctx.lineTo(midX - 5 * Math.cos(angle + 0.5), midY - 5 * Math.sin(angle + 0.5));
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            });
+
+            // Draw nodes
+            data.nodes.forEach(node => {
+                const pos = transform(node.x || 0, node.y || 0);
+                const isReservoir = node.type === 'reservoir' || data.reservoirs?.some(r => r.id === node.id);
+                const isTank = node.type === 'tank';
+
+                if (isReservoir) {
+                    // Reservoir - square
+                    ctx.fillStyle = '#22c55e';
+                    ctx.fillRect(pos.x - 10, pos.y - 10, 20, 20);
+                    ctx.strokeStyle = '#166534';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(pos.x - 10, pos.y - 10, 20, 20);
+                } else if (isTank) {
+                    // Tank - diamond
+                    ctx.fillStyle = '#8b5cf6';
+                    ctx.beginPath();
+                    ctx.moveTo(pos.x, pos.y - 10);
+                    ctx.lineTo(pos.x + 10, pos.y);
+                    ctx.lineTo(pos.x, pos.y + 10);
+                    ctx.lineTo(pos.x - 10, pos.y);
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    // Junction - circle
+                    ctx.fillStyle = '#f97316';
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#c2410c';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                // Draw label
+                ctx.fillStyle = '#e2e8f0';
+                ctx.font = '10px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(node.id, pos.x, pos.y - 14);
+            });
+
+            // Draw legend
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            ctx.fillRect(10, height - 80, 150, 70);
+            ctx.strokeStyle = '#334155';
+            ctx.strokeRect(10, height - 80, 150, 70);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '11px Inter, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Legenda:', 20, height - 62);
+
+            // Junction
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath();
+            ctx.arc(30, height - 45, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillText('Junção', 45, height - 41);
+
+            // Reservoir
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(25, height - 32, 10, 10);
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillText('Reservatório', 45, height - 24);
+
+            // Pipe
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(22, height - 15);
+            ctx.lineTo(38, height - 15);
+            ctx.stroke();
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillText('Tubo', 45, height - 11);
+        }
+
+        // SWMM Canvas Rendering
+        function renderSwmmCanvas() {
+            const canvas = document.getElementById('swmm-network-canvas');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const data = moduleData.swmm;
+
+            // Set canvas size
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth || 800;
+            canvas.height = container.clientHeight || 500;
+
+            const width = canvas.width;
+            const height = canvas.height;
+
+            // Clear canvas with dark theme
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw grid
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            for (let x = 0; x < width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+
+            if (!data.nodes || data.nodes.length === 0) {
+                ctx.fillStyle = '#64748b';
+                ctx.font = '16px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Importe dados para visualizar a rede', width / 2, height / 2 - 20);
+                ctx.font = '14px Inter, sans-serif';
+                ctx.fillText('Use os botões acima para importar arquivos', width / 2, height / 2 + 10);
+                return;
+            }
+
+            // Calculate bounds
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            data.nodes.forEach(n => {
+                const x = n.x || 0;
+                const y = n.y || 0;
+                minX = Math.min(minX, x);
+                maxX = Math.max(maxX, x);
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y);
+            });
+
+            const padding = 60;
+            const scaleX = (width - 2 * padding) / (maxX - minX || 1);
+            const scaleY = (height - 2 * padding) / (maxY - minY || 1);
+            const scale = Math.min(scaleX, scaleY);
+
+            const offsetX = padding + (width - 2 * padding - (maxX - minX) * scale) / 2;
+            const offsetY = padding + (height - 2 * padding - (maxY - minY) * scale) / 2;
+
+            const transform = (x, y) => ({
+                x: offsetX + (x - minX) * scale,
+                y: height - (offsetY + (y - minY) * scale)
+            });
+
+            const nodeLookup = {};
+            data.nodes.forEach(n => { nodeLookup[n.id] = n; });
+
+            // Draw conduits
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 4;
+            data.links.forEach(link => {
+                const fromNode = nodeLookup[link.from] || nodeLookup[link.fromNode];
+                const toNode = nodeLookup[link.to] || nodeLookup[link.toNode];
+
+                if (fromNode && toNode) {
+                    const from = transform(fromNode.x || 0, fromNode.y || 0);
+                    const to = transform(toNode.x || 0, toNode.y || 0);
+
+                    ctx.beginPath();
+                    ctx.moveTo(from.x, from.y);
+                    ctx.lineTo(to.x, to.y);
+                    ctx.stroke();
+                }
+            });
+
+            // Draw nodes (manholes/junctions)
+            data.nodes.forEach(node => {
+                const pos = transform(node.x || 0, node.y || 0);
+                const isOutfall = node.type === 'outfall';
+                const isStorage = node.type === 'storage' || data.storages?.some(s => s.id === node.id);
+
+                if (isOutfall) {
+                    // Outfall - triangle
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.moveTo(pos.x, pos.y - 10);
+                    ctx.lineTo(pos.x + 10, pos.y + 8);
+                    ctx.lineTo(pos.x - 10, pos.y + 8);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (isStorage) {
+                    // Storage - rectangle
+                    ctx.fillStyle = '#8b5cf6';
+                    ctx.fillRect(pos.x - 10, pos.y - 8, 20, 16);
+                } else {
+                    // Junction/Manhole - circle
+                    ctx.fillStyle = '#22c55e';
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 7, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#166534';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                // Label
+                ctx.fillStyle = '#e2e8f0';
+                ctx.font = '10px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(node.id, pos.x, pos.y - 14);
+            });
+
+            // Legend
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            ctx.fillRect(10, height - 95, 150, 85);
+            ctx.strokeStyle = '#334155';
+            ctx.strokeRect(10, height - 95, 150, 85);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '11px Inter, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Legenda:', 20, height - 77);
+
+            ctx.fillStyle = '#22c55e';
+            ctx.beginPath();
+            ctx.arc(30, height - 60, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillText('PV/Junção', 45, height - 56);
+
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(30, height - 48);
+            ctx.lineTo(35, height - 38);
+            ctx.lineTo(25, height - 38);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillText('Exutório', 45, height - 39);
+
+            ctx.fillStyle = '#8b5cf6';
+            ctx.fillRect(25, height - 32, 10, 8);
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillText('Bacia Detenção', 45, height - 24);
+
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(22, height - 13);
+            ctx.lineTo(38, height - 13);
+            ctx.stroke();
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillText('Conduto', 45, height - 9);
+        }
+
+        // Update UI functions to also render canvas
+        function updateEpanetUIWithCanvas() {
+            updateEpanetUI();
+            setTimeout(renderEpanetCanvas, 100); // Small delay for DOM update
+        }
+
+        function updateSwmmUIWithCanvas() {
+            updateSwmmUI();
+            setTimeout(renderSwmmCanvas, 100);
         }
 
         // ============================================
