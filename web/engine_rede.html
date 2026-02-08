@@ -11166,30 +11166,20 @@ DATA;
 
         function exportGanttPDF() {
             // For PDF, we'll use canvas to image then download
-            const canvas = document.getElementById('gantt-chart');
-            const dataUrl = canvas.toDataURL('image/png');
+            var canvas = document.getElementById('gantt-chart');
+            var dataUrl = canvas.toDataURL('image/png');
+            var projectName = document.getElementById('openproject-name')?.value || 'Projeto';
 
             // Open in new window for printing
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <html>
-                <head>
-                    <title>Gráfico de Gantt</title>
-                    <style>
-                        body { margin: 0; padding: 20px; }
-                        img { max-width: 100%; }
-                        @media print {
-                            body { margin: 0; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <h1>Gráfico de Gantt - ${document.getElementById('openproject-name')?.value || 'Projeto'}</h1>
-                    <img src="${dataUrl}">
-                    <script>window.onload = function() { window.print(); }</script>
-                </body>
-                </html>
-            `);
+            var printWindow = window.open('', '_blank');
+            var htmlContent = '<html><head><title>Grafico de Gantt</title>';
+            htmlContent += '<style>body { margin: 0; padding: 20px; } img { max-width: 100%; }</style>';
+            htmlContent += '</head><body>';
+            htmlContent += '<h1>Grafico de Gantt - ' + projectName + '</h1>';
+            htmlContent += '<img src="' + dataUrl + '">';
+            htmlContent += '<scr' + 'ipt>window.onload = function() { window.print(); }<\/scr' + 'ipt>';
+            htmlContent += '</body></html>';
+            printWindow.document.write(htmlContent);
             printWindow.document.close();
         }
 
