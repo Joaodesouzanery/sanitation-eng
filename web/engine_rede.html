@@ -7151,32 +7151,515 @@ PV02,359290.456,7352780.123,1.82</pre>
         }
 
         // Função auxiliar para obter nós e links ativos baseado no tipo de rede
+        // IMPORTANTE: Verifica múltiplas fontes de dados (topografia, módulos, importação direta)
         function getActiveNodesAndLinks() {
             const networkType = document.getElementById('import-network-type')?.value || 'sewer';
 
             let nodes = [];
             let links = [];
+            let source = '';
 
-            // Verificar qual aba está ativa ou qual tem dados
+            // 1. Primeiro verifica dados da topografia por tipo de rede
             if (networkType === 'sewer' && sewerNodes.length > 0) {
                 nodes = sewerNodes;
                 links = sewerLinks;
-                console.log('Usando dados de Esgoto:', nodes.length, 'nós,', links.length, 'trechos');
+                source = 'Esgoto (Topografia)';
             } else if (networkType === 'water' && waterNodes.length > 0) {
                 nodes = waterNodes;
                 links = waterLinks;
-                console.log('Usando dados de Água:', nodes.length, 'nós,', links.length, 'trechos');
+                source = 'Água (Topografia)';
             } else if (networkType === 'drainage' && drainageNodes.length > 0) {
                 nodes = drainageNodes;
                 links = drainageLinks;
-                console.log('Usando dados de Drenagem:', nodes.length, 'nós,', links.length, 'trechos');
-            } else if (importedNodes.length > 0) {
+                source = 'Drenagem (Topografia)';
+            }
+            // 2. Se não encontrou, verifica dados importados gerais
+            else if (importedNodes.length > 0) {
                 nodes = importedNodes;
                 links = previewLinks.length > 0 ? previewLinks : generateLinksFromNodes(importedNodes, 'sequential');
-                console.log('Usando dados importados:', nodes.length, 'nós,', links.length, 'trechos');
+                source = 'Importação Geral';
+            }
+            // 3. Se ainda não encontrou, verifica dados dos módulos
+            else if (moduleData.epanet?.nodes?.length > 0) {
+                nodes = moduleData.epanet.nodes;
+                links = moduleData.epanet.links || [];
+                source = 'EPANET Module';
+            }
+            else if (moduleData.swmm?.nodes?.length > 0) {
+                nodes = moduleData.swmm.nodes;
+                links = moduleData.swmm.links || [];
+                source = 'SWMM Module';
+            }
+            else if (moduleData.qgis?.nodes?.length > 0) {
+                nodes = moduleData.qgis.nodes;
+                links = moduleData.qgis.links || [];
+                source = 'QGIS Module';
             }
 
-            return { nodes, links, networkType };
+            if (nodes.length > 0) {
+                console.log(`Usando dados de ${source}:`, nodes.length, 'nós,', links.length, 'trechos');
+            }
+
+            return { nodes, links, networkType, source };
+        }
+
+        // Função unificada para obter todos os dados de todos os módulos
+        function getAllModuleData() {
+            const data = {
+                nodes: [],
+                links: [],
+                reservoirs: [],
+                pumps: [],
+                valves: [],
+                subcatchments: [],
+                storages: [],
+                outlets: [],
+                tasks: [],
+                costs: null,
+                planning: null,
+                sources: []
+            };
+
+            // Coletar de todas as fontes
+            const { nodes: mainNodes, links: mainLinks, source } = getActiveNodesAndLinks();
+            if (mainNodes.length > 0) {
+                data.nodes = [...mainNodes];
+                data.links = [...mainLinks];
+                data.sources.push(source);
+            }
+
+            // EPANET data
+            if (moduleData.epanet) {
+                if (moduleData.epanet.reservoirs?.length > 0) {
+                    data.reservoirs = [...moduleData.epanet.reservoirs];
+                }
+                if (moduleData.epanet.pumps?.length > 0) {
+                    data.pumps = [...moduleData.epanet.pumps];
+                }
+                if (moduleData.epanet.valves?.length > 0) {
+                    data.valves = [...moduleData.epanet.valves];
+                }
+            }
+
+            // SWMM data
+            if (moduleData.swmm) {
+                if (moduleData.swmm.subcatchments?.length > 0) {
+                    data.subcatchments = [...moduleData.swmm.subcatchments];
+                }
+                if (moduleData.swmm.storages?.length > 0) {
+                    data.storages = [...moduleData.swmm.storages];
+                }
+                if (moduleData.swmm.outlets?.length > 0) {
+                    data.outlets = [...moduleData.swmm.outlets];
+                }
+            }
+
+            // Planning data
+            if (planningData && planningData.schedule?.length > 0) {
+                data.planning = { ...planningData };
+            }
+
+            // OpenProject tasks
+            if (moduleData.openproject?.tasks?.length > 0) {
+                data.tasks = [...moduleData.openproject.tasks];
+            }
+
+            // Calculate costs if we have links
+            if (data.links.length > 0) {
+                try {
+                    const networkType = document.getElementById('import-network-type')?.value || 'sewer';
+                    data.costs = calculateAllCosts(data.links, networkType);
+                } catch (e) {
+                    console.warn('Erro ao calcular custos:', e);
+                }
+            }
+
+            return data;
+        }
+
+        // ============================================
+        // MÓDULO DE VERIFICAÇÃO DE ERROS DA PLATAFORMA
+        // ============================================
+
+        const PlatformErrorChecker = {
+            errors: [],
+            warnings: [],
+            info: [],
+
+            // Limpa todos os erros
+            clear() {
+                this.errors = [];
+                this.warnings = [];
+                this.info = [];
+            },
+
+            // Adiciona erro
+            addError(code, message, location, suggestion) {
+                this.errors.push({ type: 'ERROR', code, message, location, suggestion, timestamp: new Date() });
+            },
+
+            // Adiciona aviso
+            addWarning(code, message, location, suggestion) {
+                this.warnings.push({ type: 'WARNING', code, message, location, suggestion, timestamp: new Date() });
+            },
+
+            // Adiciona info
+            addInfo(code, message, location) {
+                this.info.push({ type: 'INFO', code, message, location, timestamp: new Date() });
+            },
+
+            // Verifica TODOS os dados da plataforma
+            runFullCheck() {
+                this.clear();
+
+                // 1. Verificar dados de rede
+                this.checkNetworkData();
+
+                // 2. Verificar módulos
+                this.checkEpanetModule();
+                this.checkSwmmModule();
+                this.checkQgisModule();
+                this.checkOpenProjectModule();
+
+                // 3. Verificar planejamento
+                this.checkPlanningData();
+
+                // 4. Verificar custos
+                this.checkCostData();
+
+                // 5. Verificar exportações
+                this.checkExportReadiness();
+
+                return this.getReport();
+            },
+
+            // Verifica dados de rede
+            checkNetworkData() {
+                const { nodes, links, source } = getActiveNodesAndLinks();
+
+                if (nodes.length === 0) {
+                    this.addError('NET-001', 'Nenhum nó/PV encontrado na rede',
+                        'Dados de Rede',
+                        'Importe dados na aba Topografia ou diretamente nos módulos EPANET/SWMM');
+                } else {
+                    this.addInfo('NET-OK', `${nodes.length} nós carregados de: ${source}`, 'Dados de Rede');
+                }
+
+                if (links.length === 0 && nodes.length > 0) {
+                    this.addWarning('NET-002', 'Nós encontrados mas nenhum trecho/tubo definido',
+                        'Dados de Rede',
+                        'Clique em "Gerar Trechos" ou importe arquivo com links');
+                } else if (links.length > 0) {
+                    this.addInfo('NET-OK', `${links.length} trechos carregados`, 'Dados de Rede');
+                }
+
+                // Verificar nós órfãos
+                if (nodes.length > 0 && links.length > 0) {
+                    const linkedNodes = new Set();
+                    links.forEach(l => {
+                        linkedNodes.add(l.from);
+                        linkedNodes.add(l.to);
+                    });
+                    const orphanNodes = nodes.filter(n => !linkedNodes.has(n.id));
+                    if (orphanNodes.length > 0) {
+                        this.addWarning('NET-003', `${orphanNodes.length} nós órfãos (sem conexão)`,
+                            'Dados de Rede',
+                            `Nós: ${orphanNodes.slice(0, 5).map(n => n.id).join(', ')}${orphanNodes.length > 5 ? '...' : ''}`);
+                    }
+                }
+
+                // Verificar coordenadas válidas
+                const nodesWithoutCoords = nodes.filter(n => !n.x && !n.y);
+                if (nodesWithoutCoords.length > 0) {
+                    this.addWarning('NET-004', `${nodesWithoutCoords.length} nós sem coordenadas X/Y`,
+                        'Dados de Rede',
+                        'Coordenadas são necessárias para exportação GIS');
+                }
+            },
+
+            // Verifica módulo EPANET
+            checkEpanetModule() {
+                const data = moduleData.epanet;
+                if (!data) {
+                    this.addInfo('EPA-SKIP', 'Módulo EPANET não inicializado', 'EPANET');
+                    return;
+                }
+
+                if (data.nodes?.length === 0) {
+                    this.addWarning('EPA-001', 'EPANET: Nenhum nó carregado',
+                        'Módulo EPANET',
+                        'Use "Usar Dados da Plataforma" ou importe arquivo .INP');
+                } else {
+                    this.addInfo('EPA-OK', `EPANET: ${data.nodes.length} nós carregados`, 'Módulo EPANET');
+                }
+
+                if (data.reservoirs?.length === 0 && data.nodes?.length > 0) {
+                    this.addWarning('EPA-002', 'EPANET: Nenhum reservatório definido',
+                        'Módulo EPANET',
+                        'Adicione pelo menos um reservatório para simulação hidráulica');
+                }
+            },
+
+            // Verifica módulo SWMM
+            checkSwmmModule() {
+                const data = moduleData.swmm;
+                if (!data) {
+                    this.addInfo('SWM-SKIP', 'Módulo SWMM não inicializado', 'SWMM');
+                    return;
+                }
+
+                if (data.nodes?.length === 0) {
+                    this.addWarning('SWM-001', 'SWMM: Nenhum nó/PV carregado',
+                        'Módulo SWMM',
+                        'Use "Usar Dados da Plataforma" ou importe arquivo .INP');
+                } else {
+                    this.addInfo('SWM-OK', `SWMM: ${data.nodes.length} nós carregados`, 'Módulo SWMM');
+                }
+
+                if (data.outlets?.length === 0 && data.nodes?.length > 0) {
+                    this.addWarning('SWM-002', 'SWMM: Nenhum exutório definido',
+                        'Módulo SWMM',
+                        'Adicione pelo menos um exutório para simulação de drenagem');
+                }
+            },
+
+            // Verifica módulo QGIS
+            checkQgisModule() {
+                const data = moduleData.qgis;
+                if (!data) {
+                    this.addInfo('QGS-SKIP', 'Módulo QGIS não inicializado', 'QGIS');
+                    return;
+                }
+
+                if (data.nodes?.length === 0) {
+                    this.addWarning('QGS-001', 'QGIS: Nenhum dado para exportação GIS',
+                        'Módulo QGIS',
+                        'Use "Usar Dados da Plataforma" ou importe GeoJSON/Shapefile');
+                } else {
+                    this.addInfo('QGS-OK', `QGIS: ${data.nodes.length} pontos prontos para exportação`, 'Módulo QGIS');
+                }
+            },
+
+            // Verifica módulo OpenProject
+            checkOpenProjectModule() {
+                const data = moduleData.openproject;
+                const tasks = document.querySelectorAll('#openproject-tasks-list tr').length;
+
+                if (tasks === 0 && (!planningData || planningData.schedule?.length === 0)) {
+                    this.addWarning('OPR-001', 'OpenProject: Nenhuma tarefa definida',
+                        'Módulo OpenProject',
+                        'Gere o planejamento primeiro ou adicione tarefas manualmente');
+                } else if (tasks > 0) {
+                    this.addInfo('OPR-OK', `OpenProject: ${tasks} tarefas cadastradas`, 'Módulo OpenProject');
+                }
+            },
+
+            // Verifica dados de planejamento
+            checkPlanningData() {
+                if (!planningData || planningData.input?.length === 0) {
+                    this.addWarning('PLN-001', 'Planejamento: Nenhum dado de entrada',
+                        'Planejamento',
+                        'Importe dados e configure parâmetros na aba Planejamento');
+                    return;
+                }
+
+                if (planningData.schedule?.length === 0) {
+                    this.addWarning('PLN-002', 'Planejamento: Cronograma não gerado',
+                        'Planejamento',
+                        'Clique em "Gerar Planejamento" na aba Planejamento');
+                } else {
+                    const totalDays = Math.max(...planningData.schedule.map(s => s.end_day || 0));
+                    this.addInfo('PLN-OK', `Planejamento: ${planningData.schedule.length} atividades em ${totalDays} dias`, 'Planejamento');
+                }
+            },
+
+            // Verifica dados de custos
+            checkCostData() {
+                const { links } = getActiveNodesAndLinks();
+                if (links.length === 0) {
+                    this.addWarning('CST-001', 'Custos: Nenhum trecho para calcular custos',
+                        'Custos',
+                        'Importe ou gere trechos primeiro');
+                    return;
+                }
+
+                try {
+                    const networkType = document.getElementById('import-network-type')?.value || 'sewer';
+                    const costs = calculateAllCosts(links, networkType);
+                    if (costs && costs.total > 0) {
+                        this.addInfo('CST-OK', `Custos: R$ ${costs.total.toLocaleString('pt-BR')} calculados`, 'Custos');
+                    }
+                } catch (e) {
+                    this.addError('CST-002', 'Erro ao calcular custos: ' + e.message,
+                        'Custos',
+                        'Verifique os dados de entrada');
+                }
+            },
+
+            // Verifica se está pronto para exportação
+            checkExportReadiness() {
+                const { nodes, links } = getActiveNodesAndLinks();
+
+                // SHP Export
+                if (nodes.length > 0 && links.length > 0) {
+                    const hasCoords = nodes.some(n => n.x || n.y);
+                    if (hasCoords) {
+                        this.addInfo('EXP-SHP', 'Exportação SHP: Pronto', 'Exportações');
+                    } else {
+                        this.addWarning('EXP-SHP', 'Exportação SHP: Sem coordenadas geográficas',
+                            'Exportações',
+                            'Adicione coordenadas X/Y aos nós para exportação GIS');
+                    }
+                }
+
+                // IFC Export
+                if (nodes.length > 0 && links.length > 0) {
+                    this.addInfo('EXP-IFC', 'Exportação IFC: Pronto', 'Exportações');
+                }
+
+                // EPANET Export
+                if (nodes.length > 0 && links.length > 0) {
+                    this.addInfo('EXP-INP', 'Exportação EPANET .INP: Pronto', 'Exportações');
+                }
+            },
+
+            // Gera relatório completo
+            getReport() {
+                return {
+                    timestamp: new Date(),
+                    summary: {
+                        errors: this.errors.length,
+                        warnings: this.warnings.length,
+                        info: this.info.length,
+                        status: this.errors.length > 0 ? 'ERROR' : (this.warnings.length > 0 ? 'WARNING' : 'OK')
+                    },
+                    errors: this.errors,
+                    warnings: this.warnings,
+                    info: this.info
+                };
+            },
+
+            // Mostra relatório na tela
+            showReport() {
+                const report = this.runFullCheck();
+                let html = `
+                    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                                background: var(--bg-card); border: 2px solid var(--border-color);
+                                border-radius: 12px; padding: 25px; max-width: 700px; max-height: 80vh;
+                                overflow-y: auto; z-index: 10000; box-shadow: 0 20px 60px rgba(0,0,0,0.4);">
+                        <h2 style="margin: 0 0 20px 0; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.5rem;">🔍</span> Verificação da Plataforma
+                            <span style="margin-left: auto; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem;
+                                         background: ${report.summary.status === 'ERROR' ? 'var(--accent-red)' :
+                                                       report.summary.status === 'WARNING' ? 'var(--accent-orange)' :
+                                                       'var(--accent-green)'}; color: white;">
+                                ${report.summary.status}
+                            </span>
+                        </h2>
+
+                        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                            <div style="flex: 1; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-red);">${report.summary.errors}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">Erros</div>
+                            </div>
+                            <div style="flex: 1; padding: 12px; background: rgba(249, 115, 22, 0.1); border-radius: 8px; text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-orange);">${report.summary.warnings}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">Avisos</div>
+                            </div>
+                            <div style="flex: 1; padding: 12px; background: rgba(34, 197, 94, 0.1); border-radius: 8px; text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-green);">${report.summary.info}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">OK</div>
+                            </div>
+                        </div>
+                `;
+
+                // Erros
+                if (report.errors.length > 0) {
+                    html += `<h3 style="color: var(--accent-red); margin: 15px 0 10px 0;">❌ Erros</h3>`;
+                    report.errors.forEach(e => {
+                        html += `
+                            <div style="padding: 12px; margin-bottom: 8px; background: rgba(239, 68, 68, 0.1);
+                                        border-left: 4px solid var(--accent-red); border-radius: 4px;">
+                                <strong>[${e.code}]</strong> ${e.message}
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 5px;">
+                                    📍 ${e.location} ${e.suggestion ? `<br>💡 ${e.suggestion}` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                // Avisos
+                if (report.warnings.length > 0) {
+                    html += `<h3 style="color: var(--accent-orange); margin: 15px 0 10px 0;">⚠️ Avisos</h3>`;
+                    report.warnings.forEach(w => {
+                        html += `
+                            <div style="padding: 12px; margin-bottom: 8px; background: rgba(249, 115, 22, 0.1);
+                                        border-left: 4px solid var(--accent-orange); border-radius: 4px;">
+                                <strong>[${w.code}]</strong> ${w.message}
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 5px;">
+                                    📍 ${w.location} ${w.suggestion ? `<br>💡 ${w.suggestion}` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                // Info (colapsável)
+                if (report.info.length > 0) {
+                    html += `<h3 style="color: var(--accent-green); margin: 15px 0 10px 0;">✅ Verificações OK</h3>`;
+                    html += `<div style="max-height: 150px; overflow-y: auto;">`;
+                    report.info.forEach(i => {
+                        html += `
+                            <div style="padding: 8px; margin-bottom: 4px; background: rgba(34, 197, 94, 0.1);
+                                        border-radius: 4px; font-size: 0.85rem;">
+                                ✓ ${i.message}
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                }
+
+                html += `
+                        <div style="margin-top: 20px; display: flex; gap: 10px;">
+                            <button onclick="this.closest('div').parentElement.remove()"
+                                    style="flex: 1; padding: 12px; background: var(--bg-secondary); border: 1px solid var(--border-color);
+                                           border-radius: 8px; cursor: pointer; color: var(--text-primary);">
+                                Fechar
+                            </button>
+                            <button onclick="PlatformErrorChecker.downloadReport()"
+                                    style="flex: 1; padding: 12px; background: var(--accent-blue); color: white;
+                                           border: none; border-radius: 8px; cursor: pointer;">
+                                📥 Baixar Relatório
+                            </button>
+                        </div>
+                    </div>
+                    <div onclick="this.nextElementSibling ? this.nextElementSibling.remove() : null; this.remove();"
+                         style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999;">
+                    </div>
+                `;
+
+                const overlay = document.createElement('div');
+                overlay.innerHTML = html;
+                document.body.appendChild(overlay);
+            },
+
+            // Baixa relatório como JSON
+            downloadReport() {
+                const report = this.getReport();
+                const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `verificacao_plataforma_${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        };
+
+        // Função global para chamar verificação
+        function verificarPlataforma() {
+            PlatformErrorChecker.showReport();
         }
 
         async function exportToSHP() {
