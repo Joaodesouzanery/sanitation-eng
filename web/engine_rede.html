@@ -1374,6 +1374,90 @@ PV02,359290.456,7352780.123,1.82</pre>
                 </div>
             </div>
 
+            <!-- Cronograma e Feriados -->
+            <div class="grid" style="margin-top: 20px;">
+                <div class="card">
+                    <h2><span class="icon">📅</span> Período de Execução</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Defina as datas de início e fim previsto da obra.
+                    </p>
+
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                            <label>Data de Início</label>
+                            <input type="date" id="planning-start-date" style="width: 100%;">
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                            <label>Data de Término (Previsão)</label>
+                            <input type="date" id="planning-end-date" style="width: 100%;">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 10px;">
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                            <label>Horas de Trabalho/Dia</label>
+                            <input type="number" id="planning-hours-day" value="8" min="4" max="12">
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                            <label>Dias da Semana</label>
+                            <select id="planning-work-days" style="width: 100%;">
+                                <option value="5">Segunda a Sexta (5 dias)</option>
+                                <option value="6">Segunda a Sábado (6 dias)</option>
+                                <option value="7">Todos os dias (7 dias)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 15px; padding: 10px; background: var(--bg-secondary); border-radius: 6px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                                <strong>Dias úteis calculados:</strong> <span id="planning-work-days-count">-</span>
+                            </span>
+                            <button class="btn btn-small" style="background: var(--accent-blue); color: white; border: none;" onclick="calculateWorkDays()">
+                                Recalcular
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2><span class="icon">🎉</span> Gestão de Feriados</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Adicione feriados que não serão contados como dias úteis.
+                    </p>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <input type="date" id="holiday-date" style="flex: 1;">
+                        <input type="text" id="holiday-name" placeholder="Nome do feriado" style="flex: 2;">
+                        <button class="btn btn-small" style="background: var(--accent-green); color: white; border: none;" onclick="addHoliday()">+ Adicionar</button>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <button class="btn btn-small" style="background: var(--accent-purple); color: white; border: none;" onclick="loadNationalHolidays()">
+                            🇧🇷 Carregar Feriados Nacionais
+                        </button>
+                        <button class="btn btn-small" style="background: var(--accent-orange); color: white; border: none;" onclick="clearAllHolidays()">
+                            🗑️ Limpar Todos
+                        </button>
+                    </div>
+
+                    <div id="holidays-list" style="max-height: 200px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead style="position: sticky; top: 0; background: var(--bg-card);">
+                                <tr style="border-bottom: 1px solid var(--border-color);">
+                                    <th style="padding: 8px; text-align: left;">Data</th>
+                                    <th style="padding: 8px; text-align: left;">Feriado</th>
+                                    <th style="padding: 8px; text-align: center; width: 60px;">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="holidays-tbody">
+                                <tr><td colspan="3" style="padding: 15px; text-align: center; color: var(--text-secondary);">Nenhum feriado cadastrado</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid" style="margin-top: 20px;">
                 <div class="card">
                     <h2><span class="icon">⚡</span> Tabela de Produtividade</h2>
@@ -1467,16 +1551,60 @@ PV02,359290.456,7352780.123,1.82</pre>
 
                     <div class="card">
                         <h2><span class="icon">📊</span> Histograma de Recursos</h2>
-                        <canvas id="histogram-canvas" width="600" height="300" style="width: 100%; background: var(--bg-secondary); border-radius: 8px;"></canvas>
-                        <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center;">
+
+                        <!-- Controles do Histograma -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                            <select id="histogram-view" style="padding: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);" onchange="updateHistogram()">
+                                <option value="daily">Visão Diária</option>
+                                <option value="weekly">Visão Semanal</option>
+                                <option value="monthly">Visão Mensal</option>
+                            </select>
+                            <select id="histogram-resource" style="padding: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);" onchange="updateHistogram()">
+                                <option value="all">Todos os Recursos</option>
+                                <option value="labor">Apenas Mão de Obra</option>
+                                <option value="equipment">Apenas Equipamentos</option>
+                                <option value="cost">Custo Acumulado</option>
+                            </select>
+                        </div>
+
+                        <!-- Canvas do Histograma -->
+                        <div style="position: relative;">
+                            <canvas id="histogram-canvas" width="800" height="350" style="width: 100%; background: var(--bg-secondary); border-radius: 8px;"></canvas>
+                        </div>
+
+                        <!-- Estatísticas Resumidas -->
+                        <div id="histogram-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 15px;">
+                            <div style="padding: 10px; background: var(--bg-primary); border-radius: 6px; text-align: center;">
+                                <div style="font-size: 1.3rem; color: var(--accent-blue); font-weight: bold;" id="stat-max-labor">-</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">Pico Mão de Obra</div>
+                            </div>
+                            <div style="padding: 10px; background: var(--bg-primary); border-radius: 6px; text-align: center;">
+                                <div style="font-size: 1.3rem; color: var(--accent-purple); font-weight: bold;" id="stat-avg-labor">-</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">Média Diária</div>
+                            </div>
+                            <div style="padding: 10px; background: var(--bg-primary); border-radius: 6px; text-align: center;">
+                                <div style="font-size: 1.3rem; color: var(--accent-green); font-weight: bold;" id="stat-total-hh">-</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">Total HH</div>
+                            </div>
+                            <div style="padding: 10px; background: var(--bg-primary); border-radius: 6px; text-align: center;">
+                                <div style="font-size: 1.3rem; color: var(--accent-orange); font-weight: bold;" id="stat-equip-days">-</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">Equip. x Dias</div>
+                            </div>
+                        </div>
+
+                        <!-- Legenda -->
+                        <div style="display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; justify-content: center; padding: 10px; background: var(--bg-primary); border-radius: 6px;">
                             <span style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
-                                <span style="width: 12px; height: 12px; background: var(--accent-blue); border-radius: 2px;"></span> Mão de Obra
+                                <span style="width: 16px; height: 16px; background: var(--accent-blue); border-radius: 3px;"></span> Mão de Obra (pessoas)
                             </span>
                             <span style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
-                                <span style="width: 12px; height: 12px; background: var(--accent-purple); border-radius: 2px;"></span> Equipamentos
+                                <span style="width: 16px; height: 16px; background: var(--accent-purple); border-radius: 3px;"></span> Equipamentos (unid.)
                             </span>
                             <span style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
-                                <span style="width: 12px; height: 12px; background: var(--accent-orange); border-radius: 2px;"></span> Materiais
+                                <span style="width: 16px; height: 3px; background: var(--accent-green);"></span> Custo Acumulado
+                            </span>
+                            <span style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                                <span style="width: 16px; height: 3px; background: var(--accent-orange); border-style: dashed;"></span> Média
                             </span>
                         </div>
                     </div>
@@ -5723,6 +5851,8 @@ DATA;
             } else if (tab === 'planning') {
                 renderProductivityTable();
                 updatePlanningInfo();
+                initPlanningDates();
+                renderHolidays();
             } else if (tab === 'quantities') {
                 renderQtyLinks();
             }
@@ -7045,8 +7175,247 @@ DATA;
             schedule: [],
             dailyPlan: [],
             materials: [],
-            rulesCheck: []
+            rulesCheck: [],
+            holidays: [],
+            startDate: null,
+            endDate: null,
+            workDaysPerWeek: 5,
+            hoursPerDay: 8
         };
+
+        // Brazilian national holidays (fixed dates)
+        const NATIONAL_HOLIDAYS_BR = [
+            { month: 1, day: 1, name: 'Confraternização Universal' },
+            { month: 4, day: 21, name: 'Tiradentes' },
+            { month: 5, day: 1, name: 'Dia do Trabalho' },
+            { month: 9, day: 7, name: 'Independência do Brasil' },
+            { month: 10, day: 12, name: 'Nossa Senhora Aparecida' },
+            { month: 11, day: 2, name: 'Finados' },
+            { month: 11, day: 15, name: 'Proclamação da República' },
+            { month: 12, day: 25, name: 'Natal' }
+        ];
+
+        // Initialize dates on page load
+        function initPlanningDates() {
+            const today = new Date();
+            const startInput = document.getElementById('planning-start-date');
+            const endInput = document.getElementById('planning-end-date');
+
+            if (startInput && !startInput.value) {
+                startInput.value = today.toISOString().slice(0, 10);
+            }
+            if (endInput && !endInput.value) {
+                const endDate = new Date(today);
+                endDate.setMonth(endDate.getMonth() + 3);
+                endInput.value = endDate.toISOString().slice(0, 10);
+            }
+
+            // Add change listeners
+            startInput?.addEventListener('change', calculateWorkDays);
+            endInput?.addEventListener('change', calculateWorkDays);
+            document.getElementById('planning-work-days')?.addEventListener('change', calculateWorkDays);
+
+            calculateWorkDays();
+        }
+
+        // Calculate work days between dates excluding weekends and holidays
+        function calculateWorkDays() {
+            const startInput = document.getElementById('planning-start-date');
+            const endInput = document.getElementById('planning-end-date');
+            const workDaysSelect = document.getElementById('planning-work-days');
+
+            if (!startInput?.value || !endInput?.value) return;
+
+            const startDate = new Date(startInput.value);
+            const endDate = new Date(endInput.value);
+            const workDaysPerWeek = parseInt(workDaysSelect?.value) || 5;
+
+            planningData.startDate = startDate;
+            planningData.endDate = endDate;
+            planningData.workDaysPerWeek = workDaysPerWeek;
+            planningData.hoursPerDay = parseInt(document.getElementById('planning-hours-day')?.value) || 8;
+
+            let workDays = 0;
+            let totalDays = 0;
+            const current = new Date(startDate);
+
+            while (current <= endDate) {
+                totalDays++;
+                const dayOfWeek = current.getDay(); // 0 = Sunday, 6 = Saturday
+
+                // Check if it's a working day based on work week setting
+                let isWorkDay = false;
+                if (workDaysPerWeek === 5) {
+                    isWorkDay = dayOfWeek >= 1 && dayOfWeek <= 5; // Mon-Fri
+                } else if (workDaysPerWeek === 6) {
+                    isWorkDay = dayOfWeek >= 1 && dayOfWeek <= 6; // Mon-Sat
+                } else {
+                    isWorkDay = true; // All days
+                }
+
+                // Check if it's a holiday
+                if (isWorkDay && !isHoliday(current)) {
+                    workDays++;
+                }
+
+                current.setDate(current.getDate() + 1);
+            }
+
+            const holidayCount = planningData.holidays.length;
+
+            document.getElementById('planning-work-days-count').innerHTML = `
+                <strong>${workDays}</strong> dias úteis
+                <span style="color: var(--text-secondary); font-size: 0.85rem;">
+                    (${totalDays} dias corridos, ${holidayCount} feriados cadastrados)
+                </span>
+            `;
+
+            return workDays;
+        }
+
+        function isHoliday(date) {
+            const dateStr = date.toISOString().slice(0, 10);
+            return planningData.holidays.some(h => h.date === dateStr);
+        }
+
+        function addHoliday() {
+            const dateInput = document.getElementById('holiday-date');
+            const nameInput = document.getElementById('holiday-name');
+
+            if (!dateInput.value) {
+                alert('Selecione uma data.');
+                return;
+            }
+
+            const date = dateInput.value;
+            const name = nameInput.value || 'Feriado';
+
+            // Check if already exists
+            if (planningData.holidays.some(h => h.date === date)) {
+                alert('Esta data já está cadastrada como feriado.');
+                return;
+            }
+
+            planningData.holidays.push({ date, name });
+            planningData.holidays.sort((a, b) => a.date.localeCompare(b.date));
+
+            dateInput.value = '';
+            nameInput.value = '';
+
+            renderHolidays();
+            calculateWorkDays();
+        }
+
+        function removeHoliday(index) {
+            planningData.holidays.splice(index, 1);
+            renderHolidays();
+            calculateWorkDays();
+        }
+
+        function loadNationalHolidays() {
+            const startDate = planningData.startDate || new Date();
+            const endDate = planningData.endDate || new Date(startDate.getFullYear(), 11, 31);
+
+            const startYear = startDate.getFullYear();
+            const endYear = endDate.getFullYear();
+
+            let added = 0;
+
+            for (let year = startYear; year <= endYear; year++) {
+                NATIONAL_HOLIDAYS_BR.forEach(h => {
+                    const date = new Date(year, h.month - 1, h.day);
+                    const dateStr = date.toISOString().slice(0, 10);
+
+                    // Only add if within range and not already added
+                    if (date >= startDate && date <= endDate) {
+                        if (!planningData.holidays.some(existing => existing.date === dateStr)) {
+                            planningData.holidays.push({ date: dateStr, name: h.name });
+                            added++;
+                        }
+                    }
+                });
+
+                // Add Easter-based holidays (approximate - Carnival, Good Friday, Corpus Christi)
+                const easter = calculateEaster(year);
+
+                const easterHolidays = [
+                    { offset: -47, name: 'Carnaval' },
+                    { offset: -46, name: 'Carnaval' },
+                    { offset: -2, name: 'Sexta-feira Santa' },
+                    { offset: 60, name: 'Corpus Christi' }
+                ];
+
+                easterHolidays.forEach(eh => {
+                    const date = new Date(easter);
+                    date.setDate(date.getDate() + eh.offset);
+                    const dateStr = date.toISOString().slice(0, 10);
+
+                    if (date >= startDate && date <= endDate) {
+                        if (!planningData.holidays.some(existing => existing.date === dateStr)) {
+                            planningData.holidays.push({ date: dateStr, name: eh.name });
+                            added++;
+                        }
+                    }
+                });
+            }
+
+            planningData.holidays.sort((a, b) => a.date.localeCompare(b.date));
+            renderHolidays();
+            calculateWorkDays();
+
+            alert(`${added} feriados nacionais adicionados.`);
+        }
+
+        function calculateEaster(year) {
+            // Meeus/Jones/Butcher algorithm for Easter
+            const a = year % 19;
+            const b = Math.floor(year / 100);
+            const c = year % 100;
+            const d = Math.floor(b / 4);
+            const e = b % 4;
+            const f = Math.floor((b + 8) / 25);
+            const g = Math.floor((b - f + 1) / 3);
+            const h = (19 * a + b - d - g + 15) % 30;
+            const i = Math.floor(c / 4);
+            const k = c % 4;
+            const l = (32 + 2 * e + 2 * i - h - k) % 7;
+            const m = Math.floor((a + 11 * h + 22 * l) / 451);
+            const month = Math.floor((h + l - 7 * m + 114) / 31);
+            const day = ((h + l - 7 * m + 114) % 31) + 1;
+            return new Date(year, month - 1, day);
+        }
+
+        function clearAllHolidays() {
+            if (confirm('Remover todos os feriados cadastrados?')) {
+                planningData.holidays = [];
+                renderHolidays();
+                calculateWorkDays();
+            }
+        }
+
+        function renderHolidays() {
+            const tbody = document.getElementById('holidays-tbody');
+            if (!tbody) return;
+
+            if (planningData.holidays.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="padding: 15px; text-align: center; color: var(--text-secondary);">Nenhum feriado cadastrado</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = planningData.holidays.map((h, idx) => {
+                const dateObj = new Date(h.date + 'T00:00:00');
+                const formattedDate = dateObj.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+                return `
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 8px;">${formattedDate}</td>
+                        <td style="padding: 8px;">${h.name}</td>
+                        <td style="padding: 8px; text-align: center;">
+                            <button onclick="removeHoliday(${idx})" style="background: none; border: none; color: var(--accent-red); cursor: pointer; font-size: 1rem;">✕</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
 
         // Default productivity table (SINAPI/SEINFRA based)
         const DEFAULT_PRODUCTIVITY = [
@@ -7873,51 +8242,283 @@ DATA;
             }
         }
 
+        // Store histogram data globally for updateHistogram
+        let histogramData = { dailyPlan: [], totalDays: 0 };
+
         function renderHistogram(dailyPlan, totalDays) {
+            histogramData = { dailyPlan, totalDays };
+            updateHistogram();
+        }
+
+        function updateHistogram() {
+            const { dailyPlan, totalDays } = histogramData;
+            if (!dailyPlan || dailyPlan.length === 0 || totalDays === 0) return;
+
             const canvas = document.getElementById('histogram-canvas');
             const ctx = canvas.getContext('2d');
             const width = canvas.width;
             const height = canvas.height;
 
+            const viewMode = document.getElementById('histogram-view')?.value || 'daily';
+            const resourceMode = document.getElementById('histogram-resource')?.value || 'all';
+
             ctx.clearRect(0, 0, width, height);
-            ctx.fillStyle = '#1e293b';
+
+            // Background with gradient
+            const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+            bgGradient.addColorStop(0, '#1e293b');
+            bgGradient.addColorStop(1, '#0f172a');
+            ctx.fillStyle = bgGradient;
             ctx.fillRect(0, 0, width, height);
 
-            // Aggregate by day
-            const laborByDay = Array(totalDays).fill(0);
-            const equipByDay = Array(totalDays).fill(0);
+            // Aggregate data
+            let laborByPeriod, equipByPeriod, costByPeriod, periods, periodLabels;
 
-            dailyPlan.forEach(d => {
-                laborByDay[d.day - 1] += d.labor;
-                equipByDay[d.day - 1] += d.equipment;
-            });
+            if (viewMode === 'daily') {
+                laborByPeriod = Array(totalDays).fill(0);
+                equipByPeriod = Array(totalDays).fill(0);
+                costByPeriod = Array(totalDays).fill(0);
 
-            const maxLabor = Math.max(...laborByDay, 1);
-            const barWidth = Math.max(5, (width - 70) / totalDays - 2);
+                dailyPlan.forEach(d => {
+                    laborByPeriod[d.day - 1] += d.labor;
+                    equipByPeriod[d.day - 1] += d.equipment;
+                    costByPeriod[d.day - 1] += d.daily_cost;
+                });
 
-            // Draw labor bars
-            ctx.fillStyle = '#3b82f6';
-            laborByDay.forEach((val, i) => {
-                const x = 50 + i * (barWidth + 2);
-                const barHeight = (height - 60) * (val / maxLabor);
-                ctx.fillRect(x, height - 30 - barHeight, barWidth / 2, barHeight);
-            });
+                periods = totalDays;
+                periodLabels = Array.from({ length: totalDays }, (_, i) => `D${i + 1}`);
+            } else if (viewMode === 'weekly') {
+                const weeks = Math.ceil(totalDays / 7);
+                laborByPeriod = Array(weeks).fill(0);
+                equipByPeriod = Array(weeks).fill(0);
+                costByPeriod = Array(weeks).fill(0);
 
-            // Draw equipment bars
-            ctx.fillStyle = '#8b5cf6';
-            equipByDay.forEach((val, i) => {
-                const x = 50 + i * (barWidth + 2) + barWidth / 2;
-                const barHeight = (height - 60) * (val / maxLabor);
-                ctx.fillRect(x, height - 30 - barHeight, barWidth / 2, barHeight);
-            });
+                dailyPlan.forEach(d => {
+                    const week = Math.floor((d.day - 1) / 7);
+                    laborByPeriod[week] += d.labor;
+                    equipByPeriod[week] += d.equipment;
+                    costByPeriod[week] += d.daily_cost;
+                });
 
-            // Y axis
+                periods = weeks;
+                periodLabels = Array.from({ length: weeks }, (_, i) => `S${i + 1}`);
+            } else {
+                const months = Math.ceil(totalDays / 30);
+                laborByPeriod = Array(months).fill(0);
+                equipByPeriod = Array(months).fill(0);
+                costByPeriod = Array(months).fill(0);
+
+                dailyPlan.forEach(d => {
+                    const month = Math.floor((d.day - 1) / 30);
+                    laborByPeriod[month] += d.labor;
+                    equipByPeriod[month] += d.equipment;
+                    costByPeriod[month] += d.daily_cost;
+                });
+
+                periods = months;
+                periodLabels = Array.from({ length: months }, (_, i) => `M${i + 1}`);
+            }
+
+            // Calculate stats
+            const maxLabor = Math.max(...laborByPeriod, 1);
+            const maxEquip = Math.max(...equipByPeriod, 1);
+            const maxVal = resourceMode === 'equipment' ? maxEquip : maxLabor;
+            const avgLabor = laborByPeriod.reduce((a, b) => a + b, 0) / periods;
+            const totalHH = laborByPeriod.reduce((a, b) => a + b, 0) * (planningData.hoursPerDay || 8);
+            const totalEquipDays = equipByPeriod.reduce((a, b) => a + b, 0);
+            const totalCost = costByPeriod.reduce((a, b) => a + b, 0);
+
+            // Update stats display
+            document.getElementById('stat-max-labor').textContent = Math.max(...laborByPeriod);
+            document.getElementById('stat-avg-labor').textContent = avgLabor.toFixed(1);
+            document.getElementById('stat-total-hh').textContent = totalHH.toLocaleString('pt-BR');
+            document.getElementById('stat-equip-days').textContent = totalEquipDays;
+
+            // Chart dimensions
+            const marginLeft = 60;
+            const marginRight = 40;
+            const marginTop = 40;
+            const marginBottom = 50;
+            const chartWidth = width - marginLeft - marginRight;
+            const chartHeight = height - marginTop - marginBottom;
+
+            // Draw grid
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= 5; i++) {
+                const y = marginTop + chartHeight * (1 - i / 5);
+                ctx.beginPath();
+                ctx.moveTo(marginLeft, y);
+                ctx.lineTo(width - marginRight, y);
+                ctx.stroke();
+
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '11px sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(Math.round(maxVal * i / 5).toString(), marginLeft - 8, y + 4);
+            }
+
+            // Bar dimensions
+            const barGroupWidth = chartWidth / periods;
+            const barWidth = Math.min(barGroupWidth * 0.7, 30);
+            const barGap = (barGroupWidth - barWidth) / 2;
+
+            if (resourceMode === 'all') {
+                // Draw both labor and equipment bars
+                const singleBarWidth = barWidth / 2 - 2;
+
+                laborByPeriod.forEach((val, i) => {
+                    const x = marginLeft + i * barGroupWidth + barGap;
+                    const barHeight = chartHeight * (val / maxVal);
+
+                    // Labor bar with gradient
+                    const laborGrad = ctx.createLinearGradient(x, marginTop + chartHeight - barHeight, x, marginTop + chartHeight);
+                    laborGrad.addColorStop(0, '#60a5fa');
+                    laborGrad.addColorStop(1, '#3b82f6');
+                    ctx.fillStyle = laborGrad;
+                    ctx.fillRect(x, marginTop + chartHeight - barHeight, singleBarWidth, barHeight);
+
+                    // Equipment bar
+                    const equipVal = equipByPeriod[i];
+                    const equipHeight = chartHeight * (equipVal / maxVal);
+                    const equipGrad = ctx.createLinearGradient(x + singleBarWidth + 2, marginTop + chartHeight - equipHeight, x + singleBarWidth + 2, marginTop + chartHeight);
+                    equipGrad.addColorStop(0, '#a78bfa');
+                    equipGrad.addColorStop(1, '#8b5cf6');
+                    ctx.fillStyle = equipGrad;
+                    ctx.fillRect(x + singleBarWidth + 2, marginTop + chartHeight - equipHeight, singleBarWidth, equipHeight);
+                });
+
+                // Draw average line
+                ctx.strokeStyle = '#f97316';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                const avgY = marginTop + chartHeight * (1 - avgLabor / maxVal);
+                ctx.beginPath();
+                ctx.moveTo(marginLeft, avgY);
+                ctx.lineTo(width - marginRight, avgY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+            } else if (resourceMode === 'labor') {
+                // Only labor bars
+                laborByPeriod.forEach((val, i) => {
+                    const x = marginLeft + i * barGroupWidth + barGap;
+                    const barHeight = chartHeight * (val / maxVal);
+
+                    const grad = ctx.createLinearGradient(x, marginTop + chartHeight - barHeight, x, marginTop + chartHeight);
+                    grad.addColorStop(0, '#60a5fa');
+                    grad.addColorStop(1, '#2563eb');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(x, marginTop + chartHeight - barHeight, barWidth, barHeight);
+
+                    // Value on top
+                    if (val > 0) {
+                        ctx.fillStyle = '#e2e8f0';
+                        ctx.font = 'bold 10px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(val.toString(), x + barWidth / 2, marginTop + chartHeight - barHeight - 5);
+                    }
+                });
+
+            } else if (resourceMode === 'equipment') {
+                // Only equipment bars
+                equipByPeriod.forEach((val, i) => {
+                    const x = marginLeft + i * barGroupWidth + barGap;
+                    const barHeight = chartHeight * (val / maxEquip);
+
+                    const grad = ctx.createLinearGradient(x, marginTop + chartHeight - barHeight, x, marginTop + chartHeight);
+                    grad.addColorStop(0, '#c4b5fd');
+                    grad.addColorStop(1, '#7c3aed');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(x, marginTop + chartHeight - barHeight, barWidth, barHeight);
+
+                    if (val > 0) {
+                        ctx.fillStyle = '#e2e8f0';
+                        ctx.font = 'bold 10px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(val.toString(), x + barWidth / 2, marginTop + chartHeight - barHeight - 5);
+                    }
+                });
+
+            } else if (resourceMode === 'cost') {
+                // Cumulative cost line
+                let cumCost = 0;
+                const costPoints = [];
+
+                costByPeriod.forEach((val, i) => {
+                    cumCost += val;
+                    costPoints.push({
+                        x: marginLeft + (i + 0.5) * barGroupWidth,
+                        y: marginTop + chartHeight * (1 - cumCost / totalCost)
+                    });
+                });
+
+                // Draw area under curve
+                ctx.beginPath();
+                ctx.moveTo(marginLeft, marginTop + chartHeight);
+                costPoints.forEach(p => ctx.lineTo(p.x, p.y));
+                ctx.lineTo(width - marginRight, marginTop + chartHeight);
+                ctx.closePath();
+
+                const areaGrad = ctx.createLinearGradient(0, marginTop, 0, marginTop + chartHeight);
+                areaGrad.addColorStop(0, 'rgba(34, 197, 94, 0.3)');
+                areaGrad.addColorStop(1, 'rgba(34, 197, 94, 0.05)');
+                ctx.fillStyle = areaGrad;
+                ctx.fill();
+
+                // Draw line
+                ctx.beginPath();
+                ctx.moveTo(costPoints[0].x, costPoints[0].y);
+                costPoints.forEach(p => ctx.lineTo(p.x, p.y));
+                ctx.strokeStyle = '#22c55e';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Draw points
+                costPoints.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                    ctx.fillStyle = '#22c55e';
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                });
+
+                // Update Y axis for percentage
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '11px sans-serif';
+                ctx.textAlign = 'right';
+                for (let i = 0; i <= 5; i++) {
+                    const y = marginTop + chartHeight * (1 - i / 5);
+                    ctx.fillText(`${i * 20}%`, marginLeft - 8, y + 4);
+                }
+            }
+
+            // X axis labels
             ctx.fillStyle = '#94a3b8';
             ctx.font = '10px sans-serif';
-            for (let i = 0; i <= 5; i++) {
-                const y = 30 + (height - 60) * (1 - i / 5);
-                ctx.fillText(Math.round(maxLabor * i / 5).toString(), 15, y + 4);
-            }
+            ctx.textAlign = 'center';
+
+            const labelStep = periods > 30 ? Math.ceil(periods / 15) : 1;
+            periodLabels.forEach((label, i) => {
+                if (i % labelStep === 0) {
+                    const x = marginLeft + (i + 0.5) * barGroupWidth;
+                    ctx.fillText(label, x, height - marginBottom + 15);
+                }
+            });
+
+            // Title
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            const titles = {
+                'all': 'Mão de Obra e Equipamentos',
+                'labor': 'Mão de Obra (pessoas/dia)',
+                'equipment': 'Equipamentos (unid./dia)',
+                'cost': 'Custo Acumulado (%)'
+            };
+            ctx.fillText(titles[resourceMode], width / 2, 20);
         }
 
         function renderDailyPlanTable(dailyPlan) {
