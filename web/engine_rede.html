@@ -4,10 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HydroNetwork - Motor de Cálculo Hidráulico</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+
+    <!-- External Libraries with Version Pinning -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js" crossorigin="anonymous"></script>
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3075,6 +3083,79 @@ PV02,359290.456,7352780.123,1.82</pre>
 
     <script>
         // ============================================
+        // SECURITY UTILITIES
+        // ============================================
+        const DEBUG_MODE = false; // Set to false in production
+
+        const SecurityUtils = {
+            // Escape HTML to prevent XSS
+            escapeHtml(unsafe) {
+                if (unsafe === null || unsafe === undefined) return '';
+                if (typeof unsafe !== 'string') return String(unsafe);
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            },
+
+            // Escape for HTML attributes
+            escapeAttr(unsafe) {
+                if (unsafe === null || unsafe === undefined) return '';
+                if (typeof unsafe !== 'string') return String(unsafe);
+                return unsafe.replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            },
+
+            // Sanitize filename
+            sanitizeFilename(filename) {
+                if (!filename) return 'file';
+                return filename.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 255);
+            },
+
+            // Validate file size (default 50MB)
+            validateFileSize(file, maxSizeMB = 50) {
+                const maxBytes = maxSizeMB * 1024 * 1024;
+                if (file.size > maxBytes) {
+                    alert(`Arquivo muito grande. Tamanho máximo: ${maxSizeMB}MB`);
+                    return false;
+                }
+                return true;
+            },
+
+            // Safe JSON parse
+            safeJsonParse(str, defaultValue = null) {
+                try {
+                    const parsed = JSON.parse(str);
+                    return parsed && typeof parsed === 'object' ? parsed : defaultValue;
+                } catch {
+                    return defaultValue;
+                }
+            },
+
+            // Validate GeoJSON structure
+            validateGeoJSON(data) {
+                if (!data || typeof data !== 'object') return false;
+                if (data.type !== 'FeatureCollection' && data.type !== 'Feature') {
+                    if (!data.geometry) return false;
+                }
+                if (data.features && !Array.isArray(data.features)) return false;
+                return true;
+            },
+
+            // Safe debug logging
+            debugLog(...args) {
+                if (DEBUG_MODE) {
+                    console.log('[DEBUG]', ...args);
+                }
+            }
+        };
+
+        // Shorthand aliases for common functions
+        const escapeHtml = SecurityUtils.escapeHtml;
+        const escapeAttr = SecurityUtils.escapeAttr;
+
+        // ============================================
         // GLOBAL STATE
         // ============================================
         let currentTab = 'import';
@@ -3562,9 +3643,15 @@ PV02,359290.456,7352780.123,1.82</pre>
 
         function handleFileSelect(e) {
             const file = e.target.files[0];
-            if (file) {
-                processFile(file);
+            if (!file) return;
+
+            // Security: Validate file size (max 50MB)
+            if (!SecurityUtils.validateFileSize(file, 50)) {
+                e.target.value = '';
+                return;
             }
+
+            processFile(file);
         }
 
         function processFile(file) {
@@ -3572,6 +3659,9 @@ PV02,359290.456,7352780.123,1.82</pre>
             reader.onload = function(e) {
                 const content = e.target.result;
                 parseTopographyData(content, file.name);
+            };
+            reader.onerror = function() {
+                alert('Erro ao ler arquivo. Tente novamente.');
             };
             reader.readAsText(file);
         }
@@ -4017,7 +4107,7 @@ PV02,359290.456,7352780.123,1.82</pre>
             for (let i = 0; i < maxPreview; i++) {
                 const node = importedNodes[i];
                 tbody += `<tr>
-                    <td>${node.id}</td>
+                    <td>${escapeHtml(node.id)}</td>
                     <td>${node.x.toFixed(2)}</td>
                     <td>${node.y.toFixed(2)}</td>
                     <td>${node.z.toFixed(2)}</td>
@@ -11945,17 +12035,26 @@ DATA;
             var dataUrl = canvas.toDataURL('image/png');
             var projectName = document.getElementById('openproject-name')?.value || 'Projeto';
 
-            // Open in new window for printing
-            var printWindow = window.open('', '_blank');
-            var htmlContent = '<html><head><title>Grafico de Gantt</title>';
-            htmlContent += '<style>body { margin: 0; padding: 20px; } img { max-width: 100%; }</style>';
+            // Security: Escape project name to prevent XSS
+            var safeProjectName = escapeHtml(projectName);
+
+            // Security: Open with noopener to prevent window.opener access
+            var printWindow = window.open('', '_blank', 'noopener,noreferrer');
+            if (!printWindow) {
+                alert('Popup bloqueado. Permita popups para exportar.');
+                return;
+            }
+
+            var htmlContent = '<!DOCTYPE html><html><head><title>Grafico de Gantt</title>';
+            htmlContent += '<meta charset="UTF-8">';
+            htmlContent += '<style>body { margin: 0; padding: 20px; font-family: Arial, sans-serif; } img { max-width: 100%; }</style>';
             htmlContent += '</head><body>';
-            htmlContent += '<h1>Grafico de Gantt - ' + projectName + '</h1>';
-            htmlContent += '<img src="' + dataUrl + '">';
-            htmlContent += '<scr' + 'ipt>window.onload = function() { window.print(); }<\/scr' + 'ipt>';
+            htmlContent += '<h1>Grafico de Gantt - ' + safeProjectName + '</h1>';
+            htmlContent += '<img src="' + dataUrl + '" alt="Gantt Chart">';
             htmlContent += '</body></html>';
             printWindow.document.write(htmlContent);
             printWindow.document.close();
+            printWindow.onload = function() { printWindow.print(); };
         }
 
         function exportGanttImage() {
