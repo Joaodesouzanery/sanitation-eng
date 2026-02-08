@@ -20,6 +20,7 @@
             --accent-green: #10b981;
             --accent-red: #ef4444;
             --accent-purple: #8b5cf6;
+            --accent-yellow: #fbbf24;
             --border-color: #475569;
         }
 
@@ -321,6 +322,7 @@
             <div class="tab" onclick="showTab('water')">💧 Água</div>
             <div class="tab" onclick="showTab('drainage')">🌧️ Drenagem</div>
             <div class="tab" onclick="showTab('quantities')">🏗️ Quantitativos</div>
+            <div class="tab" onclick="showTab('planning')">📅 Planejamento</div>
         </div>
 
         <!-- IMPORT TAB -->
@@ -544,7 +546,8 @@ PV01,359284.525,7352735.514,1.65"
                     <button class="btn btn-small" style="background: var(--accent-blue); color: white; border: none;" onclick="zoomIn()">🔍+</button>
                     <button class="btn btn-small" style="background: var(--accent-blue); color: white; border: none;" onclick="zoomOut()">🔍-</button>
                     <button class="btn btn-small" style="background: var(--accent-purple); color: white; border: none;" onclick="resetView()">↺ Reset</button>
-                    <button class="btn btn-small" style="background: var(--accent-red); color: white; border: none;" onclick="clearPreviewLinks()">🗑️ Limpar</button>
+                    <button class="btn btn-small" style="background: var(--accent-yellow); color: #333; border: none;" onclick="undoLastLink()" title="Desfazer último trecho conectado">↩️ Voltar</button>
+                    <button class="btn btn-small" style="background: var(--accent-red); color: white; border: none;" onclick="clearPreviewLinks()">🗑️ Limpar Tudo</button>
                     <span style="color: var(--text-secondary); font-size: 0.85rem; align-self: center; margin-left: auto;" id="trace-info"></span>
                 </div>
                 <div id="manual-trace-help" style="display: none; background: var(--accent-orange); color: white; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
@@ -1071,6 +1074,246 @@ PV02,359290.456,7352780.123,1.82</pre>
                     <span>⚙️</span> Calcular Quantitativos
                 </button>
                 <button class="btn btn-success" onclick="loadQtyDemo()">
+                    <span>📊</span> Carregar Demo
+                </button>
+            </div>
+        </div>
+
+        <!-- PLANNING TAB -->
+        <div id="planning-tab" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <h2><span class="icon">📋</span> Importar Planilha de Quantitativos</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                        Carregue uma planilha (CSV ou XLSX) gerada pelo software de dimensionamento.
+                        Os valores são considerados definitivos e não serão recalculados.
+                    </p>
+
+                    <div class="form-group">
+                        <label>Arquivo de Entrada</label>
+                        <input type="file" id="planning-file" accept=".csv,.xlsx,.xls"
+                               style="padding: 10px; background: var(--bg-secondary); border: 1px dashed var(--accent-blue); border-radius: 6px; width: 100%;">
+                        <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                            Formatos aceitos: CSV, XLSX, XLS
+                        </small>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="loadPlanningSpreadsheet()" style="margin-top: 10px;">
+                        <span>📥</span> Carregar e Validar Planilha
+                    </button>
+
+                    <div id="planning-validation" style="margin-top: 15px; display: none;">
+                        <h4 style="color: var(--accent-green); margin-bottom: 10px;">✓ Validação da Planilha</h4>
+                        <div id="planning-validation-content"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2><span class="icon">👷</span> Configuração de Equipes</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                        Configure as equipes de trabalho para o planejamento.
+                    </p>
+
+                    <div class="form-group">
+                        <label>Número de Equipes</label>
+                        <input type="number" id="planning-num-teams" value="2" min="1" max="10">
+                        <small style="color: var(--text-secondary);">Equipes trabalhando em paralelo</small>
+                    </div>
+
+                    <div id="team-config-container">
+                        <h4 style="margin: 15px 0 10px; color: var(--accent-blue);">Composição da Equipe Padrão:</h4>
+                        <div class="node-item" style="flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="font-size: 0.8rem; color: var(--text-secondary);">Encarregado</label>
+                                <input type="number" id="team-encarregado" value="1" min="0" max="3">
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="font-size: 0.8rem; color: var(--text-secondary);">Oficiais</label>
+                                <input type="number" id="team-oficiais" value="2" min="0" max="10">
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="font-size: 0.8rem; color: var(--text-secondary);">Ajudantes</label>
+                                <input type="number" id="team-ajudantes" value="4" min="0" max="20">
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="font-size: 0.8rem; color: var(--text-secondary);">Operador</label>
+                                <input type="number" id="team-operador" value="1" min="0" max="3">
+                            </div>
+                        </div>
+
+                        <h4 style="margin: 15px 0 10px; color: var(--accent-purple);">Equipamentos por Equipe:</h4>
+                        <div class="node-item" style="flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                                    <input type="checkbox" id="equip-retro" checked> Retroescavadeira
+                                </label>
+                            </div>
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                                    <input type="checkbox" id="equip-compactador" checked> Compactador
+                                </label>
+                            </div>
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                                    <input type="checkbox" id="equip-caminhao"> Caminhão Basculante
+                                </label>
+                            </div>
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                                    <input type="checkbox" id="equip-bomba"> Bomba de Esgotamento
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Profundidade Máxima para Escavação Manual (m)</label>
+                        <input type="number" id="planning-manual-depth" value="1.25" min="0.5" max="2.0" step="0.25">
+                        <small style="color: var(--text-secondary);">Acima disso, usa retroescavadeira obrigatoriamente</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid" style="margin-top: 20px;">
+                <div class="card">
+                    <h2><span class="icon">⚡</span> Tabela de Produtividade</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Produtividade por equipe/dia. Fonte: SINAPI/SEINFRA/TCPO
+                    </p>
+
+                    <div id="productivity-table" style="max-height: 400px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead style="position: sticky; top: 0; background: var(--bg-card);">
+                                <tr style="border-bottom: 2px solid var(--border-color);">
+                                    <th style="padding: 10px; text-align: left;">Serviço</th>
+                                    <th style="padding: 10px; text-align: center;">Unidade</th>
+                                    <th style="padding: 10px; text-align: center;">Produtividade/Dia</th>
+                                    <th style="padding: 10px; text-align: left;">Fonte</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productivity-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-small btn-add" onclick="addProductivityRow()" style="margin-top: 10px;">+ Adicionar Serviço</button>
+                </div>
+
+                <div class="card">
+                    <h2><span class="icon">📐</span> Regras Técnicas (Alertas)</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Verificações automáticas (não modificam os dados)
+                    </p>
+
+                    <div id="rules-check-container" style="max-height: 300px; overflow-y: auto;">
+                        <p style="color: var(--text-secondary); font-style: italic;">
+                            Carregue a planilha para verificar as regras técnicas
+                        </p>
+                    </div>
+
+                    <div style="margin-top: 15px; padding: 10px; background: var(--bg-secondary); border-radius: 6px;">
+                        <h4 style="color: var(--accent-orange); margin-bottom: 8px;">Regras Verificadas:</h4>
+                        <ul style="font-size: 0.85rem; color: var(--text-secondary); margin-left: 20px;">
+                            <li>Método de escavação vs profundidade</li>
+                            <li>Necessidade de escoramento (prof + solo)</li>
+                            <li>Presença de água → ativação de drenagem</li>
+                            <li>Largura da vala vs diâmetro do tubo</li>
+                            <li>Sequência lógica de atividades</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Planning Results Section -->
+            <div id="planning-results" style="display: none; margin-top: 20px;">
+                <div class="card">
+                    <h2><span class="icon">📅</span> Cronograma de Execução</h2>
+                    <div style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <div style="background: var(--accent-blue); color: white; padding: 15px 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold;" id="plan-total-days">0</div>
+                            <div style="font-size: 0.85rem;">Dias Úteis</div>
+                        </div>
+                        <div style="background: var(--accent-green); color: white; padding: 15px 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold;" id="plan-start-date">-</div>
+                            <div style="font-size: 0.85rem;">Início</div>
+                        </div>
+                        <div style="background: var(--accent-purple); color: white; padding: 15px 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold;" id="plan-end-date">-</div>
+                            <div style="font-size: 0.85rem;">Término</div>
+                        </div>
+                        <div style="background: var(--accent-orange); color: white; padding: 15px 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold;" id="plan-total-cost">R$ 0</div>
+                            <div style="font-size: 0.85rem;">Custo Total</div>
+                        </div>
+                    </div>
+
+                    <div id="schedule-gantt" style="background: var(--bg-secondary); border-radius: 8px; padding: 20px; min-height: 300px; overflow-x: auto;">
+                        <p style="color: var(--text-secondary);">Cronograma será exibido aqui</p>
+                    </div>
+                </div>
+
+                <div class="grid" style="margin-top: 20px;">
+                    <div class="card">
+                        <h2><span class="icon">📈</span> Curva S</h2>
+                        <canvas id="scurve-canvas" width="600" height="300" style="width: 100%; background: var(--bg-secondary); border-radius: 8px;"></canvas>
+                        <div style="display: flex; gap: 15px; margin-top: 10px; justify-content: center;">
+                            <span style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                                <span style="width: 12px; height: 12px; background: var(--accent-blue); border-radius: 2px;"></span> Físico Previsto
+                            </span>
+                            <span style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                                <span style="width: 12px; height: 12px; background: var(--accent-green); border-radius: 2px;"></span> Financeiro Previsto
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2><span class="icon">📊</span> Histograma de Recursos</h2>
+                        <canvas id="histogram-canvas" width="600" height="300" style="width: 100%; background: var(--bg-secondary); border-radius: 8px;"></canvas>
+                        <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center;">
+                            <span style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                                <span style="width: 12px; height: 12px; background: var(--accent-blue); border-radius: 2px;"></span> Mão de Obra
+                            </span>
+                            <span style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                                <span style="width: 12px; height: 12px; background: var(--accent-purple); border-radius: 2px;"></span> Equipamentos
+                            </span>
+                            <span style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                                <span style="width: 12px; height: 12px; background: var(--accent-orange); border-radius: 2px;"></span> Materiais
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Daily Plan Table -->
+                <div class="card" style="margin-top: 20px;">
+                    <h2><span class="icon">📋</span> Plano Diário Detalhado</h2>
+                    <div style="max-height: 400px; overflow: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead style="position: sticky; top: 0; background: var(--bg-card);">
+                                <tr style="border-bottom: 2px solid var(--border-color);">
+                                    <th style="padding: 10px; text-align: center;">Dia</th>
+                                    <th style="padding: 10px; text-align: left;">Trecho</th>
+                                    <th style="padding: 10px; text-align: left;">Atividade</th>
+                                    <th style="padding: 10px; text-align: center;">Equipes</th>
+                                    <th style="padding: 10px; text-align: center;">Produção</th>
+                                    <th style="padding: 10px; text-align: right;">Mão de Obra</th>
+                                    <th style="padding: 10px; text-align: right;">Equipamentos</th>
+                                    <th style="padding: 10px; text-align: right;">Custo Dia (R$)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="daily-plan-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" onclick="generatePlanning()">
+                    <span>📅</span> Gerar Planejamento
+                </button>
+                <button class="btn btn-success" onclick="exportPlanningToExcel()">
+                    <span>📥</span> Exportar Planejamento
+                </button>
+                <button class="btn" style="background: var(--accent-purple); color: white;" onclick="loadPlanningDemo()">
                     <span>📊</span> Carregar Demo
                 </button>
             </div>
@@ -2351,6 +2594,22 @@ PV02,359290.456,7352780.123,1.82</pre>
                 manualTraceOrigin = null;
                 drawNetwork();
                 updateTraceInfo();
+            }
+        }
+
+        function undoLastLink() {
+            if (previewLinks.length === 0) {
+                alert('Não há trechos para desfazer.');
+                return;
+            }
+            const removed = previewLinks.pop();
+            manualTraceOrigin = null;
+            drawNetwork();
+            updateTraceInfo();
+
+            const statusEl = document.getElementById('manual-trace-status');
+            if (statusEl && document.getElementById('manual-trace-help').style.display !== 'none') {
+                statusEl.textContent = `↩️ Trecho ${removed.from} → ${removed.to} removido. Clique no ponto de ORIGEM.`;
             }
         }
 
@@ -4403,7 +4662,7 @@ DATA;
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-            const tabOrder = ['import', 'sewer', 'water', 'drainage', 'quantities'];
+            const tabOrder = ['import', 'sewer', 'water', 'drainage', 'quantities', 'planning'];
             document.querySelector(`.tab:nth-child(${tabOrder.indexOf(tab) + 1})`).classList.add('active');
             document.getElementById(`${tab}-tab`).classList.add('active');
             document.getElementById('results').style.display = 'none';
@@ -4418,6 +4677,8 @@ DATA;
             } else if (tab === 'drainage') {
                 renderDrainageNodes();
                 renderDrainageLinks();
+            } else if (tab === 'planning') {
+                renderProductivityTable();
             } else if (tab === 'quantities') {
                 renderQtyLinks();
             }
@@ -5503,22 +5764,1044 @@ DATA;
         // EXPORT
         // ============================================
         function exportToExcel() {
-            if (!currentResults) return;
-
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(currentResults.data);
-            XLSX.utils.book_append_sheet(wb, ws, 'Resultados');
-
-            if (currentResults.nodeData) {
-                const ws2 = XLSX.utils.json_to_sheet(currentResults.nodeData);
-                XLSX.utils.book_append_sheet(wb, ws2, 'Nos');
+            if (!currentResults) {
+                alert('Calcule a rede primeiro para exportar os resultados.');
+                return;
             }
 
-            const summaryData = Object.entries(currentResults.summary).map(([k, v]) => ({ Métrica: k, Valor: v }));
-            const ws3 = XLSX.utils.json_to_sheet(summaryData);
-            XLSX.utils.book_append_sheet(wb, ws3, 'Resumo');
+            const wb = XLSX.utils.book_new();
+            const networkType = currentResults.type || 'rede';
+            const timestamp = new Date().toISOString().slice(0, 10);
 
-            XLSX.writeFile(wb, `hydronetwork_${currentResults.type}_${Date.now()}.xlsx`);
+            // Sheet 1: Summary/Resumo
+            const summaryRows = [
+                ['RESUMO DA REDE DE SANEAMENTO'],
+                [''],
+                ['Tipo de Rede', getNetworkTypeName(networkType)],
+                ['Data de Exportação', new Date().toLocaleString('pt-BR')],
+                [''],
+                ['MÉTRICAS PRINCIPAIS'],
+                ['']
+            ];
+
+            Object.entries(currentResults.summary).forEach(([key, value]) => {
+                const formattedKey = formatMetricKey(key);
+                const formattedValue = typeof value === 'number' ? formatNumber(value) : value;
+                summaryRows.push([formattedKey, formattedValue]);
+            });
+
+            const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+            wsSummary['!cols'] = [{ wch: 30 }, { wch: 20 }];
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumo');
+
+            // Sheet 2: Links/Trechos with formatted headers
+            if (currentResults.data && currentResults.data.length > 0) {
+                const linksHeaders = getLinksHeaders(networkType);
+                const linksData = currentResults.data.map(row => formatRowData(row, networkType));
+
+                const wsLinks = XLSX.utils.json_to_sheet(linksData);
+                wsLinks['!cols'] = linksHeaders.map(h => ({ wch: h.width || 12 }));
+                XLSX.utils.book_append_sheet(wb, wsLinks, 'Trechos');
+            }
+
+            // Sheet 3: Nodes/Nós
+            if (currentResults.nodeData && currentResults.nodeData.length > 0) {
+                const nodesData = currentResults.nodeData.map(node => ({
+                    'ID': node.id || node.ID,
+                    'X (Este)': formatNumber(node.x || node.X, 2),
+                    'Y (Norte)': formatNumber(node.y || node.Y, 2),
+                    'Cota (m)': formatNumber(node.z || node.Z || node.cota, 2),
+                    'População': node.pop || node.populacao || '-',
+                    'Demanda (L/s)': node.demand || node.demanda || '-',
+                    'Área (ha)': node.area || '-'
+                }));
+
+                const wsNodes = XLSX.utils.json_to_sheet(nodesData);
+                wsNodes['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 10 }];
+                XLSX.utils.book_append_sheet(wb, wsNodes, 'Nós');
+            }
+
+            // Sheet 4: Quantities/Quantitativos (if available)
+            if (currentResults.quantities || currentResults.costs) {
+                const qtyData = (currentResults.quantities || currentResults.costs || []).map(item => ({
+                    'Trecho': item.trecho || item.link || item.id,
+                    'Serviço': item.servico || item.descricao || item.description,
+                    'Unidade': item.unidade || item.unit || 'm³',
+                    'Quantidade': formatNumber(item.quantidade || item.qty || 0, 2),
+                    'Preço Unit. (R$)': formatNumber(item.precoUnit || item.unitPrice || 0, 2),
+                    'Custo Total (R$)': formatNumber(item.custoTotal || item.totalCost || 0, 2)
+                }));
+
+                const wsQty = XLSX.utils.json_to_sheet(qtyData);
+                wsQty['!cols'] = [{ wch: 10 }, { wch: 35 }, { wch: 8 }, { wch: 12 }, { wch: 15 }, { wch: 15 }];
+                XLSX.utils.book_append_sheet(wb, wsQty, 'Quantitativos');
+            }
+
+            // Sheet 5: Parameters/Parâmetros
+            const params = getExecutionParams();
+            const paramsRows = [
+                ['PARÂMETROS DE EXECUÇÃO'],
+                [''],
+                ['Parâmetro', 'Valor'],
+                ['Tipo de Solo', getSoilTypeName(params.soilType)],
+                ['Solo Saturado', params.soilSaturated ? 'Sim' : 'Não'],
+                ['Escoramento', params.shoringEnabled ? 'Sim' : 'Não'],
+                ['Tipo de Escoramento', params.shoringType || '-'],
+                ['Prof. Mín. Escoramento (m)', params.shoringMinDepth || 1.25],
+                [''],
+                ['PARÂMETROS HIDRÁULICOS'],
+                ['Coef. Manning (n)', document.getElementById('sewer-manning')?.value || '0.013'],
+                ['Coef. Hazen-Williams (C)', document.getElementById('water-c')?.value || '140'],
+                ['Declividade Mín. (%)', document.getElementById('sewer-smin')?.value || '0.5']
+            ];
+
+            const wsParams = XLSX.utils.aoa_to_sheet(paramsRows);
+            wsParams['!cols'] = [{ wch: 25 }, { wch: 30 }];
+            XLSX.utils.book_append_sheet(wb, wsParams, 'Parâmetros');
+
+            // Generate filename
+            const filename = `rede_${networkType}_${timestamp}.xlsx`;
+            XLSX.writeFile(wb, filename);
+
+            alert(`Arquivo ${filename} exportado com sucesso!`);
+        }
+
+        function getNetworkTypeName(type) {
+            const names = {
+                'sewer': 'Rede de Esgoto Sanitário',
+                'water': 'Rede de Abastecimento de Água',
+                'drainage': 'Rede de Drenagem Pluvial',
+                'quantities': 'Quantitativos de Obra'
+            };
+            return names[type] || type;
+        }
+
+        function getSoilTypeName(type) {
+            const names = {
+                '1cat': '1ª Categoria (solo comum)',
+                '2cat': '2ª Categoria (solo compacto/pedregulho)',
+                '3cat': '3ª Categoria (rocha)'
+            };
+            return names[type] || type;
+        }
+
+        function formatMetricKey(key) {
+            const translations = {
+                'totalLength': 'Extensão Total (m)',
+                'totalFlow': 'Vazão Total (L/s)',
+                'avgVelocity': 'Velocidade Média (m/s)',
+                'minSlope': 'Declividade Mínima (%)',
+                'maxSlope': 'Declividade Máxima (%)',
+                'totalExcavation': 'Escavação Total (m³)',
+                'totalBackfill': 'Reaterro Total (m³)',
+                'totalPavement': 'Pavimento Total (m²)',
+                'totalCost': 'Custo Total (R$)',
+                'maxFlow': 'Vazão Máxima (m³/s)',
+                'violations': 'Violações Normativas'
+            };
+            return translations[key] || key;
+        }
+
+        function formatNumber(value, decimals = 2) {
+            if (value === null || value === undefined || isNaN(value)) return '-';
+            return Number(value).toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+        }
+
+        function getLinksHeaders(type) {
+            return [
+                { name: 'Trecho', width: 10 },
+                { name: 'De', width: 10 },
+                { name: 'Para', width: 10 },
+                { name: 'Comp. (m)', width: 12 },
+                { name: 'DN (mm)', width: 10 },
+                { name: 'Decl. (%)', width: 10 },
+                { name: 'Vazão', width: 12 },
+                { name: 'Veloc. (m/s)', width: 12 },
+                { name: 'Prof. (m)', width: 10 }
+            ];
+        }
+
+        function formatRowData(row, type) {
+            return {
+                'Trecho': row.trecho || row.link || row.id || '-',
+                'De': row.from || row.de || '-',
+                'Para': row.to || row.para || '-',
+                'Comprimento (m)': formatNumber(row.length || row.comprimento || row.L, 2),
+                'DN (mm)': row.DN || row.diameter || '-',
+                'Declividade (%)': formatNumber((row.slope || row.declividade || 0) * 100, 3),
+                'Vazão (L/s)': formatNumber((row.Q || row.flow || row.vazao || 0) * 1000, 2),
+                'Velocidade (m/s)': formatNumber(row.V || row.velocity || row.velocidade, 2),
+                'Profundidade (m)': formatNumber(row.depth || row.profundidade || row.prof, 2),
+                'y/D': formatNumber(row.yD || row.yd, 3),
+                'Status': row.status || 'OK'
+            };
+        }
+
+        // ============================================
+        // PLANNING MODULE
+        // ============================================
+        let planningData = {
+            input: [],
+            productivity: [],
+            schedule: [],
+            dailyPlan: [],
+            materials: [],
+            rulesCheck: []
+        };
+
+        // Default productivity table (SINAPI/SEINFRA based)
+        const DEFAULT_PRODUCTIVITY = [
+            { servico: 'Escavação manual 1ª cat.', unidade: 'm³', produtividade: 3.5, fonte: 'SINAPI' },
+            { servico: 'Escavação manual 2ª cat.', unidade: 'm³', produtividade: 2.5, fonte: 'SINAPI' },
+            { servico: 'Escavação manual 3ª cat.', unidade: 'm³', produtividade: 1.5, fonte: 'SINAPI' },
+            { servico: 'Escavação mecânica 1ª cat.', unidade: 'm³', produtividade: 45, fonte: 'SINAPI' },
+            { servico: 'Escavação mecânica 2ª cat.', unidade: 'm³', produtividade: 35, fonte: 'SINAPI' },
+            { servico: 'Escavação mecânica 3ª cat.', unidade: 'm³', produtividade: 20, fonte: 'SINAPI' },
+            { servico: 'Assentamento tubo PVC DN150', unidade: 'm', produtividade: 60, fonte: 'SEINFRA' },
+            { servico: 'Assentamento tubo PVC DN200', unidade: 'm', produtividade: 55, fonte: 'SEINFRA' },
+            { servico: 'Assentamento tubo PVC DN300', unidade: 'm', produtividade: 45, fonte: 'SEINFRA' },
+            { servico: 'Assentamento tubo PVC DN400', unidade: 'm', produtividade: 35, fonte: 'SEINFRA' },
+            { servico: 'Reaterro compactado', unidade: 'm³', produtividade: 25, fonte: 'SINAPI' },
+            { servico: 'Escoramento contínuo', unidade: 'm²', produtividade: 15, fonte: 'TCPO' },
+            { servico: 'Lastro de brita', unidade: 'm³', produtividade: 20, fonte: 'SINAPI' },
+            { servico: 'Recomposição asfalto (CBUQ)', unidade: 'm²', produtividade: 80, fonte: 'SEINFRA' },
+            { servico: 'Poço de visita (PV) h≤2m', unidade: 'un', produtividade: 1, fonte: 'SINAPI' },
+            { servico: 'Poço de visita (PV) h>2m', unidade: 'un', produtividade: 0.5, fonte: 'SINAPI' },
+            { servico: 'Teste de estanqueidade', unidade: 'm', produtividade: 200, fonte: 'SEINFRA' },
+            { servico: 'Esgotamento com bomba', unidade: 'h', produtividade: 8, fonte: 'Mercado' }
+        ];
+
+        function renderProductivityTable() {
+            if (planningData.productivity.length === 0) {
+                planningData.productivity = [...DEFAULT_PRODUCTIVITY];
+            }
+
+            const tbody = document.getElementById('productivity-tbody');
+            if (!tbody) return;
+
+            let html = '';
+            planningData.productivity.forEach((item, idx) => {
+                html += `
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 8px;">
+                            <input type="text" value="${item.servico}" onchange="planningData.productivity[${idx}].servico = this.value"
+                                   style="width: 100%; background: transparent; border: none; color: var(--text-primary);">
+                        </td>
+                        <td style="padding: 8px; text-align: center;">
+                            <select onchange="planningData.productivity[${idx}].unidade = this.value"
+                                    style="background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px;">
+                                ${['m³', 'm²', 'm', 'un', 'h', 'vb'].map(u => `<option value="${u}" ${item.unidade === u ? 'selected' : ''}>${u}</option>`).join('')}
+                            </select>
+                        </td>
+                        <td style="padding: 8px; text-align: center;">
+                            <input type="number" value="${item.produtividade}" onchange="planningData.productivity[${idx}].produtividade = parseFloat(this.value)"
+                                   style="width: 80px; background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary); text-align: center; padding: 4px;">
+                        </td>
+                        <td style="padding: 8px;">
+                            <select onchange="planningData.productivity[${idx}].fonte = this.value"
+                                    style="background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px;">
+                                ${['SINAPI', 'SEINFRA', 'TCPO', 'Mercado', 'Histórico'].map(f => `<option value="${f}" ${item.fonte === f ? 'selected' : ''}>${f}</option>`).join('')}
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function addProductivityRow() {
+            planningData.productivity.push({ servico: 'Novo Serviço', unidade: 'm', produtividade: 10, fonte: 'Mercado' });
+            renderProductivityTable();
+        }
+
+        async function loadPlanningSpreadsheet() {
+            const fileInput = document.getElementById('planning-file');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Selecione um arquivo primeiro.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const fileName = file.name.toLowerCase();
+
+            try {
+                let data;
+                if (fileName.endsWith('.csv')) {
+                    data = await parseCSVFile(file);
+                } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                    data = await parseExcelFile(file);
+                } else {
+                    alert('Formato não suportado. Use CSV ou XLSX.');
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    alert('Arquivo vazio ou formato inválido.');
+                    return;
+                }
+
+                // Detect and normalize columns
+                const normalizedData = normalizeSpreadsheetData(data);
+
+                if (normalizedData.errors.length > 0) {
+                    showValidationErrors(normalizedData.errors);
+                    return;
+                }
+
+                planningData.input = normalizedData.data;
+                showValidationSuccess(normalizedData);
+
+            } catch (error) {
+                console.error('Erro ao carregar planilha:', error);
+                alert('Erro ao processar arquivo: ' + error.message);
+            }
+        }
+
+        function parseCSVFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const text = e.target.result;
+                        const lines = text.split(/\r?\n/).filter(l => l.trim());
+                        if (lines.length < 2) {
+                            resolve([]);
+                            return;
+                        }
+
+                        const delimiter = text.includes(';') ? ';' : ',';
+                        const headers = lines[0].split(delimiter).map(h => h.trim().replace(/"/g, ''));
+
+                        const data = [];
+                        for (let i = 1; i < lines.length; i++) {
+                            const values = lines[i].split(delimiter).map(v => v.trim().replace(/"/g, ''));
+                            const row = {};
+                            headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+                            data.push(row);
+                        }
+                        resolve(data);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsText(file, 'UTF-8');
+            });
+        }
+
+        function parseExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+                        resolve(jsonData);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function normalizeSpreadsheetData(rawData) {
+            const errors = [];
+            const normalized = [];
+
+            // Column mapping (detect by common names)
+            const columnMappings = {
+                trecho_id: ['trecho', 'setor', 'frente', 'id', 'trecho_id', 'item', 'cod'],
+                servico: ['servico', 'serviço', 'atividade', 'descricao', 'descrição', 'item_desc'],
+                unidade: ['unidade', 'und', 'un', 'unit'],
+                quantidade: ['quantidade', 'qtd', 'quant', 'qty', 'qte'],
+                tipo_solo: ['tipo_solo', 'solo', 'categoria', 'cat_solo', 'material'],
+                profundidade: ['profundidade', 'prof', 'depth', 'h', 'altura'],
+                diametro: ['diametro', 'diâmetro', 'dn', 'diam', 'diameter'],
+                observacoes: ['observacoes', 'observações', 'obs', 'notas', 'notes']
+            };
+
+            if (rawData.length === 0) {
+                errors.push('Planilha vazia');
+                return { data: [], errors };
+            }
+
+            const sampleRow = rawData[0];
+            const detectedColumns = {};
+
+            // Detect columns
+            for (const [normalizedName, possibleNames] of Object.entries(columnMappings)) {
+                for (const colName of Object.keys(sampleRow)) {
+                    const lowerCol = colName.toLowerCase().trim();
+                    if (possibleNames.some(pn => lowerCol.includes(pn))) {
+                        detectedColumns[normalizedName] = colName;
+                        break;
+                    }
+                }
+            }
+
+            // Check required columns
+            const requiredCols = ['quantidade'];
+            for (const req of requiredCols) {
+                if (!detectedColumns[req]) {
+                    errors.push(`Coluna obrigatória não encontrada: ${req}`);
+                }
+            }
+
+            if (errors.length > 0) {
+                return { data: [], errors, detectedColumns };
+            }
+
+            // Normalize data
+            rawData.forEach((row, idx) => {
+                const normalizedRow = {
+                    trecho_id: row[detectedColumns.trecho_id] || `T${idx + 1}`,
+                    servico: row[detectedColumns.servico] || 'Serviço não especificado',
+                    unidade: normalizeUnit(row[detectedColumns.unidade] || 'm'),
+                    quantidade: parseFloat(String(row[detectedColumns.quantidade] || '0').replace(',', '.')) || 0,
+                    tipo_solo: row[detectedColumns.tipo_solo] || '1cat',
+                    profundidade: parseFloat(String(row[detectedColumns.profundidade] || '1.2').replace(',', '.')) || 1.2,
+                    diametro: parseInt(row[detectedColumns.diametro]) || 150,
+                    observacoes: row[detectedColumns.observacoes] || ''
+                };
+
+                if (normalizedRow.quantidade > 0) {
+                    normalized.push(normalizedRow);
+                }
+            });
+
+            return { data: normalized, errors, detectedColumns };
+        }
+
+        function normalizeUnit(unit) {
+            const unitMap = {
+                'm3': 'm³', 'M3': 'm³', 'metro cubico': 'm³', 'metros cúbicos': 'm³',
+                'm2': 'm²', 'M2': 'm²', 'metro quadrado': 'm²', 'metros quadrados': 'm²',
+                'metro': 'm', 'metros': 'm', 'ML': 'm', 'ml': 'm',
+                'unidade': 'un', 'unid': 'un', 'UN': 'un', 'UNID': 'un',
+                'hora': 'h', 'horas': 'h', 'H': 'h',
+                'verba': 'vb', 'VB': 'vb'
+            };
+            return unitMap[unit] || unit;
+        }
+
+        function showValidationErrors(errors) {
+            const container = document.getElementById('planning-validation');
+            const content = document.getElementById('planning-validation-content');
+            container.style.display = 'block';
+            container.querySelector('h4').style.color = 'var(--accent-red)';
+            container.querySelector('h4').textContent = '✗ Erros de Validação';
+
+            content.innerHTML = `
+                <div style="background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 6px; border-left: 4px solid var(--accent-red);">
+                    <ul style="margin-left: 20px; color: var(--accent-red);">
+                        ${errors.map(e => `<li>${e}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function showValidationSuccess(result) {
+            const container = document.getElementById('planning-validation');
+            const content = document.getElementById('planning-validation-content');
+            container.style.display = 'block';
+            container.querySelector('h4').style.color = 'var(--accent-green)';
+            container.querySelector('h4').textContent = '✓ Planilha Validada com Sucesso';
+
+            const cols = result.detectedColumns;
+            content.innerHTML = `
+                <div style="background: rgba(16, 185, 129, 0.1); padding: 15px; border-radius: 6px; border-left: 4px solid var(--accent-green);">
+                    <p><strong>${result.data.length}</strong> registros carregados</p>
+                    <p style="margin-top: 10px; color: var(--text-secondary);">Colunas detectadas:</p>
+                    <ul style="margin-left: 20px; font-size: 0.85rem; color: var(--text-secondary);">
+                        ${Object.entries(cols).map(([k, v]) => `<li>${k}: <strong>${v}</strong></li>`).join('')}
+                    </ul>
+                </div>
+                <div style="margin-top: 15px; max-height: 200px; overflow: auto;">
+                    <table style="width: 100%; font-size: 0.8rem; border-collapse: collapse;">
+                        <thead style="position: sticky; top: 0; background: var(--bg-card);">
+                            <tr>
+                                <th style="padding: 5px; border-bottom: 1px solid var(--border-color);">Trecho</th>
+                                <th style="padding: 5px; border-bottom: 1px solid var(--border-color);">Serviço</th>
+                                <th style="padding: 5px; border-bottom: 1px solid var(--border-color);">Qtd</th>
+                                <th style="padding: 5px; border-bottom: 1px solid var(--border-color);">Un</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${result.data.slice(0, 10).map(r => `
+                                <tr>
+                                    <td style="padding: 5px;">${r.trecho_id}</td>
+                                    <td style="padding: 5px;">${r.servico.substring(0, 30)}${r.servico.length > 30 ? '...' : ''}</td>
+                                    <td style="padding: 5px; text-align: right;">${r.quantidade.toFixed(2)}</td>
+                                    <td style="padding: 5px;">${r.unidade}</td>
+                                </tr>
+                            `).join('')}
+                            ${result.data.length > 10 ? `<tr><td colspan="4" style="padding: 5px; text-align: center; color: var(--text-secondary);">... e mais ${result.data.length - 10} registros</td></tr>` : ''}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            // Run rules check
+            runRulesCheck(result.data);
+        }
+
+        function runRulesCheck(data) {
+            const rulesContainer = document.getElementById('rules-check-container');
+            const checks = [];
+
+            data.forEach(item => {
+                // Rule 1: Excavation method vs depth
+                if (item.profundidade > parseFloat(document.getElementById('planning-manual-depth')?.value || 1.25)) {
+                    if (item.servico.toLowerCase().includes('manual')) {
+                        checks.push({
+                            trecho: item.trecho_id,
+                            rule: 'Método de escavação',
+                            status: 'ALERT',
+                            msg: `Profundidade ${item.profundidade}m requer escavação mecânica`
+                        });
+                    }
+                }
+
+                // Rule 2: Shoring requirement
+                if (item.profundidade > 1.25 && !item.observacoes.toLowerCase().includes('escorad')) {
+                    checks.push({
+                        trecho: item.trecho_id,
+                        rule: 'Escoramento',
+                        status: 'ALERT',
+                        msg: `Prof. ${item.profundidade}m pode necessitar escoramento`
+                    });
+                }
+
+                // Rule 3: Water presence
+                if (item.observacoes.toLowerCase().includes('agua') || item.observacoes.toLowerCase().includes('água') ||
+                    item.observacoes.toLowerCase().includes('lencol') || item.observacoes.toLowerCase().includes('saturado')) {
+                    checks.push({
+                        trecho: item.trecho_id,
+                        rule: 'Presença de água',
+                        status: 'ALERT',
+                        msg: 'Necessário esgotamento/drenagem'
+                    });
+                }
+
+                // Rule 4: Trench width vs diameter
+                if (item.diametro >= 400 && item.quantidade > 0) {
+                    checks.push({
+                        trecho: item.trecho_id,
+                        rule: 'Largura da vala',
+                        status: 'INFO',
+                        msg: `DN${item.diametro} requer vala mais larga`
+                    });
+                }
+            });
+
+            planningData.rulesCheck = checks;
+
+            if (checks.length === 0) {
+                rulesContainer.innerHTML = '<p style="color: var(--accent-green);">✓ Nenhum alerta identificado</p>';
+            } else {
+                rulesContainer.innerHTML = checks.map(c => `
+                    <div style="padding: 8px; margin-bottom: 5px; border-radius: 4px; font-size: 0.85rem;
+                                background: ${c.status === 'ALERT' ? 'rgba(249, 115, 22, 0.1)' : 'rgba(59, 130, 246, 0.1)'};
+                                border-left: 3px solid ${c.status === 'ALERT' ? 'var(--accent-orange)' : 'var(--accent-blue)'};">
+                        <strong>${c.trecho}</strong> - ${c.rule}: ${c.msg}
+                    </div>
+                `).join('');
+            }
+        }
+
+        function generatePlanning() {
+            if (planningData.input.length === 0) {
+                // Try to use existing network data
+                const { nodes, links } = getActiveNodesAndLinks();
+                if (links.length === 0) {
+                    alert('Carregue uma planilha ou calcule a rede primeiro.');
+                    return;
+                }
+                // Convert network data to planning input
+                planningData.input = convertNetworkToPlanning(nodes, links);
+            }
+
+            const numTeams = parseInt(document.getElementById('planning-num-teams')?.value) || 2;
+            const teamConfig = getTeamConfig();
+
+            // Generate WBS and schedule
+            const wbs = generateWBS(planningData.input);
+            const schedule = generateSchedule(wbs, numTeams, teamConfig);
+            const dailyPlan = generateDailyPlan(schedule, teamConfig);
+
+            planningData.schedule = schedule;
+            planningData.dailyPlan = dailyPlan;
+
+            // Display results
+            displayPlanningResults(schedule, dailyPlan, teamConfig);
+        }
+
+        function getTeamConfig() {
+            return {
+                encarregado: parseInt(document.getElementById('team-encarregado')?.value) || 1,
+                oficiais: parseInt(document.getElementById('team-oficiais')?.value) || 2,
+                ajudantes: parseInt(document.getElementById('team-ajudantes')?.value) || 4,
+                operador: parseInt(document.getElementById('team-operador')?.value) || 1,
+                hasRetro: document.getElementById('equip-retro')?.checked ?? true,
+                hasCompactor: document.getElementById('equip-compactador')?.checked ?? true,
+                hasTruck: document.getElementById('equip-caminhao')?.checked ?? false,
+                hasPump: document.getElementById('equip-bomba')?.checked ?? false
+            };
+        }
+
+        function convertNetworkToPlanning(nodes, links) {
+            const input = [];
+            links.forEach((link, idx) => {
+                const fromNode = nodes.find(n => n.id === link.from);
+                const toNode = nodes.find(n => n.id === link.to);
+                const profUp = fromNode?.profUp || 1.2;
+                const profDown = toNode?.profDown || profUp + 0.3;
+                const avgProf = (profUp + profDown) / 2;
+
+                // Calculate quantities
+                const largura = Math.max(0.6, (link.DN || 150) / 1000 + 0.4);
+                const volEsc = link.length * largura * avgProf;
+                const volReat = volEsc * 0.7;
+                const areaPav = link.length * (largura + 0.2);
+
+                input.push({
+                    trecho_id: `T${String(idx + 1).padStart(2, '0')}`,
+                    servico: 'Escavação',
+                    unidade: 'm³',
+                    quantidade: volEsc,
+                    profundidade: avgProf,
+                    diametro: link.DN || 150
+                });
+                input.push({
+                    trecho_id: `T${String(idx + 1).padStart(2, '0')}`,
+                    servico: `Assentamento tubo DN${link.DN || 150}`,
+                    unidade: 'm',
+                    quantidade: link.length,
+                    profundidade: avgProf,
+                    diametro: link.DN || 150
+                });
+                input.push({
+                    trecho_id: `T${String(idx + 1).padStart(2, '0')}`,
+                    servico: 'Reaterro compactado',
+                    unidade: 'm³',
+                    quantidade: volReat,
+                    profundidade: avgProf,
+                    diametro: link.DN || 150
+                });
+                input.push({
+                    trecho_id: `T${String(idx + 1).padStart(2, '0')}`,
+                    servico: 'Recomposição pavimento',
+                    unidade: 'm²',
+                    quantidade: areaPav,
+                    profundidade: avgProf,
+                    diametro: link.DN || 150
+                });
+            });
+            return input;
+        }
+
+        function generateWBS(input) {
+            // Group by trecho
+            const byTrecho = {};
+            input.forEach(item => {
+                if (!byTrecho[item.trecho_id]) {
+                    byTrecho[item.trecho_id] = [];
+                }
+                byTrecho[item.trecho_id].push(item);
+            });
+
+            const wbs = [];
+            Object.entries(byTrecho).forEach(([trechoId, items], idx) => {
+                items.forEach(item => {
+                    wbs.push({
+                        wbs_id: `${trechoId}.${wbs.filter(w => w.trecho_id === trechoId).length + 1}`,
+                        trecho_id: trechoId,
+                        activity: item.servico,
+                        unidade: item.unidade,
+                        quantidade: item.quantidade,
+                        profundidade: item.profundidade,
+                        diametro: item.diametro
+                    });
+                });
+            });
+            return wbs;
+        }
+
+        function generateSchedule(wbs, numTeams, teamConfig) {
+            const schedule = [];
+            let currentDay = 1;
+            let teamAssignments = Array(numTeams).fill(0); // Day each team is free
+
+            // Get productivity lookup
+            const prodLookup = {};
+            planningData.productivity.forEach(p => {
+                prodLookup[p.servico.toLowerCase()] = p.produtividade;
+            });
+
+            // Group WBS by trecho
+            const byTrecho = {};
+            wbs.forEach(item => {
+                if (!byTrecho[item.trecho_id]) byTrecho[item.trecho_id] = [];
+                byTrecho[item.trecho_id].push(item);
+            });
+
+            Object.values(byTrecho).forEach(trechoItems => {
+                // Find next available team
+                const teamIdx = teamAssignments.indexOf(Math.min(...teamAssignments));
+                let trechoStartDay = teamAssignments[teamIdx];
+
+                trechoItems.forEach(item => {
+                    // Find productivity
+                    let productivity = 10; // default
+                    for (const [key, prod] of Object.entries(prodLookup)) {
+                        if (item.activity.toLowerCase().includes(key.split(' ')[0])) {
+                            productivity = prod;
+                            break;
+                        }
+                    }
+
+                    // Calculate duration
+                    const efficiency = item.profundidade > 2 ? 0.8 : 1.0;
+                    const duration = Math.ceil(item.quantidade / (productivity * efficiency));
+
+                    schedule.push({
+                        wbs_id: item.wbs_id,
+                        trecho_id: item.trecho_id,
+                        activity: item.activity,
+                        quantidade: item.quantidade,
+                        unidade: item.unidade,
+                        start_day: trechoStartDay + 1,
+                        end_day: trechoStartDay + duration,
+                        duration: duration,
+                        team: teamIdx + 1,
+                        productivity: productivity
+                    });
+
+                    trechoStartDay += duration;
+                });
+
+                teamAssignments[teamIdx] = trechoStartDay;
+            });
+
+            return schedule;
+        }
+
+        function generateDailyPlan(schedule, teamConfig) {
+            const dailyPlan = [];
+            const totalDays = Math.max(...schedule.map(s => s.end_day));
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dayActivities = schedule.filter(s => s.start_day <= day && s.end_day >= day);
+
+                dayActivities.forEach(act => {
+                    const laborCount = teamConfig.encarregado + teamConfig.oficiais + teamConfig.ajudantes + teamConfig.operador;
+                    const laborCost = laborCount * 180; // Average daily cost per worker
+                    const equipCost = (teamConfig.hasRetro ? 450 : 0) + (teamConfig.hasCompactor ? 120 : 0) +
+                                      (teamConfig.hasTruck ? 350 : 0) + (teamConfig.hasPump ? 200 : 0);
+
+                    dailyPlan.push({
+                        day: day,
+                        trecho_id: act.trecho_id,
+                        activity: act.activity,
+                        team: act.team,
+                        production: act.productivity,
+                        labor: laborCount,
+                        equipment: Object.entries(teamConfig).filter(([k, v]) => k.startsWith('has') && v).length,
+                        daily_cost: laborCost + equipCost
+                    });
+                });
+            }
+
+            return dailyPlan;
+        }
+
+        function displayPlanningResults(schedule, dailyPlan, teamConfig) {
+            document.getElementById('planning-results').style.display = 'block';
+
+            const totalDays = Math.max(...schedule.map(s => s.end_day));
+            const startDate = new Date();
+            const endDate = new Date(startDate);
+            endDate.setDate(endDate.getDate() + totalDays);
+
+            document.getElementById('plan-total-days').textContent = totalDays;
+            document.getElementById('plan-start-date').textContent = startDate.toLocaleDateString('pt-BR');
+            document.getElementById('plan-end-date').textContent = endDate.toLocaleDateString('pt-BR');
+
+            const totalCost = dailyPlan.reduce((sum, d) => sum + d.daily_cost, 0);
+            document.getElementById('plan-total-cost').textContent = `R$ ${totalCost.toLocaleString('pt-BR')}`;
+
+            // Render Gantt
+            renderSimpleGantt(schedule, totalDays);
+
+            // Render S-Curve
+            renderSCurve(schedule, dailyPlan, totalDays);
+
+            // Render Histogram
+            renderHistogram(dailyPlan, totalDays);
+
+            // Render Daily Plan Table
+            renderDailyPlanTable(dailyPlan);
+        }
+
+        function renderSimpleGantt(schedule, totalDays) {
+            const container = document.getElementById('schedule-gantt');
+            const trechos = [...new Set(schedule.map(s => s.trecho_id))];
+            const dayWidth = Math.max(20, Math.min(40, 600 / totalDays));
+
+            let html = `<div style="display: flex; gap: 5px; margin-bottom: 10px; font-size: 0.75rem; color: var(--text-secondary);">
+                <div style="width: 100px;">Trecho</div>
+                ${Array.from({length: totalDays}, (_, i) => `<div style="width: ${dayWidth}px; text-align: center;">${i + 1}</div>`).join('')}
+            </div>`;
+
+            trechos.forEach(trecho => {
+                const trechoSchedule = schedule.filter(s => s.trecho_id === trecho);
+                html += `<div style="display: flex; gap: 5px; margin-bottom: 3px; align-items: center;">
+                    <div style="width: 100px; font-size: 0.8rem; font-weight: bold;">${trecho}</div>`;
+
+                for (let day = 1; day <= totalDays; day++) {
+                    const activity = trechoSchedule.find(s => s.start_day <= day && s.end_day >= day);
+                    const color = activity ? getActivityColor(activity.activity) : 'transparent';
+                    const border = activity ? 'none' : '1px solid var(--border-color)';
+                    html += `<div style="width: ${dayWidth}px; height: 20px; background: ${color}; border: ${border}; border-radius: 2px;"
+                                  title="${activity ? activity.activity : ''}"></div>`;
+                }
+                html += '</div>';
+            });
+
+            container.innerHTML = html;
+        }
+
+        function getActivityColor(activity) {
+            const lower = activity.toLowerCase();
+            if (lower.includes('escava')) return 'var(--accent-orange)';
+            if (lower.includes('assenta')) return 'var(--accent-blue)';
+            if (lower.includes('reaterro') || lower.includes('aterro')) return 'var(--accent-green)';
+            if (lower.includes('pavimento') || lower.includes('recomp')) return 'var(--accent-purple)';
+            if (lower.includes('teste')) return 'var(--accent-red)';
+            return 'var(--text-secondary)';
+        }
+
+        function renderSCurve(schedule, dailyPlan, totalDays) {
+            const canvas = document.getElementById('scurve-canvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, width, height);
+
+            // Calculate cumulative progress
+            const totalQty = schedule.reduce((sum, s) => sum + s.quantidade, 0);
+            const totalCost = dailyPlan.reduce((sum, d) => sum + d.daily_cost, 0);
+
+            const physicalProgress = [];
+            const financialProgress = [];
+            let cumQty = 0, cumCost = 0;
+
+            for (let day = 1; day <= totalDays; day++) {
+                const daySchedule = schedule.filter(s => s.start_day <= day && s.end_day >= day);
+                daySchedule.forEach(s => { cumQty += s.quantidade / s.duration; });
+
+                const dayCosts = dailyPlan.filter(d => d.day === day);
+                dayCosts.forEach(d => { cumCost += d.daily_cost; });
+
+                physicalProgress.push(Math.min(100, (cumQty / totalQty) * 100));
+                financialProgress.push(Math.min(100, (cumCost / totalCost) * 100));
+            }
+
+            // Draw grid
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= 10; i++) {
+                const y = 30 + (height - 60) * (1 - i / 10);
+                ctx.beginPath();
+                ctx.moveTo(50, y);
+                ctx.lineTo(width - 20, y);
+                ctx.stroke();
+
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '10px sans-serif';
+                ctx.fillText(`${i * 10}%`, 20, y + 4);
+            }
+
+            // Draw physical curve
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            physicalProgress.forEach((p, i) => {
+                const x = 50 + (width - 70) * (i / (totalDays - 1 || 1));
+                const y = 30 + (height - 60) * (1 - p / 100);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // Draw financial curve
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            financialProgress.forEach((p, i) => {
+                const x = 50 + (width - 70) * (i / (totalDays - 1 || 1));
+                const y = 30 + (height - 60) * (1 - p / 100);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // X axis labels
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px sans-serif';
+            const step = Math.ceil(totalDays / 10);
+            for (let i = 0; i < totalDays; i += step) {
+                const x = 50 + (width - 70) * (i / (totalDays - 1 || 1));
+                ctx.fillText(`D${i + 1}`, x - 10, height - 10);
+            }
+        }
+
+        function renderHistogram(dailyPlan, totalDays) {
+            const canvas = document.getElementById('histogram-canvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, width, height);
+
+            // Aggregate by day
+            const laborByDay = Array(totalDays).fill(0);
+            const equipByDay = Array(totalDays).fill(0);
+
+            dailyPlan.forEach(d => {
+                laborByDay[d.day - 1] += d.labor;
+                equipByDay[d.day - 1] += d.equipment;
+            });
+
+            const maxLabor = Math.max(...laborByDay, 1);
+            const barWidth = Math.max(5, (width - 70) / totalDays - 2);
+
+            // Draw labor bars
+            ctx.fillStyle = '#3b82f6';
+            laborByDay.forEach((val, i) => {
+                const x = 50 + i * (barWidth + 2);
+                const barHeight = (height - 60) * (val / maxLabor);
+                ctx.fillRect(x, height - 30 - barHeight, barWidth / 2, barHeight);
+            });
+
+            // Draw equipment bars
+            ctx.fillStyle = '#8b5cf6';
+            equipByDay.forEach((val, i) => {
+                const x = 50 + i * (barWidth + 2) + barWidth / 2;
+                const barHeight = (height - 60) * (val / maxLabor);
+                ctx.fillRect(x, height - 30 - barHeight, barWidth / 2, barHeight);
+            });
+
+            // Y axis
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px sans-serif';
+            for (let i = 0; i <= 5; i++) {
+                const y = 30 + (height - 60) * (1 - i / 5);
+                ctx.fillText(Math.round(maxLabor * i / 5).toString(), 15, y + 4);
+            }
+        }
+
+        function renderDailyPlanTable(dailyPlan) {
+            const tbody = document.getElementById('daily-plan-tbody');
+            tbody.innerHTML = dailyPlan.map(d => `
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 8px; text-align: center;">${d.day}</td>
+                    <td style="padding: 8px;">${d.trecho_id}</td>
+                    <td style="padding: 8px;">${d.activity}</td>
+                    <td style="padding: 8px; text-align: center;">Eq. ${d.team}</td>
+                    <td style="padding: 8px; text-align: center;">${d.production}/dia</td>
+                    <td style="padding: 8px; text-align: right;">${d.labor} pessoas</td>
+                    <td style="padding: 8px; text-align: right;">${d.equipment} equip.</td>
+                    <td style="padding: 8px; text-align: right;">R$ ${d.daily_cost.toLocaleString('pt-BR')}</td>
+                </tr>
+            `).join('');
+        }
+
+        function exportPlanningToExcel() {
+            if (planningData.schedule.length === 0) {
+                alert('Gere o planejamento primeiro.');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const timestamp = new Date().toISOString().slice(0, 10);
+
+            // Schedule sheet
+            const scheduleData = planningData.schedule.map(s => ({
+                'WBS': s.wbs_id,
+                'Trecho': s.trecho_id,
+                'Atividade': s.activity,
+                'Quantidade': s.quantidade,
+                'Unidade': s.unidade,
+                'Início (Dia)': s.start_day,
+                'Término (Dia)': s.end_day,
+                'Duração (Dias)': s.duration,
+                'Equipe': s.team
+            }));
+            const wsSchedule = XLSX.utils.json_to_sheet(scheduleData);
+            XLSX.utils.book_append_sheet(wb, wsSchedule, 'Cronograma');
+
+            // Daily Plan sheet
+            const dailyData = planningData.dailyPlan.map(d => ({
+                'Dia': d.day,
+                'Trecho': d.trecho_id,
+                'Atividade': d.activity,
+                'Equipe': d.team,
+                'Produção/Dia': d.production,
+                'Mão de Obra': d.labor,
+                'Equipamentos': d.equipment,
+                'Custo Dia (R$)': d.daily_cost
+            }));
+            const wsDaily = XLSX.utils.json_to_sheet(dailyData);
+            XLSX.utils.book_append_sheet(wb, wsDaily, 'Plano Diário');
+
+            // Rules Check sheet
+            if (planningData.rulesCheck.length > 0) {
+                const rulesData = planningData.rulesCheck.map(r => ({
+                    'Trecho': r.trecho,
+                    'Regra': r.rule,
+                    'Status': r.status,
+                    'Mensagem': r.msg
+                }));
+                const wsRules = XLSX.utils.json_to_sheet(rulesData);
+                XLSX.utils.book_append_sheet(wb, wsRules, 'Verificação de Regras');
+            }
+
+            XLSX.writeFile(wb, `planejamento_${timestamp}.xlsx`);
+            alert('Planejamento exportado com sucesso!');
+        }
+
+        function loadPlanningDemo() {
+            // Create demo data
+            planningData.input = [
+                { trecho_id: 'T01', servico: 'Escavação mecânica 1ª cat.', unidade: 'm³', quantidade: 45, profundidade: 1.5, diametro: 150 },
+                { trecho_id: 'T01', servico: 'Assentamento tubo PVC DN150', unidade: 'm', quantidade: 50, profundidade: 1.5, diametro: 150 },
+                { trecho_id: 'T01', servico: 'Reaterro compactado', unidade: 'm³', quantidade: 35, profundidade: 1.5, diametro: 150 },
+                { trecho_id: 'T01', servico: 'Recomposição asfalto (CBUQ)', unidade: 'm²', quantidade: 40, profundidade: 1.5, diametro: 150 },
+                { trecho_id: 'T02', servico: 'Escavação mecânica 1ª cat.', unidade: 'm³', quantidade: 54, profundidade: 1.8, diametro: 150 },
+                { trecho_id: 'T02', servico: 'Assentamento tubo PVC DN150', unidade: 'm', quantidade: 50, profundidade: 1.8, diametro: 150 },
+                { trecho_id: 'T02', servico: 'Reaterro compactado', unidade: 'm³', quantidade: 42, profundidade: 1.8, diametro: 150 },
+                { trecho_id: 'T02', servico: 'Recomposição asfalto (CBUQ)', unidade: 'm²', quantidade: 40, profundidade: 1.8, diametro: 150 },
+                { trecho_id: 'T03', servico: 'Escavação mecânica 2ª cat.', unidade: 'm³', quantidade: 72, profundidade: 2.0, diametro: 200 },
+                { trecho_id: 'T03', servico: 'Escoramento contínuo', unidade: 'm²', quantidade: 100, profundidade: 2.0, diametro: 200 },
+                { trecho_id: 'T03', servico: 'Assentamento tubo PVC DN200', unidade: 'm', quantidade: 50, profundidade: 2.0, diametro: 200 },
+                { trecho_id: 'T03', servico: 'Reaterro compactado', unidade: 'm³', quantidade: 56, profundidade: 2.0, diametro: 200 },
+                { trecho_id: 'T03', servico: 'Recomposição asfalto (CBUQ)', unidade: 'm²', quantidade: 45, profundidade: 2.0, diametro: 200 }
+            ];
+
+            // Show validation
+            showValidationSuccess({ data: planningData.input, detectedColumns: { trecho_id: 'trecho_id', servico: 'servico', quantidade: 'quantidade', unidade: 'unidade' } });
+
+            alert('Dados de demonstração carregados. Clique em "Gerar Planejamento" para ver os resultados.');
         }
 
         // ============================================
@@ -5532,6 +6815,7 @@ DATA;
             renderDrainageNodes();
             renderDrainageLinks();
             renderQtyLinks();
+            renderProductivityTable();
 
             // Set up network type change handler
             const networkTypeSelect = document.getElementById('import-network-type');
