@@ -1,0 +1,191 @@
+{
+    "_metadata": {
+        "description": "Dicionário de campos para exportação SHP (limite 10 caracteres DBF)",
+        "version": "1.0.0",
+        "author": "HydroNetwork",
+        "last_updated": "2026-02-08"
+    },
+
+    "water_pipes": {
+        "layer_name": "water_pipes",
+        "geometry_type": "LineString",
+        "description": "Tubulações de água",
+        "fields": {
+            "project_id": {"shp_name": "PRJ_ID", "type": "str", "max_length": 36, "unit": null, "description": "ID do projeto"},
+            "external_id": {"shp_name": "TRECHO_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID do trecho"},
+            "diameter": {"shp_name": "DIAM_MM", "type": "float", "precision": 0, "unit": "mm", "description": "Diâmetro nominal"},
+            "material": {"shp_name": "MATERIAL", "type": "str", "max_length": 20, "unit": null, "description": "Material do tubo"},
+            "length": {"shp_name": "COMPRIM", "type": "float", "precision": 2, "unit": "m", "description": "Comprimento do trecho"},
+            "roughness": {"shp_name": "RUGOSID", "type": "float", "precision": 2, "unit": null, "description": "Coeficiente de rugosidade"},
+            "upstream_cover": {"shp_name": "COB_MONT", "type": "float", "precision": 2, "unit": "m", "description": "Cobertura montante"},
+            "downstream_cover": {"shp_name": "COB_JUS", "type": "float", "precision": 2, "unit": "m", "description": "Cobertura jusante"},
+            "pressure_min": {"shp_name": "P_MIN", "type": "float", "precision": 2, "unit": "mca", "description": "Pressão mínima"},
+            "pressure_max": {"shp_name": "P_MAX", "type": "float", "precision": 2, "unit": "mca", "description": "Pressão máxima"},
+            "velocity_min": {"shp_name": "V_MIN", "type": "float", "precision": 3, "unit": "m/s", "description": "Velocidade mínima"},
+            "velocity_max": {"shp_name": "V_MAX", "type": "float", "precision": 3, "unit": "m/s", "description": "Velocidade máxima"},
+            "wbs_id": {"shp_name": "WBS_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID WBS do planejamento"},
+            "planned_start": {"shp_name": "INI_PLAN", "type": "date", "unit": null, "description": "Início planejado"},
+            "planned_end": {"shp_name": "FIM_PLAN", "type": "date", "unit": null, "description": "Fim planejado"},
+            "progress_percent": {"shp_name": "PCT_FIS", "type": "float", "precision": 1, "unit": "%", "description": "Percentual físico"}
+        }
+    },
+
+    "water_nodes": {
+        "layer_name": "water_nodes",
+        "geometry_type": "Point",
+        "description": "Nós da rede de água",
+        "fields": {
+            "external_id": {"shp_name": "NO_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID do nó"},
+            "element_type": {"shp_name": "TIPO_NO", "type": "str", "max_length": 15, "unit": null, "description": "Tipo do nó"},
+            "ground_elevation": {"shp_name": "COTA_TER", "type": "float", "precision": 3, "unit": "m", "description": "Cota do terreno"},
+            "invert_elevation": {"shp_name": "COTA_SOL", "type": "float", "precision": 3, "unit": "m", "description": "Cota de soleira"},
+            "pressure_min": {"shp_name": "PRESS_MIN", "type": "float", "precision": 2, "unit": "mca", "description": "Pressão mínima"},
+            "pressure_max": {"shp_name": "PRESS_MAX", "type": "float", "precision": 2, "unit": "mca", "description": "Pressão máxima"},
+            "demand": {"shp_name": "DEMANDA", "type": "float", "precision": 4, "unit": "L/s", "description": "Demanda base"}
+        }
+    },
+
+    "sewer_pipes": {
+        "layer_name": "sewer_pipes",
+        "geometry_type": "LineString",
+        "description": "Tubulações de esgoto",
+        "fields": {
+            "external_id": {"shp_name": "TRECHO_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID do trecho"},
+            "diameter": {"shp_name": "DIAM_MM", "type": "float", "precision": 0, "unit": "mm", "description": "Diâmetro nominal"},
+            "slope": {"shp_name": "DECLIV", "type": "float", "precision": 5, "unit": "m/m", "description": "Declividade"},
+            "material": {"shp_name": "MATERIAL", "type": "str", "max_length": 20, "unit": null, "description": "Material do tubo"},
+            "length": {"shp_name": "COMPRIM", "type": "float", "precision": 2, "unit": "m", "description": "Comprimento"},
+            "upstream_invert": {"shp_name": "PROF_SUP", "type": "float", "precision": 3, "unit": "m", "description": "Cota fundo montante"},
+            "downstream_invert": {"shp_name": "PROF_INF", "type": "float", "precision": 3, "unit": "m", "description": "Cota fundo jusante"},
+            "sewer_type": {"shp_name": "TIPO_ESG", "type": "str", "max_length": 15, "unit": null, "description": "Tipo (sanitário/misto)"},
+            "flow": {"shp_name": "VAZAO", "type": "float", "precision": 4, "unit": "L/s", "description": "Vazão calculada"},
+            "velocity": {"shp_name": "VELOC", "type": "float", "precision": 3, "unit": "m/s", "description": "Velocidade"},
+            "tractive_force": {"shp_name": "T_TRAT", "type": "float", "precision": 3, "unit": "Pa", "description": "Tensão trativa"}
+        }
+    },
+
+    "sewer_structures": {
+        "layer_name": "sewer_structures",
+        "geometry_type": "Point",
+        "description": "Poços de visita e estruturas",
+        "fields": {
+            "external_id": {"shp_name": "PV_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID do PV"},
+            "structure_type": {"shp_name": "TIPO_PV", "type": "str", "max_length": 15, "unit": null, "description": "Tipo de estrutura"},
+            "diameter": {"shp_name": "DIAM_PV", "type": "float", "precision": 0, "unit": "mm", "description": "Diâmetro do PV"},
+            "invert_elevation": {"shp_name": "COTA_FUND", "type": "float", "precision": 3, "unit": "m", "description": "Cota de fundo"},
+            "ground_elevation": {"shp_name": "COTA_TER", "type": "float", "precision": 3, "unit": "m", "description": "Cota do terreno"},
+            "depth": {"shp_name": "PROF", "type": "float", "precision": 2, "unit": "m", "description": "Profundidade"}
+        }
+    },
+
+    "drainage_conduits": {
+        "layer_name": "drainage_conduits",
+        "geometry_type": "LineString",
+        "description": "Condutos de drenagem",
+        "fields": {
+            "external_id": {"shp_name": "TRECHO_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID do trecho"},
+            "shape": {"shp_name": "SECAO", "type": "str", "max_length": 15, "unit": null, "description": "Tipo de seção"},
+            "diameter": {"shp_name": "DIAM_MM", "type": "float", "precision": 0, "unit": "mm", "description": "Diâmetro/dimensão"},
+            "material": {"shp_name": "MATERIAL", "type": "str", "max_length": 20, "unit": null, "description": "Material"},
+            "slope": {"shp_name": "DECLIV", "type": "float", "precision": 5, "unit": "m/m", "description": "Declividade"},
+            "length": {"shp_name": "COMPRIM", "type": "float", "precision": 2, "unit": "m", "description": "Comprimento"},
+            "velocity_max": {"shp_name": "VEL_MAX", "type": "float", "precision": 3, "unit": "m/s", "description": "Velocidade máxima"},
+            "flow_max": {"shp_name": "VAZ_MAX", "type": "float", "precision": 3, "unit": "m³/s", "description": "Vazão máxima"},
+            "flooding_duration": {"shp_name": "ALAGAM", "type": "float", "precision": 0, "unit": "min", "description": "Duração alagamento"}
+        }
+    },
+
+    "drainage_nodes": {
+        "layer_name": "drainage_nodes",
+        "geometry_type": "Point",
+        "description": "Nós de drenagem",
+        "fields": {
+            "external_id": {"shp_name": "NO_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID do nó"},
+            "element_type": {"shp_name": "TIPO", "type": "str", "max_length": 15, "unit": null, "description": "Tipo do nó"},
+            "invert_elevation": {"shp_name": "COTA_FUND", "type": "float", "precision": 3, "unit": "m", "description": "Cota de fundo"},
+            "ground_elevation": {"shp_name": "COTA_TER", "type": "float", "precision": 3, "unit": "m", "description": "Cota do terreno"},
+            "max_depth": {"shp_name": "PROF_MAX", "type": "float", "precision": 2, "unit": "m", "description": "Lâmina máxima"}
+        }
+    },
+
+    "epanet_results_nodes": {
+        "layer_name": "epanet_results_nodes",
+        "geometry_type": "Point",
+        "description": "Resultados EPANET - Nós",
+        "fields": {
+            "external_id": {"shp_name": "NO_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID do nó"},
+            "pressure_h00": {"shp_name": "PRESS_H0", "type": "float", "precision": 2, "unit": "mca", "description": "Pressão hora 0"},
+            "pressure_h06": {"shp_name": "PRESS_H6", "type": "float", "precision": 2, "unit": "mca", "description": "Pressão hora 6"},
+            "pressure_h12": {"shp_name": "PRESS_H12", "type": "float", "precision": 2, "unit": "mca", "description": "Pressão hora 12"},
+            "pressure_h18": {"shp_name": "PRESS_H18", "type": "float", "precision": 2, "unit": "mca", "description": "Pressão hora 18"},
+            "pressure_min": {"shp_name": "PRESS_MIN", "type": "float", "precision": 2, "unit": "mca", "description": "Pressão mínima"},
+            "pressure_max": {"shp_name": "PRESS_MAX", "type": "float", "precision": 2, "unit": "mca", "description": "Pressão máxima"},
+            "head_min": {"shp_name": "CARG_MIN", "type": "float", "precision": 2, "unit": "m", "description": "Carga mínima"},
+            "head_max": {"shp_name": "CARG_MAX", "type": "float", "precision": 2, "unit": "m", "description": "Carga máxima"},
+            "critical_status": {"shp_name": "STAT_CRIT", "type": "str", "max_length": 10, "unit": null, "description": "Status crítico"}
+        }
+    },
+
+    "epanet_results_pipes": {
+        "layer_name": "epanet_results_pipes",
+        "geometry_type": "LineString",
+        "description": "Resultados EPANET - Tubos",
+        "fields": {
+            "external_id": {"shp_name": "TRECHO_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID do trecho"},
+            "flow_h00": {"shp_name": "VAZAO_H0", "type": "float", "precision": 4, "unit": "L/s", "description": "Vazão hora 0"},
+            "flow_h06": {"shp_name": "VAZAO_H6", "type": "float", "precision": 4, "unit": "L/s", "description": "Vazão hora 6"},
+            "flow_h12": {"shp_name": "VAZAO_H12", "type": "float", "precision": 4, "unit": "L/s", "description": "Vazão hora 12"},
+            "flow_h18": {"shp_name": "VAZAO_H18", "type": "float", "precision": 4, "unit": "L/s", "description": "Vazão hora 18"},
+            "flow_max": {"shp_name": "VAZ_MAX", "type": "float", "precision": 4, "unit": "L/s", "description": "Vazão máxima"},
+            "headloss": {"shp_name": "PERDA_CRG", "type": "float", "precision": 4, "unit": "m", "description": "Perda de carga total"},
+            "velocity_max": {"shp_name": "VEL_MAX", "type": "float", "precision": 3, "unit": "m/s", "description": "Velocidade máxima"},
+            "unit_headloss": {"shp_name": "J_UNIT", "type": "float", "precision": 5, "unit": "m/km", "description": "Perda de carga unitária"}
+        }
+    },
+
+    "swmm_results_links": {
+        "layer_name": "swmm_results_links",
+        "geometry_type": "LineString",
+        "description": "Resultados SWMM - Condutos",
+        "fields": {
+            "external_id": {"shp_name": "LINK_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID do conduto"},
+            "max_depth": {"shp_name": "PROF_MAX", "type": "float", "precision": 3, "unit": "m", "description": "Lâmina máxima"},
+            "max_flow": {"shp_name": "VAZAO_MAX", "type": "float", "precision": 4, "unit": "m³/s", "description": "Vazão máxima"},
+            "max_velocity": {"shp_name": "VEL_MAX", "type": "float", "precision": 3, "unit": "m/s", "description": "Velocidade máxima"},
+            "time_full": {"shp_name": "TEMPO_CHE", "type": "float", "precision": 0, "unit": "min", "description": "Tempo em carga"},
+            "capacity_limited": {"shp_name": "CAP_LIMIT", "type": "float", "precision": 1, "unit": "%", "description": "% tempo capacidade limitada"},
+            "flooding_duration": {"shp_name": "ALAG_DUR", "type": "float", "precision": 0, "unit": "min", "description": "Duração alagamento"}
+        }
+    },
+
+    "swmm_results_nodes": {
+        "layer_name": "swmm_results_nodes",
+        "geometry_type": "Point",
+        "description": "Resultados SWMM - Nós",
+        "fields": {
+            "external_id": {"shp_name": "NO_ID", "type": "str", "max_length": 20, "unit": null, "description": "ID do nó"},
+            "max_depth": {"shp_name": "LAMINA_MAX", "type": "float", "precision": 3, "unit": "m", "description": "Lâmina máxima"},
+            "max_head": {"shp_name": "CARG_MAX", "type": "float", "precision": 3, "unit": "m", "description": "Carga máxima"},
+            "time_flooded": {"shp_name": "T_ALAG", "type": "float", "precision": 0, "unit": "min", "description": "Tempo alagado"},
+            "flooding_volume": {"shp_name": "TRANSB_VOL", "type": "float", "precision": 2, "unit": "m³", "description": "Volume transbordado"},
+            "max_inflow": {"shp_name": "AFL_MAX", "type": "float", "precision": 4, "unit": "m³/s", "description": "Afluência máxima"}
+        }
+    },
+
+    "peer_review_findings": {
+        "layer_name": "peer_review_findings",
+        "geometry_type": "Point",
+        "description": "Resultados da revisão por pares",
+        "fields": {
+            "element_id": {"shp_name": "ELEM_ID", "type": "str", "max_length": 36, "unit": null, "description": "ID do elemento"},
+            "rule_id": {"shp_name": "RULE_ID", "type": "str", "max_length": 15, "unit": null, "description": "ID da regra"},
+            "severity": {"shp_name": "SEVERITY", "type": "str", "max_length": 10, "unit": null, "description": "Severidade"},
+            "norm_ref": {"shp_name": "NORM_REF", "type": "str", "max_length": 20, "unit": null, "description": "Referência normativa"},
+            "topic": {"shp_name": "TOPIC", "type": "str", "max_length": 30, "unit": null, "description": "Tópico da norma"},
+            "message": {"shp_name": "MSG", "type": "str", "max_length": 254, "unit": null, "description": "Mensagem"},
+            "recommendation": {"shp_name": "RECOMEND", "type": "str", "max_length": 254, "unit": null, "description": "Recomendação"},
+            "reviewer": {"shp_name": "REVISOR", "type": "str", "max_length": 50, "unit": null, "description": "Revisor"},
+            "review_date": {"shp_name": "DT_REV", "type": "date", "unit": null, "description": "Data da revisão"}
+        }
+    }
+}

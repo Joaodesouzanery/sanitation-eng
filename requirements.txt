@@ -1,0 +1,48 @@
+# HydroNetwork - Motor de Cálculo Hidráulico
+# Dependências do projeto
+# Instalar com: pip install -r requirements.txt
+
+# Core
+pydantic>=2.0.0
+python-dateutil>=2.8.2
+
+# GIS
+pyshp>=2.3.1
+pyproj>=3.6.0
+shapely>=2.0.0
+fiona>=1.9.0
+geopandas>=0.14.0
+
+# Importadores
+ezdxf>=1.1.0
+ifcopenshell>=0.7.0
+
+# Hidráulica (wrappers)
+# wntr>=1.0.0  # EPANET wrapper
+# swmm-api>=0.4.0  # SWMM wrapper
+
+# Mapa interativo
+# maplibre>=0.1.0
+# folium>=0.15.0
+
+# Web API
+fastapi>=0.104.0
+uvicorn>=0.24.0
+
+# Utilitários
+numpy>=1.24.0
+pandas>=2.0.0
+openpyxl>=3.1.0
+xlrd>=2.0.0
+
+# Testes
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Logging
+loguru>=0.7.0
+
+# Desenvolvimento
+black>=23.0.0
+flake8>=6.1.0
+mypy>=1.5.0
