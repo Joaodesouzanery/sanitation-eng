@@ -12864,7 +12864,9 @@ DATA;
                 const row = tasksList.lastElementChild;
                 if (row) {
                     const inputs = row.querySelectorAll('input');
-                    if (inputs[0]) inputs[0].value = task.name || task.titulo || `Tarefa ${idx + 1}`;
+                    // inputs[0] = WBS ID, inputs[1] = Nome, inputs[2] = Duração, inputs[3] = Início, inputs[4] = Fim, inputs[5] = Progresso
+                    if (inputs[0]) inputs[0].value = task.wbs || `${idx + 1}`;
+                    if (inputs[1]) inputs[1].value = task.name || task.titulo || `Tarefa ${idx + 1}`;
 
                     // Processa data de início
                     let startDate = task.start || task.startDate || task.inicio || task.data_inicio || '';
@@ -12881,17 +12883,18 @@ DATA;
                             startDate = startDate.split('T')[0];
                         }
                     }
-                    if (inputs[1]) inputs[1].value = startDate;
+                    if (inputs[3]) inputs[3].value = startDate;
 
                     // Calcula duração
                     const duration = task.duration || task.duracao || task.dias || 5;
                     if (inputs[2]) inputs[2].value = duration;
 
-                    // Rastreia datas para calcular período do projeto
-                    if (startDate) {
-                        const taskStart = new Date(startDate);
-                        const taskEnd = new Date(startDate);
-                        taskEnd.setDate(taskEnd.getDate() + parseInt(duration));
+                    // Calcula data fim automaticamente
+                    if (startDate && duration) {
+                        const taskStart = new Date(startDate + 'T00:00:00');
+                        const taskEnd = new Date(taskStart);
+                        taskEnd.setDate(taskEnd.getDate() + parseInt(duration) - 1);
+                        if (inputs[4]) inputs[4].value = taskEnd.toISOString().slice(0, 10);
 
                         if (!minDate || taskStart < minDate) minDate = taskStart;
                         if (!maxDate || taskEnd > maxDate) maxDate = taskEnd;
@@ -15618,6 +15621,45 @@ DATA;
             list.appendChild(item);
         }
 
+        // Auto-calculate end date when duration or start date changes
+        function updateTaskEndDate(row) {
+            const inputs = row.querySelectorAll('input');
+            const durationInput = inputs[2]; // Duration field
+            const startDateInput = inputs[3]; // Start date field
+            const endDateInput = inputs[4]; // End date field
+
+            const duration = parseInt(durationInput.value) || 1;
+            const startDate = startDateInput.value;
+
+            if (startDate) {
+                const start = new Date(startDate + 'T00:00:00');
+                const end = new Date(start);
+                end.setDate(end.getDate() + duration - 1); // -1 because same day = 1 day duration
+                endDateInput.value = end.toISOString().slice(0, 10);
+                renderGanttChart();
+            }
+        }
+
+        // Auto-calculate duration when end date changes
+        function updateTaskDuration(row) {
+            const inputs = row.querySelectorAll('input');
+            const durationInput = inputs[2]; // Duration field
+            const startDateInput = inputs[3]; // Start date field
+            const endDateInput = inputs[4]; // End date field
+
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+
+            if (startDate && endDate) {
+                const start = new Date(startDate + 'T00:00:00');
+                const end = new Date(endDate + 'T00:00:00');
+                const diffTime = end - start;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 because same day = 1 day
+                durationInput.value = Math.max(1, diffDays);
+                renderGanttChart();
+            }
+        }
+
         function addOpenProjectTask() {
             const list = document.getElementById('openproject-tasks-list');
             const startDate = document.getElementById('openproject-start-date')?.value || new Date().toISOString().slice(0, 10);
@@ -15625,17 +15667,17 @@ DATA;
             newRow.innerHTML = `
                 <td><input type="text" value="${list.children.length + 1}" style="width: 50px;"></td>
                 <td><input type="text" value="Nova Tarefa" style="width: 100%;"></td>
-                <td><input type="number" value="1" style="width: 60px;"> dias</td>
-                <td><input type="date" value="${startDate}"></td>
-                <td><input type="date" value="${startDate}"></td>
-                <td><select style="width: 100%;">
-                    <option>Equipe Escavação</option>
-                    <option>Equipe Assentamento</option>
-                    <option>Equipe Reaterro</option>
+                <td><input type="number" value="1" min="1" style="width: 60px;" onchange="updateTaskEndDate(this.closest('tr'))"> dias</td>
+                <td><input type="date" value="${startDate}" onchange="updateTaskEndDate(this.closest('tr'))"></td>
+                <td><input type="date" value="${startDate}" onchange="updateTaskDuration(this.closest('tr'))"></td>
+                <td><select style="width: 100%;" onchange="renderGanttChart()">
+                    <option value="1">Equipe 1</option>
+                    <option value="2">Equipe 2</option>
+                    <option value="3">Equipe 3</option>
                 </select></td>
                 <td>
                     <div style="display: flex; align-items: center; gap: 5px;">
-                        <input type="range" min="0" max="100" value="0" style="width: 60px;">
+                        <input type="range" min="0" max="100" value="0" style="width: 60px;" onchange="this.nextElementSibling.textContent = this.value + '%'; renderGanttChart();">
                         <span>0%</span>
                     </div>
                 </td>
@@ -15689,14 +15731,15 @@ DATA;
                     ? `Ciclo completo (${task.activities.length} atividades)`
                     : task.activities.join(', ');
 
+                const duration = task.end_day - task.start_day + 1;
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="text" value="${task.wbs_id || `${idx + 1}`}" style="width: 60px;"></td>
                     <td><input type="text" value="${task.trecho_id} - ${activityName}" style="width: 100%;"></td>
-                    <td><input type="number" value="1" style="width: 60px;"> dias</td>
-                    <td><input type="date" value="${taskStart.toISOString().slice(0, 10)}"></td>
-                    <td><input type="date" value="${taskEnd.toISOString().slice(0, 10)}"></td>
-                    <td><select style="width: 100%;">
+                    <td><input type="number" value="${duration}" min="1" style="width: 60px;" onchange="updateTaskEndDate(this.closest('tr'))"> dias</td>
+                    <td><input type="date" value="${taskStart.toISOString().slice(0, 10)}" onchange="updateTaskEndDate(this.closest('tr'))"></td>
+                    <td><input type="date" value="${taskEnd.toISOString().slice(0, 10)}" onchange="updateTaskDuration(this.closest('tr'))"></td>
+                    <td><select style="width: 100%;" onchange="renderGanttChart()">
                         <option value="1" ${task.team === 1 ? 'selected' : ''}>Equipe 1</option>
                         <option value="2" ${task.team === 2 ? 'selected' : ''}>Equipe 2</option>
                         <option value="3">Equipe 3</option>
