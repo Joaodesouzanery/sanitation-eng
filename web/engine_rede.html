@@ -1236,6 +1236,7 @@
     <!-- Leaflet CSS and JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <div class="container">
@@ -11098,6 +11099,8 @@ DATA;
         }
 
         function generatePlanning() {
+            LoadingSystem.show('Gerando planejamento...');
+
             // Try to get data from multiple sources
             if (planningData.input.length === 0) {
                 // First, try to use data loaded from platform
@@ -11111,14 +11114,16 @@ DATA;
                         console.log('Usando dados de rede:', nodes.length, 'nós,', links.length, 'trechos');
                         planningData.input = convertNetworkToPlanning(nodes, links);
                     } else {
-                        alert('Nenhum dado encontrado!\n\nPor favor:\n1. Importe dados na aba "Importar Topografia"\n2. Ou clique em "Carregar Dados da Plataforma" na aba Planejamento\n3. Ou clique em "Carregar Demo" para testar');
+                        LoadingSystem.hide();
+                        ToastSystem.warning('Nenhum dado encontrado! Importe dados ou clique em "Carregar Demo".');
                         return;
                     }
                 }
             }
 
             if (planningData.input.length === 0) {
-                alert('Erro: Não foi possível converter os dados para planejamento.');
+                LoadingSystem.hide();
+                ToastSystem.error('Erro: Não foi possível converter os dados para planejamento.');
                 return;
             }
 
@@ -11135,7 +11140,8 @@ DATA;
             console.log('Cronograma gerado:', schedule.length, 'atividades');
 
             if (schedule.length === 0) {
-                alert('Erro ao gerar cronograma. Verifique os dados de entrada.');
+                LoadingSystem.hide();
+                ToastSystem.error('Erro ao gerar cronograma. Verifique os dados de entrada.');
                 return;
             }
 
@@ -11148,10 +11154,9 @@ DATA;
             // Display results
             displayPlanningResults(schedule, dailyPlan, teamConfig);
 
-            alert(`Planejamento gerado com sucesso!\n\n` +
-                `Atividades: ${schedule.length}\n` +
-                `Dias totais: ${Math.max(...schedule.map(s => s.end_day))}\n` +
-                `Equipes: ${numTeams}`);
+            const totalDays = Math.max(...schedule.map(s => s.end_day));
+            LoadingSystem.hide();
+            ToastSystem.success(`Planejamento gerado: ${schedule.length} atividades em ${totalDays} dias!`);
         }
 
         // Convert previewLinks to planning input format
@@ -12214,7 +12219,7 @@ DATA;
         }
 
         function loadPlanningDemo() {
-            // Create demo data
+            // Create demo data with more trechos for better visualization
             planningData.input = [
                 { trecho_id: 'T01', servico: 'Escavação mecânica 1ª cat.', unidade: 'm³', quantidade: 45, profundidade: 1.5, diametro: 150 },
                 { trecho_id: 'T01', servico: 'Assentamento tubo PVC DN150', unidade: 'm', quantidade: 50, profundidade: 1.5, diametro: 150 },
@@ -12228,13 +12233,22 @@ DATA;
                 { trecho_id: 'T03', servico: 'Escoramento contínuo', unidade: 'm²', quantidade: 100, profundidade: 2.0, diametro: 200 },
                 { trecho_id: 'T03', servico: 'Assentamento tubo PVC DN200', unidade: 'm', quantidade: 50, profundidade: 2.0, diametro: 200 },
                 { trecho_id: 'T03', servico: 'Reaterro compactado', unidade: 'm³', quantidade: 56, profundidade: 2.0, diametro: 200 },
-                { trecho_id: 'T03', servico: 'Recomposição asfalto (CBUQ)', unidade: 'm²', quantidade: 45, profundidade: 2.0, diametro: 200 }
+                { trecho_id: 'T03', servico: 'Recomposição asfalto (CBUQ)', unidade: 'm²', quantidade: 45, profundidade: 2.0, diametro: 200 },
+                { trecho_id: 'T04', servico: 'Escavação mecânica 1ª cat.', unidade: 'm³', quantidade: 36, profundidade: 1.2, diametro: 150 },
+                { trecho_id: 'T04', servico: 'Assentamento tubo PVC DN150', unidade: 'm', quantidade: 40, profundidade: 1.2, diametro: 150 },
+                { trecho_id: 'T04', servico: 'Reaterro compactado', unidade: 'm³', quantidade: 28, profundidade: 1.2, diametro: 150 },
+                { trecho_id: 'T04', servico: 'Recomposição asfalto (CBUQ)', unidade: 'm²', quantidade: 35, profundidade: 1.2, diametro: 150 },
+                { trecho_id: 'T05', servico: 'Escavação mecânica 2ª cat.', unidade: 'm³', quantidade: 90, profundidade: 2.5, diametro: 250 },
+                { trecho_id: 'T05', servico: 'Escoramento contínuo', unidade: 'm²', quantidade: 150, profundidade: 2.5, diametro: 250 },
+                { trecho_id: 'T05', servico: 'Assentamento tubo PVC DN250', unidade: 'm', quantidade: 60, profundidade: 2.5, diametro: 250 },
+                { trecho_id: 'T05', servico: 'Reaterro compactado', unidade: 'm³', quantidade: 70, profundidade: 2.5, diametro: 250 },
+                { trecho_id: 'T05', servico: 'Recomposição asfalto (CBUQ)', unidade: 'm²', quantidade: 55, profundidade: 2.5, diametro: 250 }
             ];
 
             // Show validation
             showValidationSuccess({ data: planningData.input, detectedColumns: { trecho_id: 'trecho_id', servico: 'servico', quantidade: 'quantidade', unidade: 'unidade' } });
 
-            alert('Dados de demonstração carregados. Clique em "Gerar Planejamento" para ver os resultados.');
+            ToastSystem.success('Dados de demonstração carregados! Clique em "Gerar Planejamento".');
         }
 
         // ============================================
@@ -14146,12 +14160,29 @@ DATA;
         }
 
         function runEpanetSimulation() {
-            const { nodes, links } = getActiveNodesAndLinks();
+            // Usa dados do módulo EPANET primeiro, depois outras fontes
+            let nodes = moduleData.epanet?.nodes || [];
+            let links = moduleData.epanet?.links || [];
 
-            if (nodes.length === 0 || links.length === 0) {
-                alert('Importe dados primeiro na aba Topografia.');
+            // Se não há dados no módulo, tenta outras fontes
+            if (nodes.length === 0) {
+                const mainData = getActiveNodesAndLinks();
+                nodes = mainData.nodes;
+                links = mainData.links;
+            }
+
+            if (nodes.length === 0) {
+                ToastSystem.warning('Nenhum dado disponível. Importe um arquivo .INP ou use "Carregar Rede".');
                 return;
             }
+
+            // Se não há links, gera automaticamente
+            if (links.length === 0 && nodes.length > 1) {
+                links = generateLinksFromNodes(nodes, 'sequential');
+                moduleData.epanet.links = links;
+            }
+
+            LoadingSystem.show('Executando simulação EPANET...');
 
             const analysisType = document.getElementById('epanet-analysis-type').value;
             const headloss = document.getElementById('epanet-headloss').value;
@@ -14216,6 +14247,8 @@ DATA;
 
             // Display results
             displayEpanetResults(results);
+            LoadingSystem.hide();
+            ToastSystem.success('Simulação EPANET concluída!');
         }
 
         function displayEpanetResults(results) {
@@ -14526,6 +14559,330 @@ DATA;
             input.click();
         }
 
+        // ============================================
+        // EPANET CANVAS INTERACTION & TOOLS
+        // ============================================
+
+        // Canvas state
+        let epanetCanvasState = {
+            zoom: 1,
+            offsetX: 0,
+            offsetY: 0,
+            isDragging: false,
+            dragStartX: 0,
+            dragStartY: 0,
+            selectedTool: 'select',
+            selectedElement: null,
+            tempPipe: null
+        };
+
+        // Initialize EPANET canvas events
+        function initEpanetCanvas() {
+            const canvas = document.getElementById('epanet-network-canvas');
+            if (!canvas) return;
+
+            // Mouse wheel zoom
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                epanetCanvasState.zoom = Math.max(0.1, Math.min(5, epanetCanvasState.zoom * delta));
+                document.getElementById('epanet-zoom-level').textContent = Math.round(epanetCanvasState.zoom * 100);
+                renderEpanetCanvas();
+            });
+
+            // Mouse down
+            canvas.addEventListener('mousedown', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                if (epanetCanvasState.selectedTool === 'select' || e.button === 1 || e.button === 2) {
+                    // Pan mode
+                    epanetCanvasState.isDragging = true;
+                    epanetCanvasState.dragStartX = x - epanetCanvasState.offsetX;
+                    epanetCanvasState.dragStartY = y - epanetCanvasState.offsetY;
+                    canvas.style.cursor = 'grabbing';
+                } else {
+                    // Add element at click position
+                    handleEpanetCanvasClick(x, y);
+                }
+            });
+
+            // Mouse move
+            canvas.addEventListener('mousemove', (e) => {
+                if (!epanetCanvasState.isDragging) return;
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                epanetCanvasState.offsetX = x - epanetCanvasState.dragStartX;
+                epanetCanvasState.offsetY = y - epanetCanvasState.dragStartY;
+                renderEpanetCanvas();
+            });
+
+            // Mouse up
+            canvas.addEventListener('mouseup', () => {
+                epanetCanvasState.isDragging = false;
+                canvas.style.cursor = getCursorForTool(epanetCanvasState.selectedTool);
+            });
+
+            // Right click context menu prevention
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        }
+
+        // Get cursor for tool
+        function getCursorForTool(tool) {
+            const cursors = {
+                'select': 'default',
+                'junction': 'crosshair',
+                'reservoir': 'crosshair',
+                'tank': 'crosshair',
+                'pipe': 'crosshair',
+                'pump': 'crosshair',
+                'valve': 'crosshair',
+                'delete': 'not-allowed'
+            };
+            return cursors[tool] || 'default';
+        }
+
+        // Handle canvas click for adding elements
+        function handleEpanetCanvasClick(canvasX, canvasY) {
+            const canvas = document.getElementById('epanet-network-canvas');
+            if (!canvas) return;
+
+            const data = moduleData.epanet;
+
+            // Convert canvas coordinates to world coordinates
+            const worldX = (canvasX - epanetCanvasState.offsetX) / epanetCanvasState.zoom;
+            const worldY = (canvas.height - canvasY - epanetCanvasState.offsetY) / epanetCanvasState.zoom;
+
+            switch (epanetCanvasState.selectedTool) {
+                case 'junction':
+                    const jId = `J${(data.nodes?.length || 0) + 1}`;
+                    if (!data.nodes) data.nodes = [];
+                    data.nodes.push({
+                        id: jId,
+                        x: worldX,
+                        y: worldY,
+                        z: 0,
+                        demand: 0,
+                        type: 'junction'
+                    });
+                    ToastSystem.success(`Junção ${jId} adicionada`);
+                    break;
+
+                case 'reservoir':
+                    const rId = `R${(data.reservoirs?.length || 0) + 1}`;
+                    if (!data.reservoirs) data.reservoirs = [];
+                    if (!data.nodes) data.nodes = [];
+                    data.reservoirs.push({
+                        id: rId,
+                        x: worldX,
+                        y: worldY,
+                        head: 100,
+                        type: 'reservoir'
+                    });
+                    data.nodes.push({
+                        id: rId,
+                        x: worldX,
+                        y: worldY,
+                        z: 100,
+                        type: 'reservoir'
+                    });
+                    ToastSystem.success(`Reservatório ${rId} adicionado`);
+                    break;
+
+                case 'tank':
+                    const tId = `T${(data.nodes?.filter(n => n.type === 'tank').length || 0) + 1}`;
+                    if (!data.nodes) data.nodes = [];
+                    data.nodes.push({
+                        id: tId,
+                        x: worldX,
+                        y: worldY,
+                        z: 0,
+                        type: 'tank',
+                        initLevel: 5,
+                        maxLevel: 10,
+                        diameter: 10
+                    });
+                    ToastSystem.success(`Tanque ${tId} adicionado`);
+                    break;
+
+                case 'delete':
+                    // Find and remove nearest element
+                    if (data.nodes && data.nodes.length > 0) {
+                        let minDist = Infinity;
+                        let nearestIdx = -1;
+                        data.nodes.forEach((n, idx) => {
+                            const dist = Math.sqrt(Math.pow(n.x - worldX, 2) + Math.pow(n.y - worldY, 2));
+                            if (dist < minDist) {
+                                minDist = dist;
+                                nearestIdx = idx;
+                            }
+                        });
+                        if (nearestIdx >= 0 && minDist < 50 / epanetCanvasState.zoom) {
+                            const removed = data.nodes.splice(nearestIdx, 1)[0];
+                            ToastSystem.info(`Elemento ${removed.id} removido`);
+                        }
+                    }
+                    break;
+            }
+
+            updateEpanetUI();
+            renderEpanetCanvas();
+            updateEpanetElementsTree();
+        }
+
+        // Zoom controls
+        function epanetZoomIn() {
+            epanetCanvasState.zoom = Math.min(5, epanetCanvasState.zoom * 1.2);
+            document.getElementById('epanet-zoom-level').textContent = Math.round(epanetCanvasState.zoom * 100);
+            renderEpanetCanvas();
+        }
+
+        function epanetZoomOut() {
+            epanetCanvasState.zoom = Math.max(0.1, epanetCanvasState.zoom / 1.2);
+            document.getElementById('epanet-zoom-level').textContent = Math.round(epanetCanvasState.zoom * 100);
+            renderEpanetCanvas();
+        }
+
+        function epanetZoomFit() {
+            epanetCanvasState.zoom = 1;
+            epanetCanvasState.offsetX = 0;
+            epanetCanvasState.offsetY = 0;
+            document.getElementById('epanet-zoom-level').textContent = '100';
+            renderEpanetCanvas();
+        }
+
+        // Tool selection
+        function setEpanetTool(tool) {
+            epanetCanvasState.selectedTool = tool;
+
+            // Update button states
+            document.querySelectorAll('.epanet-tool-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const activeBtn = document.getElementById(`epanet-tool-${tool}`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            // Update cursor
+            const canvas = document.getElementById('epanet-network-canvas');
+            if (canvas) canvas.style.cursor = getCursorForTool(tool);
+
+            ToastSystem.info(`Ferramenta: ${getToolName(tool)}`);
+        }
+
+        function getToolName(tool) {
+            const names = {
+                'select': 'Selecionar/Mover',
+                'junction': 'Adicionar Junção',
+                'reservoir': 'Adicionar Reservatório',
+                'tank': 'Adicionar Tanque',
+                'pipe': 'Adicionar Tubo',
+                'pump': 'Adicionar Bomba',
+                'valve': 'Adicionar Válvula',
+                'delete': 'Excluir Elemento'
+            };
+            return names[tool] || tool;
+        }
+
+        // Toggle element tree
+        function toggleEpanetTree(element) {
+            const children = element.nextElementSibling;
+            if (children && children.classList.contains('epanet-tree-children')) {
+                children.style.display = children.style.display === 'none' ? 'block' : 'none';
+                element.classList.toggle('collapsed');
+            }
+        }
+
+        // Update elements tree
+        function updateEpanetElementsTree() {
+            const data = moduleData.epanet;
+
+            // Update counts
+            const junctions = data.nodes?.filter(n => n.type !== 'reservoir' && n.type !== 'tank') || [];
+            const reservoirs = data.reservoirs || data.nodes?.filter(n => n.type === 'reservoir') || [];
+            const tanks = data.nodes?.filter(n => n.type === 'tank') || [];
+            const pipes = data.links || [];
+            const pumps = data.pumps || [];
+            const valves = data.valves || [];
+
+            document.getElementById('epanet-junction-count').textContent = junctions.length;
+            document.getElementById('epanet-reservoir-count').textContent = reservoirs.length;
+            document.getElementById('epanet-tank-count').textContent = tanks.length;
+            document.getElementById('epanet-pipe-count').textContent = pipes.length;
+            document.getElementById('epanet-pump-count').textContent = pumps.length;
+            document.getElementById('epanet-valve-count').textContent = valves.length;
+
+            // Update tree lists
+            const junctionsList = document.getElementById('epanet-junctions-list');
+            if (junctionsList) {
+                junctionsList.innerHTML = junctions.slice(0, 20).map(j =>
+                    `<div class="epanet-tree-child" onclick="selectEpanetElement('${j.id}')">${j.id}</div>`
+                ).join('') + (junctions.length > 20 ? `<div class="epanet-tree-child">... e mais ${junctions.length - 20}</div>` : '');
+            }
+
+            const reservoirsTree = document.getElementById('epanet-reservoirs-tree');
+            if (reservoirsTree) {
+                reservoirsTree.innerHTML = reservoirs.map(r =>
+                    `<div class="epanet-tree-child" onclick="selectEpanetElement('${r.id}')">${r.id}</div>`
+                ).join('');
+            }
+        }
+
+        // Select element in tree
+        function selectEpanetElement(id) {
+            epanetCanvasState.selectedElement = id;
+            ToastSystem.info(`Elemento selecionado: ${id}`);
+            renderEpanetCanvas();
+        }
+
+        // Load network data to EPANET module
+        function loadNetworkToEpanet() {
+            // Get data from any available source
+            let nodes = [];
+            let links = [];
+
+            // Try multiple sources
+            const mainData = getActiveNodesAndLinks();
+            if (mainData.nodes.length > 0) {
+                nodes = mainData.nodes;
+                links = mainData.links;
+            } else if (moduleData.swmm?.nodes?.length > 0) {
+                nodes = moduleData.swmm.nodes;
+                links = moduleData.swmm.links || [];
+            } else if (moduleData.qgis?.nodes?.length > 0) {
+                nodes = moduleData.qgis.nodes;
+                links = moduleData.qgis.links || [];
+            }
+
+            if (nodes.length === 0) {
+                ToastSystem.warning('Nenhum dado disponível. Importe dados primeiro.');
+                return;
+            }
+
+            // Copy to EPANET module
+            moduleData.epanet.nodes = nodes.map(n => ({
+                ...n,
+                type: n.type || 'junction',
+                demand: n.demand || n.demanda || 0
+            }));
+            moduleData.epanet.links = links.map(l => ({
+                ...l,
+                diameter: l.diameter || l.DN || l.dn || 150,
+                roughness: l.roughness || 140
+            }));
+
+            updateEpanetUI();
+            updateEpanetElementsTree();
+            renderEpanetCanvas();
+            ToastSystem.success(`Carregados ${nodes.length} nós e ${links.length} tubos no EPANET`);
+        }
+
+        // Initialize canvas when EPANET tab is shown
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(initEpanetCanvas, 500);
+        });
+
         function parseEpanetINP(content) {
             // Parse EPANET .INP file (simplified)
             const lines = content.split('\n');
@@ -14778,12 +15135,29 @@ DATA;
         }
 
         function runSwmmSimulation() {
-            const { nodes, links } = getActiveNodesAndLinks();
+            // Usa dados do módulo SWMM primeiro, depois outras fontes
+            let nodes = moduleData.swmm?.nodes || [];
+            let links = moduleData.swmm?.links || [];
 
-            if (nodes.length === 0 || links.length === 0) {
-                alert('Importe dados primeiro na aba Topografia.');
+            // Se não há dados no módulo, tenta outras fontes
+            if (nodes.length === 0) {
+                const mainData = getActiveNodesAndLinks();
+                nodes = mainData.nodes;
+                links = mainData.links;
+            }
+
+            if (nodes.length === 0) {
+                ToastSystem.warning('Nenhum dado disponível. Importe um arquivo .INP ou use "Usar Dados da Plataforma".');
                 return;
             }
+
+            // Se não há links, gera automaticamente
+            if (links.length === 0 && nodes.length > 1) {
+                links = generateLinksFromNodes(nodes, 'sequential');
+                moduleData.swmm.links = links;
+            }
+
+            LoadingSystem.show('Executando simulação SWMM...');
 
             // Generate rainfall if not already done
             if (swmmData.rainfall.length === 0) {
@@ -14874,6 +15248,8 @@ DATA;
 
             swmmData.results = results;
             displaySwmmResults(results);
+            LoadingSystem.hide();
+            ToastSystem.success('Simulação SWMM concluída!');
         }
 
         function displaySwmmResults(results) {
@@ -15273,9 +15649,11 @@ DATA;
 
         function loadTasksFromPlanning() {
             if (!planningData || planningData.schedule.length === 0) {
-                alert('Gere o planejamento primeiro na aba Planejamento.');
+                ToastSystem.warning('Gere o planejamento primeiro na aba Planejamento.');
                 return;
             }
+
+            LoadingSystem.show('Carregando tarefas do planejamento...');
 
             const startDateInput = document.getElementById('openproject-start-date')?.value;
             const startDate = startDateInput ? new Date(startDateInput) : new Date();
@@ -15283,49 +15661,63 @@ DATA;
             const list = document.getElementById('openproject-tasks-list');
             list.innerHTML = '';
 
-            // Group by trecho
-            const trechoTasks = {};
+            // Group by trecho and consolidate by day
+            const trechoConsolidated = {};
             planningData.schedule.forEach(s => {
-                if (!trechoTasks[s.trecho_id]) {
-                    trechoTasks[s.trecho_id] = [];
+                const key = `${s.trecho_id}_D${s.start_day}`;
+                if (!trechoConsolidated[key]) {
+                    trechoConsolidated[key] = {
+                        trecho_id: s.trecho_id,
+                        start_day: s.start_day,
+                        end_day: s.end_day,
+                        wbs_id: s.wbs_id?.split('.')[0] + '.D' + s.start_day,
+                        activities: [],
+                        team: s.team
+                    };
                 }
-                trechoTasks[s.trecho_id].push(s);
+                trechoConsolidated[key].activities.push(s.activity);
             });
 
-            Object.entries(trechoTasks).forEach(([trechoId, tasks], trechoIdx) => {
-                tasks.forEach((task, taskIdx) => {
-                    const taskStart = new Date(startDate);
-                    taskStart.setDate(taskStart.getDate() + task.start_day - 1);
-                    const taskEnd = new Date(startDate);
-                    taskEnd.setDate(taskEnd.getDate() + task.end_day - 1);
+            let taskCount = 0;
+            Object.values(trechoConsolidated).forEach((task, idx) => {
+                const taskStart = new Date(startDate);
+                taskStart.setDate(taskStart.getDate() + task.start_day - 1);
+                const taskEnd = new Date(startDate);
+                taskEnd.setDate(taskEnd.getDate() + task.end_day - 1);
 
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td><input type="text" value="${task.wbs_id || `${trechoIdx + 1}.${taskIdx + 1}`}" style="width: 60px;"></td>
-                        <td><input type="text" value="${trechoId} - ${task.activity}" style="width: 100%;"></td>
-                        <td><input type="number" value="${task.duration}" style="width: 60px;"> dias</td>
-                        <td><input type="date" value="${taskStart.toISOString().slice(0, 10)}"></td>
-                        <td><input type="date" value="${taskEnd.toISOString().slice(0, 10)}"></td>
-                        <td><select style="width: 100%;">
-                            <option ${task.team?.includes('Escav') ? 'selected' : ''}>Equipe Escavação</option>
-                            <option ${task.team?.includes('Assent') ? 'selected' : ''}>Equipe Assentamento</option>
-                            <option ${task.team?.includes('Reaterro') ? 'selected' : ''}>Equipe Reaterro</option>
-                        </select></td>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <input type="range" min="0" max="100" value="0" style="width: 60px;" onchange="this.nextElementSibling.textContent = this.value + '%'">
-                                <span>0%</span>
-                            </div>
-                        </td>
-                        <td>
-                            <button class="btn-small btn-remove" onclick="this.closest('tr').remove(); renderGanttChart();">✕</button>
-                        </td>
-                    `;
-                    list.appendChild(row);
-                });
+                const activityName = task.activities.length > 3
+                    ? `Ciclo completo (${task.activities.length} atividades)`
+                    : task.activities.join(', ');
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="text" value="${task.wbs_id || `${idx + 1}`}" style="width: 60px;"></td>
+                    <td><input type="text" value="${task.trecho_id} - ${activityName}" style="width: 100%;"></td>
+                    <td><input type="number" value="1" style="width: 60px;"> dias</td>
+                    <td><input type="date" value="${taskStart.toISOString().slice(0, 10)}"></td>
+                    <td><input type="date" value="${taskEnd.toISOString().slice(0, 10)}"></td>
+                    <td><select style="width: 100%;">
+                        <option value="1" ${task.team === 1 ? 'selected' : ''}>Equipe 1</option>
+                        <option value="2" ${task.team === 2 ? 'selected' : ''}>Equipe 2</option>
+                        <option value="3">Equipe 3</option>
+                    </select></td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <input type="range" min="0" max="100" value="0" style="width: 60px;" onchange="this.nextElementSibling.textContent = this.value + '%'; renderGanttChart();">
+                            <span>0%</span>
+                        </div>
+                    </td>
+                    <td>
+                        <button class="btn-small btn-remove" onclick="this.closest('tr').remove(); renderGanttChart();">✕</button>
+                    </td>
+                `;
+                list.appendChild(row);
+                taskCount++;
             });
 
             renderGanttChart();
+            LoadingSystem.hide();
+            ToastSystem.success(`${taskCount} tarefas carregadas do planejamento!`);
         }
 
         function getOpenProjectTasks() {
@@ -15729,42 +16121,92 @@ DATA;
             alert(`Arquivo MS Project exportado!\n\nTarefas: ${tasks.length}`);
         }
 
-        function exportGanttPDF() {
-            // For PDF, we'll use canvas to image then download
-            var canvas = document.getElementById('gantt-chart');
-            var dataUrl = canvas.toDataURL('image/png');
-            var projectName = document.getElementById('openproject-name')?.value || 'Projeto';
-
-            // Security: Escape project name to prevent XSS
-            var safeProjectName = escapeHtml(projectName);
-
-            // Security: Open with noopener to prevent window.opener access
-            var printWindow = window.open('', '_blank', 'noopener,noreferrer');
-            if (!printWindow) {
-                alert('Popup bloqueado. Permita popups para exportar.');
+        async function exportGanttPDF() {
+            const container = document.getElementById('gantt-chart-container');
+            if (!container || container.innerHTML.includes('Nenhuma tarefa')) {
+                alert('Gere o gráfico de Gantt primeiro (adicione tarefas ou carregue do Planejamento).');
                 return;
             }
 
-            var htmlContent = '<!DOCTYPE html><html><head><title>Grafico de Gantt</title>';
-            htmlContent += '<meta charset="UTF-8">';
-            htmlContent += '<style>body { margin: 0; padding: 20px; font-family: Arial, sans-serif; } img { max-width: 100%; }</style>';
-            htmlContent += '</head><body>';
-            htmlContent += '<h1>Grafico de Gantt - ' + safeProjectName + '</h1>';
-            htmlContent += '<img src="' + dataUrl + '" alt="Gantt Chart">';
-            htmlContent += '</body></html>';
-            printWindow.document.write(htmlContent);
-            printWindow.document.close();
-            printWindow.onload = function() { printWindow.print(); };
+            const projectName = document.getElementById('openproject-name')?.value || 'Projeto';
+            const safeProjectName = escapeHtml(projectName);
+
+            LoadingSystem.show('Gerando PDF do Gantt...');
+
+            try {
+                // Use html2canvas to capture the HTML-based Gantt
+                const canvas = await html2canvas(container, {
+                    backgroundColor: '#1e293b',
+                    scale: 2,
+                    logging: false,
+                    useCORS: true
+                });
+
+                const dataUrl = canvas.toDataURL('image/png');
+
+                // Security: Open with noopener to prevent window.opener access
+                const printWindow = window.open('', '_blank', 'noopener,noreferrer');
+                if (!printWindow) {
+                    LoadingSystem.hide();
+                    alert('Popup bloqueado. Permita popups para exportar.');
+                    return;
+                }
+
+                let htmlContent = '<!DOCTYPE html><html><head><title>Gráfico de Gantt</title>';
+                htmlContent += '<meta charset="UTF-8">';
+                htmlContent += '<style>body { margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #1e293b; color: white; } img { max-width: 100%; } h1 { margin-bottom: 20px; }</style>';
+                htmlContent += '</head><body>';
+                htmlContent += '<h1>Gráfico de Gantt - ' + safeProjectName + '</h1>';
+                htmlContent += '<p style="color: #94a3b8; margin-bottom: 20px;">Exportado em: ' + new Date().toLocaleString('pt-BR') + '</p>';
+                htmlContent += '<img src="' + dataUrl + '" alt="Gantt Chart">';
+                htmlContent += '</body></html>';
+                printWindow.document.write(htmlContent);
+                printWindow.document.close();
+                printWindow.onload = function() { printWindow.print(); };
+
+                LoadingSystem.hide();
+                ToastSystem.success('PDF gerado com sucesso!');
+            } catch (error) {
+                LoadingSystem.hide();
+                console.error('Erro ao exportar PDF:', error);
+                ToastSystem.error('Erro ao gerar PDF. Tente novamente.');
+            }
         }
 
-        function exportGanttImage() {
-            const canvas = document.getElementById('gantt-chart');
-            const dataUrl = canvas.toDataURL('image/png');
+        async function exportGanttImage() {
+            const container = document.getElementById('gantt-chart-container');
+            if (!container || container.innerHTML.includes('Nenhuma tarefa')) {
+                alert('Gere o gráfico de Gantt primeiro (adicione tarefas ou carregue do Planejamento).');
+                return;
+            }
 
-            const a = document.createElement('a');
-            a.href = dataUrl;
-            a.download = 'gantt_chart.png';
-            a.click();
+            LoadingSystem.show('Gerando imagem do Gantt...');
+
+            try {
+                // Use html2canvas to capture the HTML-based Gantt
+                const canvas = await html2canvas(container, {
+                    backgroundColor: '#1e293b',
+                    scale: 2,
+                    logging: false,
+                    useCORS: true
+                });
+
+                const dataUrl = canvas.toDataURL('image/png');
+                const projectName = document.getElementById('openproject-name')?.value || 'gantt';
+                const safeName = projectName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = `gantt_${safeName}_${new Date().toISOString().slice(0, 10)}.png`;
+                a.click();
+
+                LoadingSystem.hide();
+                ToastSystem.success('Imagem exportada com sucesso!');
+            } catch (error) {
+                LoadingSystem.hide();
+                console.error('Erro ao exportar imagem:', error);
+                ToastSystem.error('Erro ao gerar imagem. Tente novamente.');
+            }
         }
 
         // ============================================
