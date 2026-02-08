@@ -6607,6 +6607,11 @@ DATA;
                 renderHolidays();
             } else if (tab === 'quantities') {
                 renderQtyLinks();
+            } else if (tab === 'openproject') {
+                // Render Gantt chart if tasks exist
+                if (document.getElementById('openproject-tasks-list')?.children.length > 0) {
+                    renderGanttChart();
+                }
             }
         }
 
@@ -10992,7 +10997,12 @@ DATA;
                 const color = colors[idx % colors.length];
                 ctx.fillStyle = color;
                 ctx.beginPath();
-                ctx.roundRect(barX, barY, barWidth, barHeight, 4);
+                // Use roundRect if available, otherwise fallback to regular rect
+                if (ctx.roundRect) {
+                    ctx.roundRect(barX, barY, barWidth, barHeight, 4);
+                } else {
+                    ctx.rect(barX, barY, barWidth, barHeight);
+                }
                 ctx.fill();
 
                 // Draw progress
@@ -11000,7 +11010,11 @@ DATA;
                     ctx.fillStyle = 'rgba(0,0,0,0.3)';
                     const progressWidth = barWidth * (task.progress / 100);
                     ctx.beginPath();
-                    ctx.roundRect(barX, barY, progressWidth, barHeight, 4);
+                    if (ctx.roundRect) {
+                        ctx.roundRect(barX, barY, progressWidth, barHeight, 4);
+                    } else {
+                        ctx.rect(barX, barY, progressWidth, barHeight);
+                    }
                     ctx.fill();
 
                     ctx.fillStyle = '#fff';
@@ -11707,10 +11721,10 @@ deprecated=False
 
             // Main plugin file
             zip.file("hydronetwork_plugin/__init__.py", `# -*- coding: utf-8 -*-
-\"\"\"
+'''
 HydroNetwork QGIS Plugin
 Importa dados da Plataforma de Saneamento
-\"\"\"
+'''
 
 def classFactory(iface):
     from .hydronetwork_plugin import HydroNetworkPlugin
@@ -11719,9 +11733,9 @@ def classFactory(iface):
 
             // Plugin implementation
             zip.file("hydronetwork_plugin/hydronetwork_plugin.py", `# -*- coding: utf-8 -*-
-\"\"\"
+'''
 HydroNetwork QGIS Plugin - Módulo Principal
-\"\"\"
+'''
 
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
@@ -11736,7 +11750,7 @@ import json
 
 
 class HydroNetworkPlugin:
-    \"\"\"Plugin QGIS para importar dados da plataforma HydroNetwork.\"\"\"
+    '''Plugin QGIS para importar dados da plataforma HydroNetwork.'''
 
     def __init__(self, iface):
         self.iface = iface
@@ -11747,7 +11761,7 @@ class HydroNetworkPlugin:
         self.toolbar.setObjectName('HydroNetwork')
 
     def initGui(self):
-        \"\"\"Inicializa a interface do plugin.\"\"\"
+        '''Inicializa a interface do plugin.'''
         icon_path = os.path.join(self.plugin_dir, 'icon.png')
 
         # Ação de importar GeoJSON
@@ -11772,14 +11786,14 @@ class HydroNetworkPlugin:
         self.actions.append(action_epanet)
 
     def unload(self):
-        \"\"\"Remove o plugin.\"\"\"
+        '''Remove o plugin.'''
         for action in self.actions:
             self.iface.removePluginMenu(self.menu, action)
             self.iface.removeToolBarIcon(action)
         del self.toolbar
 
     def import_geojson(self):
-        \"\"\"Importa arquivos GeoJSON exportados da plataforma.\"\"\"
+        '''Importa arquivos GeoJSON exportados da plataforma.'''
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             'Selecionar arquivo GeoJSON',
@@ -11808,7 +11822,7 @@ class HydroNetworkPlugin:
             )
 
     def import_epanet(self):
-        \"\"\"Importa arquivo EPANET INP e cria camadas.\"\"\"
+        '''Importa arquivo EPANET INP e cria camadas.'''
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             'Selecionar arquivo EPANET INP',
@@ -11878,7 +11892,7 @@ class HydroNetworkPlugin:
             QMessageBox.critical(None, 'Erro', f'Erro ao importar: {str(e)}')
 
     def parse_epanet_inp(self, file_path):
-        \"\"\"Parse arquivo EPANET INP.\"\"\"
+        '''Parse arquivo EPANET INP.'''
         nodes = []
         pipes = []
         coords = {}
