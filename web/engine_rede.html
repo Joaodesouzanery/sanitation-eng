@@ -419,6 +419,43 @@ PV01,359284.525,7352735.514,1.65"
                     </div>
 
                     <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
+                    <h4 style="color: var(--accent-green); margin-bottom: 10px;">🏗️ Parâmetros de Execução</h4>
+
+                    <div class="form-group">
+                        <label>Tipo de Solo</label>
+                        <select id="import-soil-type">
+                            <option value="1cat">1ª Categoria (solo comum)</option>
+                            <option value="2cat">2ª Categoria (solo compacto/pedregulho)</option>
+                            <option value="3cat">3ª Categoria (rocha)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="import-shoring-enabled" style="width: auto;" checked>
+                            Utilizar escoramento
+                        </label>
+                        <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                            Escoramento é obrigatório para profundidades > 1,25m conforme NR-18
+                        </small>
+                    </div>
+
+                    <div class="form-group" id="shoring-type-group">
+                        <label>Tipo de Escoramento</label>
+                        <select id="import-shoring-type">
+                            <option value="continuo">Escoramento Contínuo (madeira)</option>
+                            <option value="pontaletes">Pontaleteamento</option>
+                            <option value="metalico">Escoramento Metálico</option>
+                            <option value="estacas">Estacas-prancha</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Profundidade Mínima para Escoramento (m)</label>
+                        <input type="number" id="import-shoring-depth" value="1.25" min="0.5" max="3.0" step="0.05">
+                    </div>
+
+                    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
                     <h4 style="color: var(--accent-blue); margin-bottom: 10px;">📍 Interpolação de Cotas</h4>
 
                     <div class="form-group">
@@ -1063,7 +1100,35 @@ PV02,359290.456,7352780.123,1.82</pre>
                 mercado: 170.00,
                 adotado: 174.80
             },
-            // Escavação
+            // Escavação por tipo de solo
+            'ESCAVACAO_1CAT': {
+                id: 'SAN-004A',
+                descricao: 'Escavação mecânica vala - solo 1ª cat.',
+                unidade: 'm³',
+                sinapi: 8.50,
+                seinfra: 12.30,
+                mercado: 15.00,
+                adotado: 12.30
+            },
+            'ESCAVACAO_2CAT': {
+                id: 'SAN-004B',
+                descricao: 'Escavação mecânica vala - solo 2ª cat.',
+                unidade: 'm³',
+                sinapi: 15.00,
+                seinfra: 22.00,
+                mercado: 28.00,
+                adotado: 22.00
+            },
+            'ESCAVACAO_3CAT': {
+                id: 'SAN-004C',
+                descricao: 'Escavação mecânica vala - rocha (3ª cat.)',
+                unidade: 'm³',
+                sinapi: 85.00,
+                seinfra: 120.00,
+                mercado: 150.00,
+                adotado: 120.00
+            },
+            // Alias para compatibilidade
             'ESCAVACAO_MECANICA': {
                 id: 'SAN-004',
                 descricao: 'Escavação mecânica de vala solo 1ª cat.',
@@ -1073,7 +1138,44 @@ PV02,359290.456,7352780.123,1.82</pre>
                 mercado: 15.00,
                 adotado: 12.30
             },
-            // Escoramento
+            // Escoramento por tipo
+            'ESCORAMENTO_CONTINUO': {
+                id: 'SAN-005A',
+                descricao: 'Escoramento contínuo de vala (madeira)',
+                unidade: 'm²',
+                sinapi: 25.00,
+                seinfra: 32.50,
+                mercado: 35.00,
+                adotado: 32.50
+            },
+            'ESCORAMENTO_PONTALETES': {
+                id: 'SAN-005B',
+                descricao: 'Escoramento com pontaletes',
+                unidade: 'm²',
+                sinapi: 18.00,
+                seinfra: 24.00,
+                mercado: 28.00,
+                adotado: 24.00
+            },
+            'ESCORAMENTO_METALICO': {
+                id: 'SAN-005C',
+                descricao: 'Escoramento metálico blindado',
+                unidade: 'm²',
+                sinapi: 45.00,
+                seinfra: 58.00,
+                mercado: 70.00,
+                adotado: 58.00
+            },
+            'ESCORAMENTO_ESTACAS': {
+                id: 'SAN-005D',
+                descricao: 'Escoramento com estacas-prancha',
+                unidade: 'm²',
+                sinapi: 65.00,
+                seinfra: 85.00,
+                mercado: 100.00,
+                adotado: 85.00
+            },
+            // Alias para compatibilidade
             'ESCORAMENTO_MADEIRA': {
                 id: 'SAN-005',
                 descricao: 'Escoramento de vala com madeira',
@@ -1228,8 +1330,18 @@ PV02,359290.456,7352780.123,1.82</pre>
             return COST_TABLE['TUBO_PVC_DN150'];
         }
 
+        // Obter parâmetros de execução da interface
+        function getExecutionParams() {
+            return {
+                soilType: document.getElementById('import-soil-type')?.value || '1cat',
+                shoringEnabled: document.getElementById('import-shoring-enabled')?.checked ?? true,
+                shoringType: document.getElementById('import-shoring-type')?.value || 'continuo',
+                shoringMinDepth: parseFloat(document.getElementById('import-shoring-depth')?.value) || 1.25
+            };
+        }
+
         // Calcular custos detalhados por trecho
-        function calculateLinkCosts(link, networkType = 'sewer') {
+        function calculateLinkCosts(link, networkType = 'sewer', execParams = null) {
             const costs = [];
             const dn = link.DN || 150;
             const length = link.length || 0;
@@ -1238,27 +1350,45 @@ PV02,359290.456,7352780.123,1.82</pre>
             const profMedia = (profUp + profDown) / 2;
             const larguraVala = Math.max(0.60, (dn / 1000) + 0.30);
 
-            // 1. Escavação
+            // Obter parâmetros de execução
+            const params = execParams || getExecutionParams();
+
+            // 1. Escavação - baseado no tipo de solo
+            const escavacaoKey = {
+                '1cat': 'ESCAVACAO_1CAT',
+                '2cat': 'ESCAVACAO_2CAT',
+                '3cat': 'ESCAVACAO_3CAT'
+            }[params.soilType] || 'ESCAVACAO_1CAT';
+
             const volEscavacao = profMedia * larguraVala * length;
+            const escavRef = COST_TABLE[escavacaoKey];
             costs.push({
-                item: COST_TABLE['ESCAVACAO_MECANICA'].id,
-                descricao: COST_TABLE['ESCAVACAO_MECANICA'].descricao,
+                item: escavRef.id,
+                descricao: escavRef.descricao,
                 unidade: 'm³',
                 quantidade: volEscavacao,
-                custoUnit: COST_TABLE['ESCAVACAO_MECANICA'].adotado,
-                custoTotal: volEscavacao * COST_TABLE['ESCAVACAO_MECANICA'].adotado
+                custoUnit: escavRef.adotado,
+                custoTotal: volEscavacao * escavRef.adotado
             });
 
-            // 2. Escoramento (se prof > 1.25m)
-            if (profMedia > 1.25) {
+            // 2. Escoramento - baseado no tipo e profundidade mínima
+            if (params.shoringEnabled && profMedia > params.shoringMinDepth) {
+                const escoraKey = {
+                    'continuo': 'ESCORAMENTO_CONTINUO',
+                    'pontaletes': 'ESCORAMENTO_PONTALETES',
+                    'metalico': 'ESCORAMENTO_METALICO',
+                    'estacas': 'ESCORAMENTO_ESTACAS'
+                }[params.shoringType] || 'ESCORAMENTO_CONTINUO';
+
                 const areaEscoramento = 2 * profMedia * length; // duas faces
+                const escoraRef = COST_TABLE[escoraKey];
                 costs.push({
-                    item: COST_TABLE['ESCORAMENTO_MADEIRA'].id,
-                    descricao: COST_TABLE['ESCORAMENTO_MADEIRA'].descricao,
+                    item: escoraRef.id,
+                    descricao: escoraRef.descricao,
                     unidade: 'm²',
                     quantidade: areaEscoramento,
-                    custoUnit: COST_TABLE['ESCORAMENTO_MADEIRA'].adotado,
-                    custoTotal: areaEscoramento * COST_TABLE['ESCORAMENTO_MADEIRA'].adotado
+                    custoUnit: escoraRef.adotado,
+                    custoTotal: areaEscoramento * escoraRef.adotado
                 });
             }
 
@@ -3574,8 +3704,20 @@ DATA;
             const networkType = document.getElementById('import-network-type').value;
             const linkMode = document.getElementById('import-link-mode').value;
 
-            // Generate links
-            const links = generateLinksFromNodes(importedNodes, linkMode);
+            // Use previewLinks if available, otherwise generate new links
+            let links;
+            if (previewLinks && previewLinks.length > 0) {
+                links = previewLinks.map(l => ({ ...l })); // Clone previewLinks
+                console.log('Usando previewLinks existentes:', links.length, 'trechos');
+            } else {
+                links = generateLinksFromNodes(importedNodes, linkMode);
+                console.log('Gerando novos links:', links.length, 'trechos');
+            }
+
+            if (links.length === 0) {
+                alert('Nenhum trecho foi gerado. Clique em "Gerar Trechos" primeiro.');
+                return;
+            }
 
             // Convert to appropriate network type and calculate
             if (networkType === 'sewer') {
@@ -3585,6 +3727,9 @@ DATA;
                     id: n.id, x: n.x, y: n.y, z: n.z, pop: pop
                 }));
                 sewerLinks = links;
+
+                console.log('Sewer nodes:', sewerNodes.length);
+                console.log('Sewer links:', sewerLinks.length);
 
                 renderSewerNodes();
                 renderSewerLinks();
@@ -3603,6 +3748,9 @@ DATA;
                 }));
                 waterLinks = links;
 
+                console.log('Water nodes:', waterNodes.length);
+                console.log('Water links:', waterLinks.length);
+
                 renderWaterNodes();
                 renderWaterLinks();
                 showTab('water');
@@ -3617,6 +3765,9 @@ DATA;
                     id: n.id, x: n.x, y: n.y, z: n.z, area: area, runoff: runoff
                 }));
                 drainageLinks = links;
+
+                console.log('Drainage nodes:', drainageNodes.length);
+                console.log('Drainage links:', drainageLinks.length);
 
                 renderDrainageNodes();
                 renderDrainageLinks();
@@ -3681,7 +3832,22 @@ DATA;
 
             const networkType = document.getElementById('import-network-type').value;
             const linkMode = document.getElementById('import-link-mode').value;
-            const links = generateLinksFromNodes(importedNodes, linkMode);
+
+            // Use previewLinks if available, otherwise generate new links
+            let links;
+            if (previewLinks && previewLinks.length > 0) {
+                links = previewLinks.map(l => ({ ...l }));
+                console.log('calculateAllFromImport: Usando previewLinks:', links.length);
+            } else {
+                links = generateLinksFromNodes(importedNodes, linkMode);
+                console.log('calculateAllFromImport: Gerando novos links:', links.length);
+            }
+
+            if (links.length === 0) {
+                document.getElementById('loading').style.display = 'none';
+                alert('Nenhum trecho disponível. Clique em "Gerar Trechos" primeiro.');
+                return;
+            }
 
             // Build node map
             const nodeMap = {};
@@ -4922,6 +5088,14 @@ DATA;
                     const show = this.checked;
                     document.getElementById('pv-position-group').style.display = show ? 'block' : 'none';
                     document.getElementById('street-width-group').style.display = show ? 'block' : 'none';
+                });
+            }
+
+            // Set up shoring checkbox handler
+            const shoringCheckbox = document.getElementById('import-shoring-enabled');
+            if (shoringCheckbox) {
+                shoringCheckbox.addEventListener('change', function() {
+                    document.getElementById('shoring-type-group').style.display = this.checked ? 'block' : 'none';
                 });
             }
         });
