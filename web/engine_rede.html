@@ -692,12 +692,30 @@ PV01,359284.525,7352735.514,1.65"
                     <button class="btn btn-small" style="background: var(--accent-blue); color: white; border: none;" onclick="zoomOut()">🔍-</button>
                     <button class="btn btn-small" style="background: var(--accent-purple); color: white; border: none;" onclick="resetView()">↺ Reset</button>
                     <button class="btn btn-small" style="background: var(--accent-yellow); color: #333; border: none;" onclick="undoLastLink()" title="Desfazer último trecho conectado">↩️ Voltar</button>
+                    <button class="btn btn-small" style="background: #e74c3c; color: white; border: none;" onclick="showDeleteLinkModal()" title="Excluir um trecho específico">✂️ Excluir Trecho</button>
                     <button class="btn btn-small" style="background: var(--accent-red); color: white; border: none;" onclick="clearPreviewLinks()">🗑️ Limpar Tudo</button>
+                    <span style="border-left: 1px solid var(--border-color); height: 20px; margin: 0 5px;"></span>
+                    <button class="btn btn-small" style="background: var(--accent-green); color: white; border: none;" onclick="saveLinksToStorage()" title="Salvar trechos no navegador">💾 Salvar</button>
+                    <button class="btn btn-small" style="background: var(--accent-blue); color: white; border: none;" onclick="loadLinksFromStorage()" title="Carregar trechos salvos">📂 Carregar</button>
                     <span style="color: var(--text-secondary); font-size: 0.85rem; align-self: center; margin-left: auto;" id="trace-info"></span>
                 </div>
                 <div id="manual-trace-help" style="display: none; background: var(--accent-orange); color: white; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
                     <strong>Modo Manual Ativo:</strong> Clique em um ponto de ORIGEM, depois clique no ponto de DESTINO para criar o trecho.
                     <span id="manual-trace-status" style="margin-left: 10px;"></span>
+                </div>
+                <!-- Modal para excluir trecho específico -->
+                <div id="delete-link-modal" style="display: none; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="color: var(--accent-red); margin: 0;">✂️ Excluir Trecho Específico</h4>
+                        <button onclick="hideDeleteLinkModal()" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.2rem;">×</button>
+                    </div>
+                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 10px;">Selecione o trecho que deseja excluir:</p>
+                    <select id="delete-link-select" style="width: 100%; padding: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary); margin-bottom: 10px;">
+                    </select>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-small" style="background: var(--accent-red); color: white; border: none;" onclick="deleteSelectedLink()">Excluir</button>
+                        <button class="btn btn-small" style="background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);" onclick="hideDeleteLinkModal()">Cancelar</button>
+                    </div>
                 </div>
                 <div style="position: relative; background: var(--bg-card); border-radius: 8px; overflow: hidden;">
                     <canvas id="network-canvas" width="800" height="500" style="width: 100%; cursor: grab;"></canvas>
@@ -873,6 +891,9 @@ PV01,359284.525,7352735.514,1.65"
                     </button>
                     <button class="btn" style="background: var(--bg-card);" onclick="exportToDXF()">
                         <span>📐</span> DXF (CAD)
+                    </button>
+                    <button class="btn" style="background: #27ae60; color: white;" onclick="exportToExcel()">
+                        <span>📗</span> Excel (XLSX)
                     </button>
                 </div>
             </div>
@@ -1228,27 +1249,61 @@ PV02,359290.456,7352780.123,1.82</pre>
         <div id="planning-tab" class="tab-content">
             <div class="grid">
                 <div class="card">
-                    <h2><span class="icon">📋</span> Importar Planilha de Quantitativos</h2>
+                    <h2><span class="icon">📋</span> Dados para Planejamento</h2>
                     <p style="color: var(--text-secondary); margin-bottom: 20px;">
-                        Carregue uma planilha (CSV ou XLSX) gerada pelo software de dimensionamento.
-                        Os valores são considerados definitivos e não serão recalculados.
+                        Carregue os dados da própria plataforma ou importe de arquivo externo.
                     </p>
 
-                    <div class="form-group">
-                        <label>Arquivo de Entrada</label>
-                        <input type="file" id="planning-file" accept=".csv,.xlsx,.xls"
-                               style="padding: 10px; background: var(--bg-secondary); border: 1px dashed var(--accent-blue); border-radius: 6px; width: 100%;">
-                        <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
-                            Formatos aceitos: CSV, XLSX, XLS
+                    <!-- Opção 1: Carregar da plataforma -->
+                    <div style="background: linear-gradient(135deg, var(--accent-green), var(--accent-blue)); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <h4 style="color: white; margin-bottom: 10px;">Usar Dados da Plataforma</h4>
+                        <p style="color: rgba(255,255,255,0.85); font-size: 0.85rem; margin-bottom: 10px;">
+                            Importa automaticamente os trechos e quantitativos já calculados nas outras abas.
+                        </p>
+                        <button class="btn" style="background: white; color: #1e293b; width: 100%;" onclick="loadPlanningFromPlatform()">
+                            <span>📥</span> Carregar Dados da Plataforma
+                        </button>
+                    </div>
+
+                    <!-- Info sobre dados disponíveis -->
+                    <div id="planning-platform-info" style="background: var(--bg-secondary); padding: 10px; border-radius: 6px; margin-bottom: 15px; display: none;">
+                        <small style="color: var(--text-secondary);">
+                            <strong>Dados disponíveis:</strong>
+                            <span id="planning-nodes-count">0</span> pontos,
+                            <span id="planning-links-count">0</span> trechos,
+                            <span id="planning-costs-count">0</span> itens de custo
                         </small>
                     </div>
 
-                    <button class="btn btn-primary" onclick="loadPlanningSpreadsheet()" style="margin-top: 10px;">
-                        <span>📥</span> Carregar e Validar Planilha
-                    </button>
+                    <!-- Divisor -->
+                    <div style="display: flex; align-items: center; gap: 10px; margin: 15px 0;">
+                        <hr style="flex: 1; border: none; border-top: 1px solid var(--border-color);">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;">ou</span>
+                        <hr style="flex: 1; border: none; border-top: 1px solid var(--border-color);">
+                    </div>
+
+                    <!-- Opção 2: Importar arquivo -->
+                    <details style="margin-bottom: 10px;">
+                        <summary style="cursor: pointer; color: var(--accent-purple); font-weight: bold; padding: 8px;">
+                            Importar de Arquivo Externo (CSV/XLSX)
+                        </summary>
+                        <div style="padding: 10px; margin-top: 10px; background: var(--bg-secondary); border-radius: 6px;">
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label>Arquivo de Entrada</label>
+                                <input type="file" id="planning-file" accept=".csv,.xlsx,.xls"
+                                       style="padding: 10px; background: var(--bg-primary); border: 1px dashed var(--accent-blue); border-radius: 6px; width: 100%;">
+                                <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                                    Formatos aceitos: CSV, XLSX, XLS
+                                </small>
+                            </div>
+                            <button class="btn btn-small" style="background: var(--accent-purple); color: white; border: none;" onclick="loadPlanningSpreadsheet()">
+                                <span>📥</span> Carregar Arquivo
+                            </button>
+                        </div>
+                    </details>
 
                     <div id="planning-validation" style="margin-top: 15px; display: none;">
-                        <h4 style="color: var(--accent-green); margin-bottom: 10px;">✓ Validação da Planilha</h4>
+                        <h4 style="color: var(--accent-green); margin-bottom: 10px;">✓ Dados Carregados</h4>
                         <div id="planning-validation-content"></div>
                     </div>
                 </div>
@@ -3461,6 +3516,146 @@ PV02,359290.456,7352780.123,1.82</pre>
             }
         }
 
+        // ============================================
+        // DELETE SPECIFIC LINK
+        // ============================================
+        function showDeleteLinkModal() {
+            if (previewLinks.length === 0) {
+                alert('Não há trechos para excluir.');
+                return;
+            }
+
+            const modal = document.getElementById('delete-link-modal');
+            const select = document.getElementById('delete-link-select');
+
+            // Populate dropdown with links
+            select.innerHTML = previewLinks.map((link, index) => {
+                const length = link.length ? ` (${link.length.toFixed(1)}m)` : '';
+                return `<option value="${index}">${index + 1}. ${link.from} → ${link.to}${length}</option>`;
+            }).join('');
+
+            modal.style.display = 'block';
+        }
+
+        function hideDeleteLinkModal() {
+            document.getElementById('delete-link-modal').style.display = 'none';
+        }
+
+        function deleteSelectedLink() {
+            const select = document.getElementById('delete-link-select');
+            const index = parseInt(select.value);
+
+            if (isNaN(index) || index < 0 || index >= previewLinks.length) {
+                alert('Selecione um trecho válido.');
+                return;
+            }
+
+            const removed = previewLinks.splice(index, 1)[0];
+            manualTraceOrigin = null;
+            drawNetwork();
+            updateTraceInfo();
+            hideDeleteLinkModal();
+
+            alert(`Trecho ${removed.from} → ${removed.to} excluído com sucesso!`);
+        }
+
+        // ============================================
+        // SAVE/LOAD LINKS TO STORAGE
+        // ============================================
+        function saveLinksToStorage() {
+            if (previewLinks.length === 0 && importedNodes.length === 0) {
+                alert('Não há dados para salvar.');
+                return;
+            }
+
+            const dataToSave = {
+                timestamp: new Date().toISOString(),
+                nodes: importedNodes,
+                links: previewLinks,
+                projectName: document.getElementById('project-name')?.value || 'Sem nome'
+            };
+
+            // Ask for a name
+            const name = prompt('Nome para salvar (deixe vazio para usar data/hora):', '');
+            const key = name ? `sanitation_${name}` : `sanitation_${new Date().toISOString().slice(0,19).replace(/[:-]/g, '')}`;
+
+            localStorage.setItem(key, JSON.stringify(dataToSave));
+
+            // Keep track of saved projects
+            let savedList = JSON.parse(localStorage.getItem('sanitation_saved_list') || '[]');
+            if (!savedList.includes(key)) {
+                savedList.push(key);
+                localStorage.setItem('sanitation_saved_list', JSON.stringify(savedList));
+            }
+
+            alert(`Projeto salvo com sucesso!\nChave: ${key}\nNós: ${importedNodes.length}\nTrechos: ${previewLinks.length}`);
+        }
+
+        function loadLinksFromStorage() {
+            const savedList = JSON.parse(localStorage.getItem('sanitation_saved_list') || '[]');
+
+            if (savedList.length === 0) {
+                alert('Nenhum projeto salvo encontrado.');
+                return;
+            }
+
+            // Build options for selection
+            let options = savedList.map((key, index) => {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key) || '{}');
+                    const date = data.timestamp ? new Date(data.timestamp).toLocaleString('pt-BR') : 'Data desconhecida';
+                    const nodes = data.nodes?.length || 0;
+                    const links = data.links?.length || 0;
+                    const name = key.replace('sanitation_', '');
+                    return `${index + 1}. ${name} - ${date} (${nodes} nós, ${links} trechos)`;
+                } catch {
+                    return `${index + 1}. ${key} (erro ao ler)`;
+                }
+            }).join('\n');
+
+            const selection = prompt(`Projetos salvos:\n${options}\n\nDigite o número do projeto para carregar (ou "excluir N" para remover):`);
+
+            if (!selection) return;
+
+            // Handle delete command
+            if (selection.toLowerCase().startsWith('excluir ')) {
+                const idx = parseInt(selection.split(' ')[1]) - 1;
+                if (idx >= 0 && idx < savedList.length) {
+                    const keyToDelete = savedList[idx];
+                    localStorage.removeItem(keyToDelete);
+                    savedList.splice(idx, 1);
+                    localStorage.setItem('sanitation_saved_list', JSON.stringify(savedList));
+                    alert('Projeto excluído.');
+                }
+                return;
+            }
+
+            const idx = parseInt(selection) - 1;
+            if (isNaN(idx) || idx < 0 || idx >= savedList.length) {
+                alert('Seleção inválida.');
+                return;
+            }
+
+            try {
+                const data = JSON.parse(localStorage.getItem(savedList[idx]) || '{}');
+
+                if (data.nodes && data.nodes.length > 0) {
+                    importedNodes = data.nodes;
+                }
+                if (data.links && data.links.length > 0) {
+                    previewLinks = data.links;
+                }
+
+                drawNetwork();
+                updateTraceInfo();
+                renderNodesTable();
+
+                alert(`Projeto carregado!\nNós: ${importedNodes.length}\nTrechos: ${previewLinks.length}`);
+            } catch (e) {
+                alert('Erro ao carregar projeto: ' + e.message);
+            }
+        }
+
         function getNetworkBounds() {
             if (importedNodes.length === 0) return null;
 
@@ -5527,6 +5722,7 @@ DATA;
                 renderDrainageLinks();
             } else if (tab === 'planning') {
                 renderProductivityTable();
+                updatePlanningInfo();
             } else if (tab === 'quantities') {
                 renderQtyLinks();
             }
@@ -6612,68 +6808,123 @@ DATA;
         // EXPORT
         // ============================================
         function exportToExcel() {
-            if (!currentResults) {
-                alert('Calcule a rede primeiro para exportar os resultados.');
+            // Check if there's any data to export
+            const hasResults = currentResults && currentResults.data && currentResults.data.length > 0;
+            const hasRawNodes = importedNodes && importedNodes.length > 0;
+            const hasRawLinks = previewLinks && previewLinks.length > 0;
+            const hasCosts = calculatedCosts && calculatedCosts.length > 0;
+
+            if (!hasResults && !hasRawNodes && !hasRawLinks && !hasCosts) {
+                alert('Não há dados para exportar. Importe dados ou faça um cálculo primeiro.');
                 return;
             }
 
             const wb = XLSX.utils.book_new();
-            const networkType = currentResults.type || 'rede';
             const timestamp = new Date().toISOString().slice(0, 10);
+            const networkType = currentResults?.type || 'topografia';
 
             // Sheet 1: Summary/Resumo
             const summaryRows = [
-                ['RESUMO DA REDE DE SANEAMENTO'],
+                ['RELATÓRIO DE REDE DE SANEAMENTO'],
                 [''],
-                ['Tipo de Rede', getNetworkTypeName(networkType)],
                 ['Data de Exportação', new Date().toLocaleString('pt-BR')],
-                [''],
-                ['MÉTRICAS PRINCIPAIS'],
+                ['Tipo de Dados', hasResults ? getNetworkTypeName(networkType) : 'Dados Topográficos (sem cálculo)'],
                 ['']
             ];
 
-            Object.entries(currentResults.summary).forEach(([key, value]) => {
-                const formattedKey = formatMetricKey(key);
-                const formattedValue = typeof value === 'number' ? formatNumber(value) : value;
-                summaryRows.push([formattedKey, formattedValue]);
-            });
-
-            const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-            wsSummary['!cols'] = [{ wch: 30 }, { wch: 20 }];
-            XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumo');
-
-            // Sheet 2: Links/Trechos with formatted headers
-            if (currentResults.data && currentResults.data.length > 0) {
-                const linksHeaders = getLinksHeaders(networkType);
-                const linksData = currentResults.data.map(row => formatRowData(row, networkType));
-
-                const wsLinks = XLSX.utils.json_to_sheet(linksData);
-                wsLinks['!cols'] = linksHeaders.map(h => ({ wch: h.width || 12 }));
-                XLSX.utils.book_append_sheet(wb, wsLinks, 'Trechos');
+            if (hasResults && currentResults.summary) {
+                summaryRows.push(['MÉTRICAS PRINCIPAIS'], ['']);
+                Object.entries(currentResults.summary).forEach(([key, value]) => {
+                    const formattedKey = formatMetricKey(key);
+                    const formattedValue = typeof value === 'number' ? formatNumber(value) : value;
+                    summaryRows.push([formattedKey, formattedValue]);
+                });
+            } else {
+                summaryRows.push(['RESUMO DOS DADOS IMPORTADOS'], ['']);
+                summaryRows.push(['Total de Pontos (Nós)', hasRawNodes ? importedNodes.length : 0]);
+                summaryRows.push(['Total de Trechos', hasRawLinks ? previewLinks.length : 0]);
+                if (hasRawLinks) {
+                    const totalLength = previewLinks.reduce((sum, l) => sum + (l.length || 0), 0);
+                    summaryRows.push(['Extensão Total (m)', formatNumber(totalLength, 2)]);
+                }
             }
 
-            // Sheet 3: Nodes/Nós
-            if (currentResults.nodeData && currentResults.nodeData.length > 0) {
-                const nodesData = currentResults.nodeData.map(node => ({
-                    'ID': node.id || node.ID,
-                    'X (Este)': formatNumber(node.x || node.X, 2),
-                    'Y (Norte)': formatNumber(node.y || node.Y, 2),
-                    'Cota (m)': formatNumber(node.z || node.Z || node.cota, 2),
-                    'População': node.pop || node.populacao || '-',
+            const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+            wsSummary['!cols'] = [{ wch: 35 }, { wch: 25 }];
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumo');
+
+            // Sheet 2: Nodes/Pontos - use calculated or raw data
+            const nodesSource = (hasResults && currentResults.nodeData) ? currentResults.nodeData : importedNodes;
+            if (nodesSource && nodesSource.length > 0) {
+                const nodesData = nodesSource.map((node, idx) => ({
+                    'Seq': idx + 1,
+                    'ID': node.id || node.ID || node.name || `P${idx + 1}`,
+                    'X (Este)': formatNumber(node.x || node.X || node.este || 0, 3),
+                    'Y (Norte)': formatNumber(node.y || node.Y || node.norte || 0, 3),
+                    'Cota Terreno (m)': formatNumber(node.z || node.Z || node.cota || node.elevation || 0, 3),
+                    'Cota Fundo (m)': formatNumber(node.cotaFundo || node.invert || '-'),
+                    'População (hab)': node.pop || node.populacao || node.population || '-',
                     'Demanda (L/s)': node.demand || node.demanda || '-',
-                    'Área (ha)': node.area || '-'
+                    'Área (ha)': node.area || '-',
+                    'Tipo': node.type || node.tipo || '-'
                 }));
 
                 const wsNodes = XLSX.utils.json_to_sheet(nodesData);
-                wsNodes['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 10 }];
-                XLSX.utils.book_append_sheet(wb, wsNodes, 'Nós');
+                wsNodes['!cols'] = [
+                    { wch: 5 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 15 },
+                    { wch: 13 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 10 }
+                ];
+                XLSX.utils.book_append_sheet(wb, wsNodes, 'Pontos');
+            }
+
+            // Sheet 3: Links/Trechos - use calculated or raw data
+            const linksSource = (hasResults && currentResults.data) ? currentResults.data : previewLinks;
+            if (linksSource && linksSource.length > 0) {
+                const linksData = linksSource.map((link, idx) => {
+                    const baseData = {
+                        'Seq': idx + 1,
+                        'De (Montante)': link.from || link.de || link.startNode || '-',
+                        'Para (Jusante)': link.to || link.para || link.endNode || '-',
+                        'Comprimento (m)': formatNumber(link.length || link.comprimento || link.L || 0, 2)
+                    };
+
+                    // Add calculated fields if available
+                    if (hasResults) {
+                        return {
+                            ...baseData,
+                            'DN (mm)': link.diameter || link.DN || link.dn || '-',
+                            'Declividade (%)': formatNumber(link.slope || link.declividade || link.i || 0, 4),
+                            'Vazão (L/s)': formatNumber(link.flow || link.vazao || link.Q || 0, 2),
+                            'Velocidade (m/s)': formatNumber(link.velocity || link.velocidade || link.v || 0, 2),
+                            'Prof. Mont. (m)': formatNumber(link.depthUp || link.profMont || 0, 2),
+                            'Prof. Jus. (m)': formatNumber(link.depthDown || link.profJus || 0, 2),
+                            'y/D': formatNumber(link.yd || link.yD || 0, 2),
+                            'Status': link.status || link.verificacao || '-'
+                        };
+                    } else {
+                        return {
+                            ...baseData,
+                            'Cota Mont. (m)': formatNumber(link.elevUp || link.cotaMont || 0, 2),
+                            'Cota Jus. (m)': formatNumber(link.elevDown || link.cotaJus || 0, 2),
+                            'Desnível (m)': formatNumber((link.elevUp || 0) - (link.elevDown || 0), 2)
+                        };
+                    }
+                });
+
+                const wsLinks = XLSX.utils.json_to_sheet(linksData);
+                const colWidths = hasResults
+                    ? [{ wch: 5 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 11 }, { wch: 6 }, { wch: 10 }]
+                    : [{ wch: 5 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 11 }, { wch: 11 }];
+                wsLinks['!cols'] = colWidths;
+                XLSX.utils.book_append_sheet(wb, wsLinks, 'Trechos');
             }
 
             // Sheet 4: Quantities/Quantitativos (if available)
-            if (currentResults.quantities || currentResults.costs) {
-                const qtyData = (currentResults.quantities || currentResults.costs || []).map(item => ({
-                    'Trecho': item.trecho || item.link || item.id,
-                    'Serviço': item.servico || item.descricao || item.description,
+            const costsSource = (currentResults?.quantities) || (currentResults?.costs) || calculatedCosts;
+            if (costsSource && costsSource.length > 0) {
+                const qtyData = costsSource.map(item => ({
+                    'Trecho': item.trecho || item.link || item.id || '-',
+                    'Serviço': item.servico || item.descricao || item.description || '-',
                     'Unidade': item.unidade || item.unit || 'm³',
                     'Quantidade': formatNumber(item.quantidade || item.qty || 0, 2),
                     'Preço Unit. (R$)': formatNumber(item.precoUnit || item.unitPrice || 0, 2),
@@ -6681,7 +6932,7 @@ DATA;
                 }));
 
                 const wsQty = XLSX.utils.json_to_sheet(qtyData);
-                wsQty['!cols'] = [{ wch: 10 }, { wch: 35 }, { wch: 8 }, { wch: 12 }, { wch: 15 }, { wch: 15 }];
+                wsQty['!cols'] = [{ wch: 12 }, { wch: 40 }, { wch: 8 }, { wch: 12 }, { wch: 15 }, { wch: 15 }];
                 XLSX.utils.book_append_sheet(wb, wsQty, 'Quantitativos');
             }
 
@@ -6711,7 +6962,7 @@ DATA;
             const filename = `rede_${networkType}_${timestamp}.xlsx`;
             XLSX.writeFile(wb, filename);
 
-            alert(`Arquivo ${filename} exportado com sucesso!`);
+            alert(`Arquivo ${filename} exportado com sucesso!\n\nAbas incluídas:\n- Resumo\n- Pontos (${nodesSource?.length || 0})\n- Trechos (${linksSource?.length || 0})\n${costsSource?.length ? '- Quantitativos\n' : ''}- Parâmetros`);
         }
 
         function getNetworkTypeName(type) {
@@ -6860,6 +7111,117 @@ DATA;
         function addProductivityRow() {
             planningData.productivity.push({ servico: 'Novo Serviço', unidade: 'm', produtividade: 10, fonte: 'Mercado' });
             renderProductivityTable();
+        }
+
+        // Load planning data from platform (importedNodes, previewLinks, calculatedCosts)
+        function loadPlanningFromPlatform() {
+            // Check if there's data available
+            const hasNodes = importedNodes && importedNodes.length > 0;
+            const hasLinks = previewLinks && previewLinks.length > 0;
+            const hasCosts = calculatedCosts && calculatedCosts.length > 0;
+
+            if (!hasNodes && !hasLinks) {
+                alert('Nenhum dado encontrado na plataforma.\n\nImporte dados topográficos ou desenhe trechos na aba "Importar Topografia" primeiro.');
+                return;
+            }
+
+            // Build planning input data from platform data
+            const planningInput = [];
+
+            // Process links/trechos
+            if (hasLinks) {
+                previewLinks.forEach((link, idx) => {
+                    // Find nodes to get elevations
+                    const nodeFrom = importedNodes.find(n => n.id === link.from || n.name === link.from);
+                    const nodeTo = importedNodes.find(n => n.id === link.to || n.name === link.to);
+
+                    const cotaMont = nodeFrom?.z || nodeFrom?.cota || nodeFrom?.elevation || 0;
+                    const cotaJus = nodeTo?.z || nodeTo?.cota || nodeTo?.elevation || 0;
+                    const length = link.length || link.comprimento || 0;
+
+                    // Calculate depth based on typical invert depth (default 1.5m)
+                    const profMont = link.depthUp || link.profMont || 1.5;
+                    const profJus = link.depthDown || link.profJus || 1.5;
+                    const avgDepth = (profMont + profJus) / 2;
+
+                    // Get diameter
+                    const dn = link.diameter || link.DN || link.dn || 150;
+
+                    planningInput.push({
+                        trecho: `T${idx + 1}`,
+                        de: link.from,
+                        para: link.to,
+                        comprimento: length,
+                        diametro: dn,
+                        profundidade: avgDepth,
+                        cotaMont: cotaMont,
+                        cotaJus: cotaJus,
+                        // Calculate volumes if not present
+                        escavacao: link.escav || (length * 0.8 * avgDepth), // width 0.8m
+                        reaterro: link.reat || (length * 0.8 * avgDepth * 0.85),
+                        material: link.material || 'PVC',
+                        tipo: link.type || 'esgoto'
+                    });
+                });
+            }
+
+            // If we have calculated costs, enhance the data
+            if (hasCosts && calculatedCosts.length > 0) {
+                calculatedCosts.forEach((cost, idx) => {
+                    if (planningInput[idx]) {
+                        planningInput[idx].escavacao = cost.escavacao || planningInput[idx].escavacao;
+                        planningInput[idx].reaterro = cost.reaterro || planningInput[idx].reaterro;
+                        planningInput[idx].custo = cost.custoTotal || cost.total || 0;
+                    }
+                });
+            }
+
+            // Store in planningData
+            planningData.input = planningInput;
+
+            // Show success and update UI
+            const infoDiv = document.getElementById('planning-platform-info');
+            if (infoDiv) {
+                infoDiv.style.display = 'block';
+                document.getElementById('planning-nodes-count').textContent = importedNodes.length;
+                document.getElementById('planning-links-count').textContent = previewLinks.length;
+                document.getElementById('planning-costs-count').textContent = calculatedCosts?.length || 0;
+            }
+
+            // Show validation
+            showValidationSuccess({
+                data: planningInput,
+                stats: {
+                    totalLinks: planningInput.length,
+                    totalLength: planningInput.reduce((sum, l) => sum + (l.comprimento || 0), 0),
+                    avgDepth: planningInput.length > 0
+                        ? planningInput.reduce((sum, l) => sum + (l.profundidade || 0), 0) / planningInput.length
+                        : 0,
+                    totalExcavation: planningInput.reduce((sum, l) => sum + (l.escavacao || 0), 0),
+                    totalBackfill: planningInput.reduce((sum, l) => sum + (l.reaterro || 0), 0)
+                },
+                source: 'platform'
+            });
+
+            // Enable generate button
+            alert(`Dados carregados com sucesso!\n\n` +
+                `Trechos: ${planningInput.length}\n` +
+                `Extensão total: ${planningInput.reduce((s, l) => s + (l.comprimento || 0), 0).toFixed(1)} m\n\n` +
+                `Agora você pode gerar o planejamento.`);
+        }
+
+        // Update info when switching to planning tab
+        function updatePlanningInfo() {
+            const infoDiv = document.getElementById('planning-platform-info');
+            if (infoDiv) {
+                const hasData = (importedNodes?.length > 0) || (previewLinks?.length > 0);
+                if (hasData) {
+                    infoDiv.style.display = 'block';
+                    document.getElementById('planning-nodes-count').textContent = importedNodes?.length || 0;
+                    document.getElementById('planning-links-count').textContent = previewLinks?.length || 0;
+                    document.getElementById('planning-costs-count').textContent = calculatedCosts?.length || 0;
+                }
+            }
         }
 
         async function loadPlanningSpreadsheet() {
