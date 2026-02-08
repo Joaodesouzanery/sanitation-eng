@@ -432,6 +432,16 @@ PV01,359284.525,7352735.514,1.65"
 
                     <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="import-soil-saturated" style="width: auto;">
+                            Solo saturado (presença de água)
+                        </label>
+                        <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                            Marque se houver lençol freático na profundidade de escavação
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                             <input type="checkbox" id="import-shoring-enabled" style="width: auto;" checked>
                             Utilizar escoramento
                         </label>
@@ -1349,6 +1359,7 @@ PV02,359290.456,7352780.123,1.82</pre>
         function getExecutionParams() {
             return {
                 soilType: document.getElementById('import-soil-type')?.value || '1cat',
+                soilSaturated: document.getElementById('import-soil-saturated')?.checked || false,
                 shoringEnabled: document.getElementById('import-shoring-enabled')?.checked ?? true,
                 shoringType: document.getElementById('import-shoring-type')?.value || 'continuo',
                 shoringMinDepth: parseFloat(document.getElementById('import-shoring-depth')?.value) || 1.25
@@ -2826,6 +2837,7 @@ PV02,359290.456,7352780.123,1.82</pre>
                         '3cat': '3a CAT'
                     };
                     const soloText = soloMap[costData.tipoSolo] || '1a CAT';
+                    const saturadoText = costData.soloSaturado ? 'SIM' : 'NAO';
 
                     dbfRecords.push({
                         TRECHO: `T${String(idx+1).padStart(2,'0')}`,
@@ -2835,6 +2847,7 @@ PV02,359290.456,7352780.123,1.82</pre>
                         DN_MM: costData.dn || 150,
                         PROF_M: costData.profMedia || 1.5,
                         SOLO: soloText,
+                        SATURADO: saturadoText,
                         ESCORADO: escoradoText,
                         ESCAV_M3: escav,
                         REAT_M3: reat,
@@ -2851,6 +2864,7 @@ PV02,359290.456,7352780.123,1.82</pre>
                         DN_MM: 150,
                         PROF_M: 1.5,
                         SOLO: '1a CAT',
+                        SATURADO: 'NAO',
                         ESCORADO: 'NAO',
                         ESCAV_M3: 0,
                         REAT_M3: 0,
@@ -2882,7 +2896,7 @@ PV02,359290.456,7352780.123,1.82</pre>
                 offset += part.byteLength;
             });
 
-            // DBF fields: Trecho, De, Para, Comp, DN, Prof, Solo, Escorado, Escav, Reat, Pav, Custo
+            // DBF fields: Trecho, De, Para, Comp, DN, Prof, Solo, Saturado, Escorado, Escav, Reat, Pav, Custo
             const dbf = createDBF(dbfRecords, [
                 { name: 'TRECHO', type: 'C', length: 10 },
                 { name: 'DE', type: 'C', length: 20 },
@@ -2891,6 +2905,7 @@ PV02,359290.456,7352780.123,1.82</pre>
                 { name: 'DN_MM', type: 'N', length: 6, decimals: 0 },
                 { name: 'PROF_M', type: 'N', length: 10, decimals: 2 },
                 { name: 'SOLO', type: 'C', length: 10 },
+                { name: 'SATURADO', type: 'C', length: 5 },
                 { name: 'ESCORADO', type: 'C', length: 10 },
                 { name: 'ESCAV_M3', type: 'N', length: 12, decimals: 2 },
                 { name: 'REAT_M3', type: 'N', length: 12, decimals: 2 },
@@ -3029,11 +3044,12 @@ PV02,359290.456,7352780.123,1.82</pre>
                 });
                 const custos = calculateAllCosts(linksWithData, networkType);
 
-                // Add shoring info to cost data
+                // Add shoring and soil info to cost data
                 custos.trechos.forEach((t, idx) => {
                     t.escorado = linksWithData[idx]?.escorado || false;
                     t.tipoEscoramento = execParams.shoringEnabled ? execParams.shoringType : 'nenhum';
                     t.tipoSolo = execParams.soilType;
+                    t.soloSaturado = execParams.soilSaturated || false;
                 });
 
                 // Create points shapefile
