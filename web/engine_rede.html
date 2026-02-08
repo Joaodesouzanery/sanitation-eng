@@ -1656,6 +1656,37 @@ PV02,359290.456,7352780.123,1.82</pre>
 
         <!-- EPANET MODULE TAB -->
         <div id="epanet-tab" class="tab-content">
+            <!-- Data Status Panel -->
+            <div id="epanet-data-panel" class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));">
+                <h2><span class="icon">📊</span> Dados da Rede Carregados</h2>
+                <div class="summary-cards" style="margin-top: 15px;">
+                    <div class="summary-card blue">
+                        <div class="icon">📍</div>
+                        <div class="value" id="epanet-loaded-nodes">0</div>
+                        <div class="label">Nós Carregados</div>
+                    </div>
+                    <div class="summary-card green">
+                        <div class="icon">🔗</div>
+                        <div class="value" id="epanet-loaded-links">0</div>
+                        <div class="label">Trechos Carregados</div>
+                    </div>
+                    <div class="summary-card orange">
+                        <div class="icon">📏</div>
+                        <div class="value" id="epanet-total-length">0</div>
+                        <div class="label">Extensão Total (m)</div>
+                    </div>
+                    <div class="summary-card purple">
+                        <div class="icon">🌐</div>
+                        <div class="value" id="epanet-network-type">--</div>
+                        <div class="label">Tipo de Rede</div>
+                    </div>
+                </div>
+                <div id="epanet-no-data-warning" style="display: none; margin-top: 15px; padding: 15px; background: rgba(239, 68, 68, 0.2); border-radius: 8px; border: 1px solid var(--accent-red);">
+                    <span style="color: var(--accent-red);">⚠️ Nenhum dado importado.</span>
+                    <span style="color: var(--text-secondary);">Importe dados na aba "Importar" para usar este módulo.</span>
+                </div>
+            </div>
+
             <div class="grid">
                 <!-- EPANET Configuration -->
                 <div class="card">
@@ -1858,6 +1889,37 @@ PV02,359290.456,7352780.123,1.82</pre>
 
         <!-- SWMM MODULE TAB -->
         <div id="swmm-tab" class="tab-content">
+            <!-- Data Status Panel -->
+            <div id="swmm-data-panel" class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));">
+                <h2><span class="icon">📊</span> Dados da Rede Carregados</h2>
+                <div class="summary-cards" style="margin-top: 15px;">
+                    <div class="summary-card blue">
+                        <div class="icon">📍</div>
+                        <div class="value" id="swmm-loaded-nodes">0</div>
+                        <div class="label">Poços de Visita</div>
+                    </div>
+                    <div class="summary-card green">
+                        <div class="icon">🔗</div>
+                        <div class="value" id="swmm-loaded-links">0</div>
+                        <div class="label">Condutos</div>
+                    </div>
+                    <div class="summary-card orange">
+                        <div class="icon">🏞️</div>
+                        <div class="value" id="swmm-loaded-subcatchments">0</div>
+                        <div class="label">Sub-bacias</div>
+                    </div>
+                    <div class="summary-card purple">
+                        <div class="icon">📏</div>
+                        <div class="value" id="swmm-total-length">0</div>
+                        <div class="label">Extensão Total (m)</div>
+                    </div>
+                </div>
+                <div id="swmm-no-data-warning" style="display: none; margin-top: 15px; padding: 15px; background: rgba(239, 68, 68, 0.2); border-radius: 8px; border: 1px solid var(--accent-red);">
+                    <span style="color: var(--accent-red);">⚠️ Nenhum dado importado.</span>
+                    <span style="color: var(--text-secondary);">Importe dados na aba "Importar" para usar este módulo.</span>
+                </div>
+            </div>
+
             <div class="grid">
                 <!-- SWMM Configuration -->
                 <div class="card">
@@ -2059,6 +2121,33 @@ PV02,359290.456,7352780.123,1.82</pre>
 
         <!-- OPENPROJECT MODULE TAB -->
         <div id="openproject-tab" class="tab-content">
+            <!-- Data Status Panel -->
+            <div id="openproject-data-panel" class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));">
+                <h2><span class="icon">📊</span> Dados do Projeto</h2>
+                <div class="summary-cards" style="margin-top: 15px;">
+                    <div class="summary-card blue">
+                        <div class="icon">📋</div>
+                        <div class="value" id="openproject-loaded-tasks">0</div>
+                        <div class="label">Tarefas</div>
+                    </div>
+                    <div class="summary-card green">
+                        <div class="icon">🔗</div>
+                        <div class="value" id="openproject-loaded-links">0</div>
+                        <div class="label">Trechos da Rede</div>
+                    </div>
+                    <div class="summary-card orange">
+                        <div class="icon">📦</div>
+                        <div class="value" id="openproject-loaded-materials">0</div>
+                        <div class="label">Materiais</div>
+                    </div>
+                    <div class="summary-card purple">
+                        <div class="icon">📅</div>
+                        <div class="value" id="openproject-duration">--</div>
+                        <div class="label">Duração (dias)</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid">
                 <!-- Project Configuration -->
                 <div class="card">
@@ -2211,6 +2300,37 @@ PV02,359290.456,7352780.123,1.82</pre>
 
         <!-- QGIS MODULE TAB -->
         <div id="qgis-tab" class="tab-content">
+            <!-- Data Status Panel -->
+            <div id="qgis-data-panel" class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));">
+                <h2><span class="icon">📊</span> Dados Disponíveis para Exportação</h2>
+                <div class="summary-cards" style="margin-top: 15px;">
+                    <div class="summary-card blue">
+                        <div class="icon">📍</div>
+                        <div class="value" id="qgis-loaded-nodes">0</div>
+                        <div class="label">Nós da Rede</div>
+                    </div>
+                    <div class="summary-card green">
+                        <div class="icon">🔗</div>
+                        <div class="value" id="qgis-loaded-links">0</div>
+                        <div class="label">Trechos da Rede</div>
+                    </div>
+                    <div class="summary-card orange">
+                        <div class="icon">📋</div>
+                        <div class="value" id="qgis-loaded-tasks">0</div>
+                        <div class="label">Tarefas Planejadas</div>
+                    </div>
+                    <div class="summary-card purple">
+                        <div class="icon">📦</div>
+                        <div class="value" id="qgis-loaded-materials">0</div>
+                        <div class="label">Materiais</div>
+                    </div>
+                </div>
+                <div id="qgis-no-data-warning" style="display: none; margin-top: 15px; padding: 15px; background: rgba(239, 68, 68, 0.2); border-radius: 8px; border: 1px solid var(--accent-red);">
+                    <span style="color: var(--accent-red);">⚠️ Nenhum dado disponível.</span>
+                    <span style="color: var(--text-secondary);">Importe dados e configure planejamento para exportar.</span>
+                </div>
+            </div>
+
             <div class="grid">
                 <!-- Export Configuration -->
                 <div class="card">
@@ -6607,11 +6727,18 @@ DATA;
                 renderHolidays();
             } else if (tab === 'quantities') {
                 renderQtyLinks();
+            } else if (tab === 'epanet') {
+                // Load platform data into EPANET module
+                loadEpanetModuleData();
+            } else if (tab === 'swmm') {
+                // Load platform data into SWMM module
+                loadSwmmModuleData();
             } else if (tab === 'openproject') {
-                // Render Gantt chart if tasks exist
-                if (document.getElementById('openproject-tasks-list')?.children.length > 0) {
-                    renderGanttChart();
-                }
+                // Load planning data and render Gantt chart
+                loadOpenProjectModuleData();
+            } else if (tab === 'qgis') {
+                // Load all data for QGIS export
+                loadQgisModuleData();
             }
         }
 
@@ -9715,6 +9842,147 @@ DATA;
             return { reservoirs, pumps, valves };
         }
 
+        // ============================================
+        // MODULE DATA LOADING FUNCTIONS
+        // ============================================
+
+        function loadEpanetModuleData() {
+            const { nodes, links, networkType } = getActiveNodesAndLinks();
+
+            // Update data panel
+            document.getElementById('epanet-loaded-nodes').textContent = nodes.length;
+            document.getElementById('epanet-loaded-links').textContent = links.length;
+
+            // Calculate total length
+            const totalLength = links.reduce((sum, l) => sum + (l.length || l.comprimento || 0), 0);
+            document.getElementById('epanet-total-length').textContent = totalLength.toFixed(0);
+
+            // Network type display
+            const typeNames = {
+                'sewer': 'Esgoto',
+                'water': 'Água',
+                'drainage': 'Drenagem'
+            };
+            document.getElementById('epanet-network-type').textContent = typeNames[networkType] || networkType;
+
+            // Show/hide warning
+            const warningEl = document.getElementById('epanet-no-data-warning');
+            if (nodes.length === 0) {
+                warningEl.style.display = 'block';
+            } else {
+                warningEl.style.display = 'none';
+            }
+        }
+
+        function loadSwmmModuleData() {
+            const { nodes, links, networkType } = getActiveNodesAndLinks();
+            const elements = typeof getSwmmElements === 'function' ? getSwmmElements() : { subcatchments: [], storages: [], outlets: [] };
+
+            // Update data panel
+            document.getElementById('swmm-loaded-nodes').textContent = nodes.length;
+            document.getElementById('swmm-loaded-links').textContent = links.length;
+            document.getElementById('swmm-loaded-subcatchments').textContent = elements.subcatchments?.length || 0;
+
+            // Calculate total length
+            const totalLength = links.reduce((sum, l) => sum + (l.length || l.comprimento || 0), 0);
+            document.getElementById('swmm-total-length').textContent = totalLength.toFixed(0);
+
+            // Show/hide warning
+            const warningEl = document.getElementById('swmm-no-data-warning');
+            if (nodes.length === 0) {
+                warningEl.style.display = 'block';
+            } else {
+                warningEl.style.display = 'none';
+            }
+        }
+
+        function loadOpenProjectModuleData() {
+            // Get network data
+            const { nodes, links } = getActiveNodesAndLinks();
+
+            // Load planning data if available
+            const tasksList = document.getElementById('openproject-tasks-list');
+
+            // If we have planning data, create tasks from it
+            if (planningData && planningData.schedule && planningData.schedule.length > 0) {
+                // Clear existing tasks if empty
+                if (tasksList.children.length === 0) {
+                    // Create tasks from planning schedule
+                    planningData.schedule.forEach((item, idx) => {
+                        addOpenProjectTask();
+                        const taskItem = tasksList.lastElementChild;
+                        if (taskItem) {
+                            const inputs = taskItem.querySelectorAll('input');
+                            const selects = taskItem.querySelectorAll('select');
+                            if (inputs[0]) inputs[0].value = item.activity || `Tarefa ${idx + 1}`;
+                            if (inputs[1]) inputs[1].value = item.startDate || '';
+                            if (inputs[2]) inputs[2].value = item.duration || 5;
+                        }
+                    });
+                }
+            }
+
+            // Update data panel
+            const tasksCount = tasksList?.children?.length || planningData?.schedule?.length || 0;
+            document.getElementById('openproject-loaded-tasks').textContent = tasksCount;
+            document.getElementById('openproject-loaded-links').textContent = links.length;
+            document.getElementById('openproject-loaded-materials').textContent = planningData?.materials?.length || 0;
+
+            // Calculate project duration
+            if (planningData.startDate && planningData.endDate) {
+                const start = new Date(planningData.startDate);
+                const end = new Date(planningData.endDate);
+                const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+                document.getElementById('openproject-duration').textContent = duration > 0 ? duration : '--';
+            }
+
+            // Update project name from planning if available
+            const projectName = document.getElementById('openproject-name');
+            if (projectName && !projectName.value) {
+                projectName.value = 'Projeto de Saneamento';
+            }
+
+            // Update project dates
+            const startDateEl = document.getElementById('openproject-start-date');
+            const endDateEl = document.getElementById('openproject-end-date');
+
+            if (planningData.startDate && startDateEl && !startDateEl.value) {
+                startDateEl.value = planningData.startDate;
+            }
+            if (planningData.endDate && endDateEl && !endDateEl.value) {
+                endDateEl.value = planningData.endDate;
+            }
+
+            // Render Gantt chart if tasks exist
+            if (tasksList && tasksList.children.length > 0) {
+                renderGanttChart();
+            }
+        }
+
+        function loadQgisModuleData() {
+            const { nodes, links } = getActiveNodesAndLinks();
+
+            // Update data panel
+            document.getElementById('qgis-loaded-nodes').textContent = nodes.length;
+            document.getElementById('qgis-loaded-links').textContent = links.length;
+
+            // Count planning tasks
+            const tasksCount = planningData?.schedule?.length || 0;
+            document.getElementById('qgis-loaded-tasks').textContent = tasksCount;
+
+            // Count materials
+            const materialsCount = planningData?.materials?.length || 0;
+            document.getElementById('qgis-loaded-materials').textContent = materialsCount;
+
+            // Show/hide warning
+            const warningEl = document.getElementById('qgis-no-data-warning');
+            if (nodes.length === 0 && tasksCount === 0) {
+                warningEl.style.display = 'block';
+            } else {
+                warningEl.style.display = 'none';
+            }
+        }
+
         function runEpanetSimulation() {
             const { nodes, links } = getActiveNodesAndLinks();
 
@@ -11367,6 +11635,9 @@ Data: ${new Date().toLocaleString('pt-BR')}
                         const fromNode = nodes.find(n => n.id === link.from) || nodes[idx] || { x: 0, y: 0 };
                         const toNode = nodes.find(n => n.id === link.to) || nodes[idx + 1] || { x: 100, y: 100 };
 
+                        // Get quantities data if available
+                        const qtyData = currentResults?.quantityData?.find(q => q.id === link.id || q.id === `T${idx + 1}`) || {};
+
                         return {
                             type: 'Feature',
                             properties: {
@@ -11380,6 +11651,13 @@ Data: ${new Date().toLocaleString('pt-BR')}
                                 ...(settings.attrHydraulic && epanetData.results?.links?.[`P${idx + 1}`] ? {
                                     vazao: epanetData.results.links[`P${idx + 1}`].flow,
                                     velocidade: epanetData.results.links[`P${idx + 1}`].velocity
+                                } : {}),
+                                // Quantities data
+                                ...(settings.attrQuantities ? {
+                                    vol_escavacao: qtyData.volEsc || 0,
+                                    vol_reaterro: qtyData.volReat || 0,
+                                    vol_bota_fora: qtyData.volBota || 0,
+                                    area_pavimento: qtyData.areaPav || 0
                                 } : {})
                             },
                             geometry: {
@@ -11395,6 +11673,31 @@ Data: ${new Date().toLocaleString('pt-BR')}
                 zip.file('trechos.geojson', JSON.stringify(linksGeoJSON, null, 2));
             }
 
+            // Export planning data as JSON
+            if (planningData && (planningData.schedule?.length > 0 || planningData.materials?.length > 0)) {
+                const planningExport = {
+                    project: {
+                        startDate: planningData.startDate,
+                        endDate: planningData.endDate,
+                        workDaysPerWeek: planningData.workDaysPerWeek
+                    },
+                    schedule: planningData.schedule || [],
+                    materials: planningData.materials || [],
+                    productivity: planningData.productivity || [],
+                    holidays: planningData.holidays || []
+                };
+                zip.file('planejamento.json', JSON.stringify(planningExport, null, 2));
+            }
+
+            // Export quantities summary as CSV
+            if (currentResults?.quantityData?.length > 0) {
+                let csvContent = 'id,from,to,comprimento,diametro,vol_escavacao,vol_reaterro,vol_bota_fora,area_pavimento\n';
+                currentResults.quantityData.forEach(q => {
+                    csvContent += `${q.id},${q.from || ''},${q.to || ''},${q.length || 0},${q.DN || 0},${q.volEsc || 0},${q.volReat || 0},${q.volBota || 0},${q.areaPav || 0}\n`;
+                });
+                zip.file('quantitativos.csv', csvContent);
+            }
+
             zip.generateAsync({ type: 'blob' }).then(content => {
                 const url = URL.createObjectURL(content);
                 const a = document.createElement('a');
@@ -11404,7 +11707,12 @@ Data: ${new Date().toLocaleString('pt-BR')}
                 URL.revokeObjectURL(url);
             });
 
-            showQGISStatus('GeoJSON exportado com sucesso!', nodes.length, links.length);
+            const hasPlanning = planningData && (planningData.schedule?.length > 0 || planningData.materials?.length > 0);
+            const hasQty = currentResults?.quantityData?.length > 0;
+            let extraInfo = '';
+            if (hasPlanning) extraInfo += ' + Planejamento';
+            if (hasQty) extraInfo += ' + Quantitativos';
+            showQGISStatus('GeoJSON exportado com sucesso!' + extraInfo, nodes.length, links.length);
         }
 
         function exportQGISGeoPackage() {
