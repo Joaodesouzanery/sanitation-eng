@@ -108,6 +108,349 @@
             background: var(--text-secondary);
         }
 
+        /* ============================================
+           ANIMATIONS & KEYFRAMES
+           ============================================ */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px); }
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(14, 165, 233, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.6); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-spinner-sm {
+            width: 20px;
+            height: 20px;
+            border-width: 2px;
+        }
+
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-hover) 25%, var(--bg-card) 50%, var(--bg-hover) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: var(--radius-md);
+        }
+
+        /* Animate on scroll */
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .animate-on-scroll.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Tab content animation */
+        .tab-content {
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        /* Card hover effects enhanced */
+        .card.hover-lift:hover {
+            transform: translateY(-8px) scale(1.01);
+            box-shadow: var(--shadow-xl);
+        }
+
+        /* Button ripple effect */
+        .btn-ripple {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-ripple::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.3) 10%, transparent 10.01%);
+            background-repeat: no-repeat;
+            background-position: 50%;
+            transform: scale(10, 10);
+            opacity: 0;
+            transition: transform 0.5s, opacity 0.5s;
+        }
+
+        .btn-ripple:active::after {
+            transform: scale(0, 0);
+            opacity: 1;
+            transition: 0s;
+        }
+
+        /* Floating action button */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4);
+            cursor: pointer;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.5);
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        /* Tooltip styles */
+        .tooltip-trigger {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip-trigger::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-8px);
+            padding: 8px 12px;
+            background: var(--text-primary);
+            color: white;
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 100;
+        }
+
+        .tooltip-trigger:hover::before {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(-4px);
+        }
+
+        /* Progress bar animation */
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-hover);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--gradient-primary);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .progress-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        /* Icon hover animations */
+        .icon-hover {
+            transition: transform 0.3s ease, color 0.3s ease;
+        }
+
+        .icon-hover:hover {
+            transform: scale(1.2) rotate(5deg);
+            color: var(--accent-blue);
+        }
+
+        /* Glow effect on focus */
+        .glow-focus:focus {
+            animation: glow 1.5s ease-in-out infinite;
+        }
+
+        /* Float animation for icons */
+        .float-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* Stagger animations for lists */
+        .stagger-item:nth-child(1) { animation-delay: 0.05s; }
+        .stagger-item:nth-child(2) { animation-delay: 0.1s; }
+        .stagger-item:nth-child(3) { animation-delay: 0.15s; }
+        .stagger-item:nth-child(4) { animation-delay: 0.2s; }
+        .stagger-item:nth-child(5) { animation-delay: 0.25s; }
+        .stagger-item:nth-child(6) { animation-delay: 0.3s; }
+        .stagger-item:nth-child(7) { animation-delay: 0.35s; }
+        .stagger-item:nth-child(8) { animation-delay: 0.4s; }
+
+        /* Card border glow on hover */
+        .card-glow {
+            position: relative;
+        }
+
+        .card-glow::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: calc(var(--radius-lg) + 2px);
+            background: var(--gradient-primary);
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+        }
+
+        .card-glow:hover::after {
+            opacity: 0.5;
+        }
+
+        /* Glassmorphism card variant */
+        .card-glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Gradient text */
+        .gradient-text {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Badge with pulse */
+        .badge-pulse {
+            position: relative;
+        }
+
+        .badge-pulse::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: inherit;
+            animation: pulse 2s infinite;
+            z-index: -1;
+        }
+
         .container {
             max-width: 1440px;
             margin: 0 auto;
@@ -3359,9 +3702,10 @@ PV02,359290.456,7352780.123,1.82</pre>
 
     <script>
         // ============================================
-        // SECURITY UTILITIES
+        // SECURITY UTILITIES - ENHANCED
         // ============================================
         const DEBUG_MODE = false; // Set to false in production
+        const APP_VERSION = '2.0.0';
 
         const SecurityUtils = {
             // Escape HTML to prevent XSS
@@ -3383,27 +3727,77 @@ PV02,359290.456,7352780.123,1.82</pre>
                 return unsafe.replace(/"/g, '&quot;').replace(/'/g, '&#039;');
             },
 
-            // Sanitize filename
+            // Sanitize filename - prevent path traversal
             sanitizeFilename(filename) {
                 if (!filename) return 'file';
-                return filename.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 255);
+                return filename
+                    .replace(/\.\./g, '') // Prevent path traversal
+                    .replace(/[^a-zA-Z0-9._-]/g, '_')
+                    .replace(/^\.+/, '') // Remove leading dots
+                    .substring(0, 255);
             },
 
             // Validate file size (default 50MB)
             validateFileSize(file, maxSizeMB = 50) {
                 const maxBytes = maxSizeMB * 1024 * 1024;
                 if (file.size > maxBytes) {
-                    alert(`Arquivo muito grande. Tamanho máximo: ${maxSizeMB}MB`);
+                    ToastSystem.error(`Arquivo muito grande. Máximo: ${maxSizeMB}MB`);
                     return false;
                 }
                 return true;
             },
 
-            // Safe JSON parse
+            // Validate file type by magic bytes
+            async validateFileType(file, allowedTypes) {
+                const header = await this.readFileHeader(file, 8);
+                const signatures = {
+                    'json': [0x7B, 0x22], // {"
+                    'csv': null, // Text-based
+                    'txt': null, // Text-based
+                    'dxf': null, // Text-based
+                    'geojson': [0x7B], // {
+                    'xlsx': [0x50, 0x4B, 0x03, 0x04], // PK ZIP
+                    'zip': [0x50, 0x4B, 0x03, 0x04]
+                };
+
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (!allowedTypes.includes(ext)) return false;
+
+                // For text-based files, just check extension
+                if (!signatures[ext]) return true;
+
+                // Validate magic bytes
+                const sig = signatures[ext];
+                for (let i = 0; i < sig.length; i++) {
+                    if (header[i] !== sig[i]) return false;
+                }
+                return true;
+            },
+
+            // Read file header bytes
+            readFileHeader(file, bytes) {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(new Uint8Array(reader.result));
+                    reader.onerror = () => resolve(new Uint8Array());
+                    reader.readAsArrayBuffer(file.slice(0, bytes));
+                });
+            },
+
+            // Safe JSON parse with prototype pollution prevention
             safeJsonParse(str, defaultValue = null) {
                 try {
                     const parsed = JSON.parse(str);
-                    return parsed && typeof parsed === 'object' ? parsed : defaultValue;
+                    if (parsed && typeof parsed === 'object') {
+                        // Prevent prototype pollution
+                        if (parsed.__proto__ || parsed.constructor || parsed.prototype) {
+                            delete parsed.__proto__;
+                            delete parsed.constructor;
+                            delete parsed.prototype;
+                        }
+                        return parsed;
+                    }
+                    return defaultValue;
                 } catch {
                     return defaultValue;
                 }
@@ -3416,7 +3810,69 @@ PV02,359290.456,7352780.123,1.82</pre>
                     if (!data.geometry) return false;
                 }
                 if (data.features && !Array.isArray(data.features)) return false;
+                // Validate feature count limit
+                if (data.features && data.features.length > 100000) {
+                    ToastSystem.warning('GeoJSON com muitas features pode causar lentidão');
+                }
                 return true;
+            },
+
+            // Sanitize number input
+            sanitizeNumber(value, min = -Infinity, max = Infinity, defaultVal = 0) {
+                const num = parseFloat(value);
+                if (isNaN(num)) return defaultVal;
+                return Math.max(min, Math.min(max, num));
+            },
+
+            // Validate URL
+            validateUrl(url) {
+                try {
+                    const parsed = new URL(url);
+                    return ['http:', 'https:'].includes(parsed.protocol);
+                } catch {
+                    return false;
+                }
+            },
+
+            // Rate limiter for operations
+            _rateLimiters: {},
+            rateLimit(key, maxCalls, windowMs) {
+                const now = Date.now();
+                if (!this._rateLimiters[key]) {
+                    this._rateLimiters[key] = { calls: [], windowMs };
+                }
+                const limiter = this._rateLimiters[key];
+                limiter.calls = limiter.calls.filter(t => now - t < windowMs);
+                if (limiter.calls.length >= maxCalls) {
+                    return false;
+                }
+                limiter.calls.push(now);
+                return true;
+            },
+
+            // Secure storage with encoding
+            secureStorage: {
+                set(key, value) {
+                    try {
+                        const encoded = btoa(encodeURIComponent(JSON.stringify(value)));
+                        localStorage.setItem(`hydro_${key}`, encoded);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                },
+                get(key, defaultValue = null) {
+                    try {
+                        const encoded = localStorage.getItem(`hydro_${key}`);
+                        if (!encoded) return defaultValue;
+                        return JSON.parse(decodeURIComponent(atob(encoded)));
+                    } catch {
+                        return defaultValue;
+                    }
+                },
+                remove(key) {
+                    localStorage.removeItem(`hydro_${key}`);
+                }
             },
 
             // Safe debug logging
@@ -3424,12 +3880,252 @@ PV02,359290.456,7352780.123,1.82</pre>
                 if (DEBUG_MODE) {
                     console.log('[DEBUG]', ...args);
                 }
+            },
+
+            // Content Security Policy violation handler
+            setupCSPHandler() {
+                document.addEventListener('securitypolicyviolation', (e) => {
+                    console.warn('CSP Violation:', e.violatedDirective, e.blockedURI);
+                });
+            }
+        };
+
+        // ============================================
+        // TOAST NOTIFICATION SYSTEM
+        // ============================================
+        const ToastSystem = {
+            container: null,
+
+            init() {
+                if (this.container) return;
+                this.container = document.createElement('div');
+                this.container.id = 'toast-container';
+                this.container.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 10000;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    pointer-events: none;
+                `;
+                document.body.appendChild(this.container);
+            },
+
+            show(message, type = 'info', duration = 4000) {
+                this.init();
+
+                const toast = document.createElement('div');
+                const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+                const colors = {
+                    success: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                    error: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                    warning: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    info: 'linear-gradient(135deg, #0ea5e9, #0284c7)'
+                };
+
+                toast.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 1.2rem;">${icons[type]}</span>
+                        <span>${SecurityUtils.escapeHtml(message)}</span>
+                    </div>
+                `;
+                toast.style.cssText = `
+                    background: ${colors[type]};
+                    color: white;
+                    padding: 14px 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+                    pointer-events: auto;
+                    cursor: pointer;
+                    transform: translateX(120%);
+                    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                    font-weight: 500;
+                    max-width: 350px;
+                `;
+
+                this.container.appendChild(toast);
+
+                // Animate in
+                requestAnimationFrame(() => {
+                    toast.style.transform = 'translateX(0)';
+                });
+
+                // Click to dismiss
+                toast.onclick = () => this.dismiss(toast);
+
+                // Auto dismiss
+                if (duration > 0) {
+                    setTimeout(() => this.dismiss(toast), duration);
+                }
+
+                return toast;
+            },
+
+            dismiss(toast) {
+                toast.style.transform = 'translateX(120%)';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 400);
+            },
+
+            success(msg) { return this.show(msg, 'success'); },
+            error(msg) { return this.show(msg, 'error', 6000); },
+            warning(msg) { return this.show(msg, 'warning', 5000); },
+            info(msg) { return this.show(msg, 'info'); }
+        };
+
+        // ============================================
+        // UI ANIMATION UTILITIES
+        // ============================================
+        const AnimationUtils = {
+            // Fade in element
+            fadeIn(element, duration = 300) {
+                element.style.opacity = '0';
+                element.style.display = '';
+                element.style.transition = `opacity ${duration}ms ease`;
+                requestAnimationFrame(() => {
+                    element.style.opacity = '1';
+                });
+            },
+
+            // Fade out element
+            fadeOut(element, duration = 300) {
+                element.style.transition = `opacity ${duration}ms ease`;
+                element.style.opacity = '0';
+                setTimeout(() => {
+                    element.style.display = 'none';
+                }, duration);
+            },
+
+            // Slide in from direction
+            slideIn(element, direction = 'right', duration = 400) {
+                const transforms = {
+                    right: 'translateX(30px)',
+                    left: 'translateX(-30px)',
+                    up: 'translateY(-30px)',
+                    down: 'translateY(30px)'
+                };
+                element.style.opacity = '0';
+                element.style.transform = transforms[direction];
+                element.style.transition = `all ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+                requestAnimationFrame(() => {
+                    element.style.opacity = '1';
+                    element.style.transform = 'translate(0)';
+                });
+            },
+
+            // Pulse effect
+            pulse(element) {
+                element.style.animation = 'pulse 0.6s ease';
+                element.addEventListener('animationend', () => {
+                    element.style.animation = '';
+                }, { once: true });
+            },
+
+            // Shake effect for errors
+            shake(element) {
+                element.style.animation = 'shake 0.5s ease';
+                element.addEventListener('animationend', () => {
+                    element.style.animation = '';
+                }, { once: true });
+            },
+
+            // Number counter animation
+            animateNumber(element, start, end, duration = 1000) {
+                const startTime = performance.now();
+                const update = (currentTime) => {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+                    const current = Math.round(start + (end - start) * eased);
+                    element.textContent = current.toLocaleString('pt-BR');
+                    if (progress < 1) requestAnimationFrame(update);
+                };
+                requestAnimationFrame(update);
+            },
+
+            // Stagger animation for list items
+            staggerIn(elements, delay = 50) {
+                elements.forEach((el, i) => {
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateY(20px)';
+                    el.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+                    setTimeout(() => {
+                        el.style.opacity = '1';
+                        el.style.transform = 'translateY(0)';
+                    }, i * delay);
+                });
+            }
+        };
+
+        // ============================================
+        // LOADING OVERLAY SYSTEM
+        // ============================================
+        const LoadingSystem = {
+            overlay: null,
+
+            show(message = 'Processando...') {
+                if (this.overlay) return;
+
+                this.overlay = document.createElement('div');
+                this.overlay.innerHTML = `
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+                        <div class="loading-spinner"></div>
+                        <div style="color: white; font-size: 1.1rem; font-weight: 500;">${SecurityUtils.escapeHtml(message)}</div>
+                    </div>
+                `;
+                this.overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(15, 23, 42, 0.85);
+                    backdrop-filter: blur(4px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                `;
+                document.body.appendChild(this.overlay);
+                requestAnimationFrame(() => {
+                    this.overlay.style.opacity = '1';
+                });
+            },
+
+            hide() {
+                if (!this.overlay) return;
+                this.overlay.style.opacity = '0';
+                setTimeout(() => {
+                    if (this.overlay) {
+                        this.overlay.remove();
+                        this.overlay = null;
+                    }
+                }, 300);
+            },
+
+            async wrap(promise, message) {
+                this.show(message);
+                try {
+                    return await promise;
+                } finally {
+                    this.hide();
+                }
             }
         };
 
         // Shorthand aliases for common functions
         const escapeHtml = SecurityUtils.escapeHtml;
         const escapeAttr = SecurityUtils.escapeAttr;
+
+        // Initialize security handlers on load
+        document.addEventListener('DOMContentLoaded', () => {
+            SecurityUtils.setupCSPHandler();
+            ToastSystem.init();
+        });
 
         // ============================================
         // GLOBAL STATE
