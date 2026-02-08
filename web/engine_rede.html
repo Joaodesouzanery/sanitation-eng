@@ -440,6 +440,19 @@ PV01,359284.525,7352735.514,1.65"
                         </small>
                     </div>
 
+                    <div class="form-group" id="dewatering-group" style="display: none;">
+                        <label>Método de Esgotamento de Água</label>
+                        <select id="import-dewatering-type">
+                            <option value="bomba">Bombeamento direto (bomba d'água)</option>
+                            <option value="ponteira">Rebaixamento com ponteiras filtrantes</option>
+                            <option value="poco">Rebaixamento com poços profundos</option>
+                            <option value="dreno">Drenos horizontais</option>
+                        </select>
+                        <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                            Escolha o método de esgotamento para trabalho em solo saturado
+                        </small>
+                    </div>
+
                     <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                             <input type="checkbox" id="import-shoring-enabled" style="width: auto;" checked>
@@ -526,11 +539,17 @@ PV01,359284.525,7352735.514,1.65"
             <div class="card" id="trace-card" style="display: none; margin-top: 20px;">
                 <h2><span class="icon">🗺️</span> Traçado da Rede</h2>
                 <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                    <button class="btn btn-small btn-add" onclick="generatePreviewLinks()">🔗 Gerar Trechos</button>
+                    <button class="btn btn-small btn-add" onclick="generatePreviewLinks()">🔗 Gerar Trechos Auto</button>
+                    <button class="btn btn-small" id="btn-manual-trace" style="background: var(--accent-orange); color: white; border: none;" onclick="toggleManualTraceMode()">✏️ Desenhar Trecho Manual</button>
                     <button class="btn btn-small" style="background: var(--accent-blue); color: white; border: none;" onclick="zoomIn()">🔍+</button>
                     <button class="btn btn-small" style="background: var(--accent-blue); color: white; border: none;" onclick="zoomOut()">🔍-</button>
                     <button class="btn btn-small" style="background: var(--accent-purple); color: white; border: none;" onclick="resetView()">↺ Reset</button>
+                    <button class="btn btn-small" style="background: var(--accent-red); color: white; border: none;" onclick="clearPreviewLinks()">🗑️ Limpar</button>
                     <span style="color: var(--text-secondary); font-size: 0.85rem; align-self: center; margin-left: auto;" id="trace-info"></span>
+                </div>
+                <div id="manual-trace-help" style="display: none; background: var(--accent-orange); color: white; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+                    <strong>Modo Manual Ativo:</strong> Clique em um ponto de ORIGEM, depois clique no ponto de DESTINO para criar o trecho.
+                    <span id="manual-trace-status" style="margin-left: 10px;"></span>
                 </div>
                 <div style="position: relative; background: var(--bg-card); border-radius: 8px; overflow: hidden;">
                     <canvas id="network-canvas" width="800" height="500" style="width: 100%; cursor: grab;"></canvas>
@@ -5259,7 +5278,150 @@ DATA;
                     document.getElementById('shoring-type-group').style.display = this.checked ? 'block' : 'none';
                 });
             }
+
+            // Set up saturated soil checkbox handler
+            const saturatedCheckbox = document.getElementById('import-soil-saturated');
+            if (saturatedCheckbox) {
+                saturatedCheckbox.addEventListener('change', function() {
+                    document.getElementById('dewatering-group').style.display = this.checked ? 'block' : 'none';
+                });
+            }
+
+            // Set up canvas click handler for manual trace mode
+            const canvas = document.getElementById('network-canvas');
+            if (canvas) {
+                canvas.addEventListener('click', handleCanvasClick);
+            }
         });
+
+        // ============================================
+        // MANUAL TRACE MODE
+        // ============================================
+        let manualTraceMode = false;
+        let manualTraceOrigin = null;
+
+        function toggleManualTraceMode() {
+            manualTraceMode = !manualTraceMode;
+            manualTraceOrigin = null;
+
+            const btn = document.getElementById('btn-manual-trace');
+            const help = document.getElementById('manual-trace-help');
+            const canvas = document.getElementById('network-canvas');
+
+            if (manualTraceMode) {
+                btn.style.background = 'var(--accent-green)';
+                btn.textContent = '✓ Modo Manual ATIVO';
+                help.style.display = 'block';
+                canvas.style.cursor = 'crosshair';
+                document.getElementById('manual-trace-status').textContent = '→ Clique no ponto de ORIGEM';
+            } else {
+                btn.style.background = 'var(--accent-orange)';
+                btn.textContent = '✏️ Desenhar Trecho Manual';
+                help.style.display = 'none';
+                canvas.style.cursor = 'grab';
+            }
+        }
+
+        function handleCanvasClick(event) {
+            if (!manualTraceMode || importedNodes.length === 0) return;
+
+            const canvas = event.target;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const clickX = (event.clientX - rect.left) * scaleX;
+            const clickY = (event.clientY - rect.top) * scaleY;
+
+            // Find nearest node to click
+            let nearestNode = null;
+            let nearestDist = Infinity;
+            const threshold = 20; // pixels
+
+            for (const node of importedNodes) {
+                const screenX = (node.x - canvasState.offsetX) * canvasState.scale + canvas.width / 2;
+                const screenY = canvas.height / 2 - (node.y - canvasState.offsetY) * canvasState.scale;
+                const dist = Math.sqrt(Math.pow(clickX - screenX, 2) + Math.pow(clickY - screenY, 2));
+
+                if (dist < nearestDist && dist < threshold * canvasState.scale) {
+                    nearestDist = dist;
+                    nearestNode = node;
+                }
+            }
+
+            if (!nearestNode) {
+                document.getElementById('manual-trace-status').textContent = '⚠️ Clique mais perto de um ponto!';
+                return;
+            }
+
+            if (!manualTraceOrigin) {
+                // First click - set origin
+                manualTraceOrigin = nearestNode;
+                document.getElementById('manual-trace-status').textContent =
+                    `Origem: ${nearestNode.id} → Clique no ponto de DESTINO`;
+                highlightNode(nearestNode, 'origin');
+            } else {
+                // Second click - create link
+                if (nearestNode.id === manualTraceOrigin.id) {
+                    document.getElementById('manual-trace-status').textContent =
+                        '⚠️ Escolha um ponto diferente para destino!';
+                    return;
+                }
+
+                // Check if link already exists
+                const existingLink = previewLinks.find(l =>
+                    (l.from === manualTraceOrigin.id && l.to === nearestNode.id) ||
+                    (l.from === nearestNode.id && l.to === manualTraceOrigin.id)
+                );
+
+                if (existingLink) {
+                    document.getElementById('manual-trace-status').textContent =
+                        '⚠️ Este trecho já existe!';
+                    manualTraceOrigin = null;
+                    renderCanvas();
+                    return;
+                }
+
+                // Calculate length
+                const dx = nearestNode.x - manualTraceOrigin.x;
+                const dy = nearestNode.y - manualTraceOrigin.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+
+                // Add new link
+                previewLinks.push({
+                    from: manualTraceOrigin.id,
+                    to: nearestNode.id,
+                    length: Math.round(length * 100) / 100
+                });
+
+                document.getElementById('manual-trace-status').textContent =
+                    `✓ Trecho ${manualTraceOrigin.id} → ${nearestNode.id} criado! Clique para novo trecho.`;
+
+                manualTraceOrigin = null;
+                renderCanvas();
+                updateTraceInfo();
+            }
+        }
+
+        function highlightNode(node, type) {
+            renderCanvas();
+            // Highlight will be shown via renderCanvas
+        }
+
+        function clearPreviewLinks() {
+            if (previewLinks.length === 0) return;
+            if (confirm('Limpar todos os trechos?')) {
+                previewLinks = [];
+                renderCanvas();
+                updateTraceInfo();
+            }
+        }
+
+        function updateTraceInfo() {
+            const info = document.getElementById('trace-info');
+            if (info) {
+                info.textContent = `${importedNodes.length} pontos, ${previewLinks.length} trechos`;
+            }
+        }
     </script>
 </body>
 </html>
