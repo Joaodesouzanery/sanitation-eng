@@ -805,9 +805,18 @@ PV02,359290.456,7352780.123,1.82</pre>
                 <div class="card">
                     <h2><span class="icon">🔗</span> Definir Trechos</h2>
 
+                    <div style="background: var(--bg-secondary); padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                        <button class="btn btn-small" style="background: var(--accent-green); color: white; border: none;" onclick="transferImportedDataToTab('sewer')">
+                            📥 Importar Dados da Aba Principal
+                        </button>
+                        <small style="color: var(--text-secondary); display: block; margin-top: 8px;">
+                            Clique para trazer os pontos e trechos importados/desenhados
+                        </small>
+                    </div>
+
                     <div id="sewer-nodes">
                         <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">
-                            Nós (PVs): ID, X, Y, Cota, População
+                            <strong>Nós (PVs):</strong> ID | X (Este) | Y (Norte) | Cota (m) | População (hab)
                         </p>
                     </div>
 
@@ -815,7 +824,7 @@ PV02,359290.456,7352780.123,1.82</pre>
 
                     <div id="sewer-links" style="margin-top: 20px;">
                         <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">
-                            Trechos: De → Para, Comprimento
+                            <strong>Trechos:</strong> De (PV montante) → Para (PV jusante) | Comprimento (m)
                         </p>
                     </div>
 
@@ -875,9 +884,18 @@ PV02,359290.456,7352780.123,1.82</pre>
                 <div class="card">
                     <h2><span class="icon">🔗</span> Definir Rede</h2>
 
+                    <div style="background: var(--bg-secondary); padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                        <button class="btn btn-small" style="background: var(--accent-green); color: white; border: none;" onclick="transferImportedDataToTab('water')">
+                            📥 Importar Dados da Aba Principal
+                        </button>
+                        <small style="color: var(--text-secondary); display: block; margin-top: 8px;">
+                            Clique para trazer os pontos e trechos importados/desenhados
+                        </small>
+                    </div>
+
                     <div id="water-nodes">
                         <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">
-                            Nós: ID, X, Y, Cota, Demanda (L/s)
+                            <strong>Nós:</strong> ID | X (Este) | Y (Norte) | Cota (m) | Demanda (L/s) | Fonte?
                         </p>
                     </div>
 
@@ -885,7 +903,7 @@ PV02,359290.456,7352780.123,1.82</pre>
 
                     <div id="water-links" style="margin-top: 20px;">
                         <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">
-                            Trechos: De → Para, Comprimento
+                            <strong>Trechos:</strong> De (nó inicial) → Para (nó final) | Comprimento (m)
                         </p>
                     </div>
 
@@ -951,9 +969,18 @@ PV02,359290.456,7352780.123,1.82</pre>
                 <div class="card">
                     <h2><span class="icon">🔗</span> Áreas de Contribuição</h2>
 
+                    <div style="background: var(--bg-secondary); padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                        <button class="btn btn-small" style="background: var(--accent-green); color: white; border: none;" onclick="transferImportedDataToTab('drainage')">
+                            📥 Importar Dados da Aba Principal
+                        </button>
+                        <small style="color: var(--text-secondary); display: block; margin-top: 8px;">
+                            Clique para trazer os pontos e trechos importados/desenhados
+                        </small>
+                    </div>
+
                     <div id="drainage-nodes">
                         <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">
-                            Nós: ID, X, Y, Cota, Área (ha), Coef. Runoff
+                            <strong>Nós:</strong> ID | X (Este) | Y (Norte) | Cota (m) | Área contr. (ha) | Coef. Runoff
                         </p>
                     </div>
 
@@ -961,7 +988,7 @@ PV02,359290.456,7352780.123,1.82</pre>
 
                     <div id="drainage-links" style="margin-top: 20px;">
                         <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">
-                            Galerias: De → Para, Comprimento
+                            <strong>Galerias:</strong> De (PV montante) → Para (PV jusante) | Comprimento (m)
                         </p>
                     </div>
 
@@ -1020,9 +1047,18 @@ PV02,359290.456,7352780.123,1.82</pre>
                 <div class="card">
                     <h2><span class="icon">📏</span> Trechos para Quantitativo</h2>
 
+                    <div style="background: var(--bg-secondary); padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                        <button class="btn btn-small" style="background: var(--accent-green); color: white; border: none;" onclick="transferImportedDataToTab('quantities')">
+                            📥 Importar Dados da Aba Principal
+                        </button>
+                        <small style="color: var(--text-secondary); display: block; margin-top: 8px;">
+                            Clique para trazer os trechos importados/desenhados
+                        </small>
+                    </div>
+
                     <div id="qty-links">
                         <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">
-                            ID, Comprimento (m), DN (mm), Prof. Mont., Prof. Jus.
+                            <strong>Trechos:</strong> ID | Comp. (m) | DN (mm) | Prof. Montante (m) | Prof. Jusante (m)
                         </p>
                     </div>
 
@@ -4371,6 +4407,76 @@ DATA;
             document.querySelector(`.tab:nth-child(${tabOrder.indexOf(tab) + 1})`).classList.add('active');
             document.getElementById(`${tab}-tab`).classList.add('active');
             document.getElementById('results').style.display = 'none';
+
+            // Re-render data when switching tabs to show imported data
+            if (tab === 'sewer') {
+                renderSewerNodes();
+                renderSewerLinks();
+            } else if (tab === 'water') {
+                renderWaterNodes();
+                renderWaterLinks();
+            } else if (tab === 'drainage') {
+                renderDrainageNodes();
+                renderDrainageLinks();
+            } else if (tab === 'quantities') {
+                renderQtyLinks();
+            }
+        }
+
+        // Transfer imported data to specific module tab
+        function transferImportedDataToTab(targetTab) {
+            if (importedNodes.length < 2) {
+                alert('Importe dados primeiro na aba Importar.');
+                return false;
+            }
+
+            // Get links from preview or generate
+            let links;
+            if (previewLinks && previewLinks.length > 0) {
+                links = previewLinks.map(l => ({ ...l }));
+            } else {
+                const linkMode = document.getElementById('import-link-mode')?.value || 'sequential';
+                links = generateLinksFromNodes(importedNodes, linkMode);
+            }
+
+            if (targetTab === 'sewer') {
+                const pop = parseInt(document.getElementById('import-pop')?.value) || 50;
+                sewerNodes = importedNodes.map(n => ({
+                    id: n.id, x: n.x, y: n.y, z: n.z, pop: pop
+                }));
+                sewerLinks = links;
+                renderSewerNodes();
+                renderSewerLinks();
+            } else if (targetTab === 'water') {
+                const demand = parseFloat(document.getElementById('import-demand')?.value) || 2.0;
+                waterNodes = importedNodes.map((n, i) => ({
+                    id: n.id, x: n.x, y: n.y, z: n.z,
+                    demand: i === 0 ? 0 : demand,
+                    isSource: i === 0
+                }));
+                waterLinks = links;
+                renderWaterNodes();
+                renderWaterLinks();
+            } else if (targetTab === 'drainage') {
+                const area = parseFloat(document.getElementById('import-area')?.value) || 0.5;
+                const runoff = parseFloat(document.getElementById('import-runoff')?.value) || 0.7;
+                drainageNodes = importedNodes.map(n => ({
+                    id: n.id, x: n.x, y: n.y, z: n.z, area: area, runoff: runoff
+                }));
+                drainageLinks = links;
+                renderDrainageNodes();
+                renderDrainageLinks();
+            } else if (targetTab === 'quantities') {
+                qtyLinks = links.map((l, i) => ({
+                    id: `T${String(i + 1).padStart(2, '0')}`,
+                    length: l.length,
+                    DN: 150,
+                    profUp: 1.2,
+                    profDown: 1.5 + (i * 0.2)
+                }));
+                renderQtyLinks();
+            }
+            return true;
         }
 
         function newCalculation() {
@@ -4436,17 +4542,26 @@ DATA;
 
         function renderSewerNodes() {
             const container = document.getElementById('sewer-nodes');
-            let html = '<p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">Nós (PVs): ID, X, Y, Cota, População</p>';
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
+                        <strong>Nós (PVs):</strong> ID | X (Este) | Y (Norte) | Cota (m) | Pop. (hab)
+                    </p>
+                    <span style="background: var(--accent-blue); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">
+                        ${sewerNodes.length} nós
+                    </span>
+                </div>
+            `;
 
             sewerNodes.forEach((node, idx) => {
                 html += `
                     <div class="node-item">
-                        <input type="text" value="${node.id}" onchange="sewerNodes[${idx}].id = this.value" placeholder="ID" style="max-width: 80px;">
-                        <input type="number" value="${node.x}" onchange="sewerNodes[${idx}].x = parseFloat(this.value)" placeholder="X">
-                        <input type="number" value="${node.y}" onchange="sewerNodes[${idx}].y = parseFloat(this.value)" placeholder="Y">
-                        <input type="number" value="${node.z}" onchange="sewerNodes[${idx}].z = parseFloat(this.value)" placeholder="Cota" step="0.1">
-                        <input type="number" value="${node.pop}" onchange="sewerNodes[${idx}].pop = parseInt(this.value)" placeholder="Pop">
-                        <button class="btn-small btn-remove" onclick="removeSewerNode(${idx})">✕</button>
+                        <input type="text" value="${node.id}" onchange="sewerNodes[${idx}].id = this.value" placeholder="ID" title="Identificador do PV" style="max-width: 80px;">
+                        <input type="number" value="${node.x.toFixed(2)}" onchange="sewerNodes[${idx}].x = parseFloat(this.value)" placeholder="X" title="Coordenada Este (X)">
+                        <input type="number" value="${node.y.toFixed(2)}" onchange="sewerNodes[${idx}].y = parseFloat(this.value)" placeholder="Y" title="Coordenada Norte (Y)">
+                        <input type="number" value="${node.z.toFixed(2)}" onchange="sewerNodes[${idx}].z = parseFloat(this.value)" placeholder="Cota" step="0.1" title="Cota do terreno (m)">
+                        <input type="number" value="${node.pop}" onchange="sewerNodes[${idx}].pop = parseInt(this.value)" placeholder="Pop" title="População contribuinte (hab)">
+                        <button class="btn-small btn-remove" onclick="removeSewerNode(${idx})" title="Remover nó">✕</button>
                     </div>
                 `;
             });
@@ -4484,7 +4599,16 @@ DATA;
 
         function renderSewerLinks() {
             const container = document.getElementById('sewer-links');
-            let html = '<p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">Trechos: De → Para, Comprimento</p>';
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
+                        <strong>Trechos:</strong> De (montante) → Para (jusante) | Comprimento (m)
+                    </p>
+                    <span style="background: var(--accent-purple); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">
+                        ${sewerLinks.length} trechos
+                    </span>
+                </div>
+            `;
 
             sewerLinks.forEach((link, idx) => {
                 const nodeOptions = sewerNodes.map(n => `<option value="${n.id}" ${link.from === n.id ? 'selected' : ''}>${n.id}</option>`).join('');
@@ -4492,17 +4616,18 @@ DATA;
 
                 html += `
                     <div class="link-item">
-                        <select onchange="sewerLinks[${idx}].from = this.value">
+                        <span style="color: var(--text-secondary); font-size: 0.8rem; min-width: 30px;">T${String(idx + 1).padStart(2, '0')}</span>
+                        <select onchange="sewerLinks[${idx}].from = this.value" title="PV de montante (início)">
                             <option value="">De...</option>
                             ${nodeOptions}
                         </select>
                         <span style="color: var(--text-secondary);">→</span>
-                        <select onchange="sewerLinks[${idx}].to = this.value">
+                        <select onchange="sewerLinks[${idx}].to = this.value" title="PV de jusante (fim)">
                             <option value="">Para...</option>
                             ${nodeOptions2}
                         </select>
-                        <input type="number" value="${link.length}" onchange="sewerLinks[${idx}].length = parseFloat(this.value)" placeholder="Comp (m)" style="max-width: 100px;">
-                        <button class="btn-small btn-remove" onclick="removeSewerLink(${idx})">✕</button>
+                        <input type="number" value="${link.length.toFixed(2)}" onchange="sewerLinks[${idx}].length = parseFloat(this.value)" placeholder="Comp (m)" title="Comprimento do trecho em metros" style="max-width: 100px;">
+                        <button class="btn-small btn-remove" onclick="removeSewerLink(${idx})" title="Remover trecho">✕</button>
                     </div>
                 `;
             });
@@ -4652,20 +4777,29 @@ DATA;
 
         function renderWaterNodes() {
             const container = document.getElementById('water-nodes');
-            let html = '<p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">Nós: ID, X, Y, Cota, Demanda (L/s), Fonte?</p>';
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
+                        <strong>Nós:</strong> ID | X (Este) | Y (Norte) | Cota (m) | Demanda (L/s) | Fonte?
+                    </p>
+                    <span style="background: var(--accent-blue); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">
+                        ${waterNodes.length} nós
+                    </span>
+                </div>
+            `;
 
             waterNodes.forEach((node, idx) => {
                 html += `
                     <div class="node-item">
-                        <input type="text" value="${node.id}" onchange="waterNodes[${idx}].id = this.value" placeholder="ID" style="max-width: 60px;">
-                        <input type="number" value="${node.x}" onchange="waterNodes[${idx}].x = parseFloat(this.value)" placeholder="X" style="max-width: 60px;">
-                        <input type="number" value="${node.y}" onchange="waterNodes[${idx}].y = parseFloat(this.value)" placeholder="Y" style="max-width: 60px;">
-                        <input type="number" value="${node.z}" onchange="waterNodes[${idx}].z = parseFloat(this.value)" placeholder="Cota" step="0.1" style="max-width: 70px;">
-                        <input type="number" value="${node.demand}" onchange="waterNodes[${idx}].demand = parseFloat(this.value)" placeholder="Q" step="0.1" style="max-width: 60px;">
-                        <label style="display: flex; align-items: center; gap: 4px; color: var(--text-secondary); font-size: 0.8rem;">
+                        <input type="text" value="${node.id}" onchange="waterNodes[${idx}].id = this.value" placeholder="ID" title="Identificador do nó" style="max-width: 60px;">
+                        <input type="number" value="${node.x.toFixed(2)}" onchange="waterNodes[${idx}].x = parseFloat(this.value)" placeholder="X" title="Coordenada Este (X)" style="max-width: 70px;">
+                        <input type="number" value="${node.y.toFixed(2)}" onchange="waterNodes[${idx}].y = parseFloat(this.value)" placeholder="Y" title="Coordenada Norte (Y)" style="max-width: 70px;">
+                        <input type="number" value="${node.z.toFixed(2)}" onchange="waterNodes[${idx}].z = parseFloat(this.value)" placeholder="Cota" step="0.1" title="Cota do terreno (m)" style="max-width: 70px;">
+                        <input type="number" value="${node.demand}" onchange="waterNodes[${idx}].demand = parseFloat(this.value)" placeholder="Q" step="0.1" title="Demanda de água (L/s)" style="max-width: 60px;">
+                        <label style="display: flex; align-items: center; gap: 4px; color: var(--text-secondary); font-size: 0.8rem;" title="Marque se este nó é fonte de abastecimento">
                             <input type="checkbox" ${node.isSource ? 'checked' : ''} onchange="waterNodes[${idx}].isSource = this.checked"> Fonte
                         </label>
-                        <button class="btn-small btn-remove" onclick="removeWaterNode(${idx})">✕</button>
+                        <button class="btn-small btn-remove" onclick="removeWaterNode(${idx})" title="Remover nó">✕</button>
                     </div>
                 `;
             });
@@ -4703,7 +4837,16 @@ DATA;
 
         function renderWaterLinks() {
             const container = document.getElementById('water-links');
-            let html = '<p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">Trechos: De → Para, Comprimento</p>';
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
+                        <strong>Trechos:</strong> De (nó inicial) → Para (nó final) | Comprimento (m)
+                    </p>
+                    <span style="background: var(--accent-purple); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">
+                        ${waterLinks.length} trechos
+                    </span>
+                </div>
+            `;
 
             waterLinks.forEach((link, idx) => {
                 const nodeOptions = waterNodes.map(n => `<option value="${n.id}" ${link.from === n.id ? 'selected' : ''}>${n.id}</option>`).join('');
@@ -4711,17 +4854,18 @@ DATA;
 
                 html += `
                     <div class="link-item">
-                        <select onchange="waterLinks[${idx}].from = this.value">
+                        <span style="color: var(--text-secondary); font-size: 0.8rem; min-width: 30px;">T${String(idx + 1).padStart(2, '0')}</span>
+                        <select onchange="waterLinks[${idx}].from = this.value" title="Nó de origem">
                             <option value="">De...</option>
                             ${nodeOptions}
                         </select>
                         <span style="color: var(--text-secondary);">→</span>
-                        <select onchange="waterLinks[${idx}].to = this.value">
+                        <select onchange="waterLinks[${idx}].to = this.value" title="Nó de destino">
                             <option value="">Para...</option>
                             ${nodeOptions2}
                         </select>
-                        <input type="number" value="${link.length}" onchange="waterLinks[${idx}].length = parseFloat(this.value)" placeholder="Comp (m)" style="max-width: 100px;">
-                        <button class="btn-small btn-remove" onclick="removeWaterLink(${idx})">✕</button>
+                        <input type="number" value="${link.length.toFixed(2)}" onchange="waterLinks[${idx}].length = parseFloat(this.value)" placeholder="Comp (m)" title="Comprimento do trecho em metros" style="max-width: 100px;">
+                        <button class="btn-small btn-remove" onclick="removeWaterLink(${idx})" title="Remover trecho">✕</button>
                     </div>
                 `;
             });
@@ -4880,18 +5024,27 @@ DATA;
 
         function renderDrainageNodes() {
             const container = document.getElementById('drainage-nodes');
-            let html = '<p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">Nós: ID, X, Y, Cota, Área (ha), Coef. Runoff</p>';
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
+                        <strong>Nós:</strong> ID | X (Este) | Y (Norte) | Cota (m) | Área (ha) | Coef. Runoff
+                    </p>
+                    <span style="background: var(--accent-blue); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">
+                        ${drainageNodes.length} nós
+                    </span>
+                </div>
+            `;
 
             drainageNodes.forEach((node, idx) => {
                 html += `
                     <div class="node-item">
-                        <input type="text" value="${node.id}" onchange="drainageNodes[${idx}].id = this.value" placeholder="ID" style="max-width: 70px;">
-                        <input type="number" value="${node.x}" onchange="drainageNodes[${idx}].x = parseFloat(this.value)" placeholder="X" style="max-width: 60px;">
-                        <input type="number" value="${node.y}" onchange="drainageNodes[${idx}].y = parseFloat(this.value)" placeholder="Y" style="max-width: 60px;">
-                        <input type="number" value="${node.z}" onchange="drainageNodes[${idx}].z = parseFloat(this.value)" placeholder="Cota" step="0.1" style="max-width: 70px;">
-                        <input type="number" value="${node.area}" onchange="drainageNodes[${idx}].area = parseFloat(this.value)" placeholder="Área" step="0.1" style="max-width: 60px;">
-                        <input type="number" value="${node.runoff}" onchange="drainageNodes[${idx}].runoff = parseFloat(this.value)" placeholder="C" step="0.05" style="max-width: 60px;">
-                        <button class="btn-small btn-remove" onclick="removeDrainageNode(${idx})">✕</button>
+                        <input type="text" value="${node.id}" onchange="drainageNodes[${idx}].id = this.value" placeholder="ID" title="Identificador do poço/boca de lobo" style="max-width: 70px;">
+                        <input type="number" value="${node.x.toFixed(2)}" onchange="drainageNodes[${idx}].x = parseFloat(this.value)" placeholder="X" title="Coordenada Este (X)" style="max-width: 70px;">
+                        <input type="number" value="${node.y.toFixed(2)}" onchange="drainageNodes[${idx}].y = parseFloat(this.value)" placeholder="Y" title="Coordenada Norte (Y)" style="max-width: 70px;">
+                        <input type="number" value="${node.z.toFixed(2)}" onchange="drainageNodes[${idx}].z = parseFloat(this.value)" placeholder="Cota" step="0.1" title="Cota do terreno (m)" style="max-width: 70px;">
+                        <input type="number" value="${node.area}" onchange="drainageNodes[${idx}].area = parseFloat(this.value)" placeholder="Área" step="0.1" title="Área de contribuição (ha)" style="max-width: 60px;">
+                        <input type="number" value="${node.runoff}" onchange="drainageNodes[${idx}].runoff = parseFloat(this.value)" placeholder="C" step="0.05" title="Coeficiente de escoamento (0-1)" style="max-width: 60px;">
+                        <button class="btn-small btn-remove" onclick="removeDrainageNode(${idx})" title="Remover nó">✕</button>
                     </div>
                 `;
             });
@@ -4929,7 +5082,16 @@ DATA;
 
         function renderDrainageLinks() {
             const container = document.getElementById('drainage-links');
-            let html = '<p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">Galerias: De → Para, Comprimento</p>';
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
+                        <strong>Galerias:</strong> De (montante) → Para (jusante) | Comprimento (m)
+                    </p>
+                    <span style="background: var(--accent-purple); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">
+                        ${drainageLinks.length} galerias
+                    </span>
+                </div>
+            `;
 
             drainageLinks.forEach((link, idx) => {
                 const nodeOptions = drainageNodes.map(n => `<option value="${n.id}" ${link.from === n.id ? 'selected' : ''}>${n.id}</option>`).join('');
@@ -4937,17 +5099,18 @@ DATA;
 
                 html += `
                     <div class="link-item">
-                        <select onchange="drainageLinks[${idx}].from = this.value">
+                        <span style="color: var(--text-secondary); font-size: 0.8rem; min-width: 30px;">G${String(idx + 1).padStart(2, '0')}</span>
+                        <select onchange="drainageLinks[${idx}].from = this.value" title="PV/BL de montante">
                             <option value="">De...</option>
                             ${nodeOptions}
                         </select>
                         <span style="color: var(--text-secondary);">→</span>
-                        <select onchange="drainageLinks[${idx}].to = this.value">
+                        <select onchange="drainageLinks[${idx}].to = this.value" title="PV/BL de jusante">
                             <option value="">Para...</option>
                             ${nodeOptions2}
                         </select>
-                        <input type="number" value="${link.length}" onchange="drainageLinks[${idx}].length = parseFloat(this.value)" placeholder="Comp (m)" style="max-width: 100px;">
-                        <button class="btn-small btn-remove" onclick="removeDrainageLink(${idx})">✕</button>
+                        <input type="number" value="${link.length.toFixed(2)}" onchange="drainageLinks[${idx}].length = parseFloat(this.value)" placeholder="Comp (m)" title="Comprimento da galeria em metros" style="max-width: 100px;">
+                        <button class="btn-small btn-remove" onclick="removeDrainageLink(${idx})" title="Remover galeria">✕</button>
                     </div>
                 `;
             });
@@ -5099,19 +5262,28 @@ DATA;
 
         function renderQtyLinks() {
             const container = document.getElementById('qty-links');
-            let html = '<p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">ID, Comprimento (m), DN (mm), Prof. Mont., Prof. Jus.</p>';
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
+                        <strong>Trechos:</strong> ID | Comp. (m) | DN (mm) | Prof. Mont. (m) | Prof. Jus. (m)
+                    </p>
+                    <span style="background: var(--accent-purple); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">
+                        ${qtyLinks.length} trechos
+                    </span>
+                </div>
+            `;
 
             qtyLinks.forEach((link, idx) => {
                 html += `
                     <div class="link-item">
-                        <input type="text" value="${link.id}" onchange="qtyLinks[${idx}].id = this.value" placeholder="ID" style="max-width: 70px;">
-                        <input type="number" value="${link.length}" onchange="qtyLinks[${idx}].length = parseFloat(this.value)" placeholder="Comp" style="max-width: 70px;">
-                        <select onchange="qtyLinks[${idx}].DN = parseInt(this.value)" style="max-width: 80px;">
+                        <input type="text" value="${link.id}" onchange="qtyLinks[${idx}].id = this.value" placeholder="ID" title="Identificador do trecho" style="max-width: 70px;">
+                        <input type="number" value="${link.length.toFixed(2)}" onchange="qtyLinks[${idx}].length = parseFloat(this.value)" placeholder="Comp" title="Comprimento do trecho (m)" style="max-width: 70px;">
+                        <select onchange="qtyLinks[${idx}].DN = parseInt(this.value)" title="Diâmetro nominal da tubulação (mm)" style="max-width: 80px;">
                             ${[150, 200, 250, 300, 400, 500, 600].map(dn => `<option value="${dn}" ${link.DN === dn ? 'selected' : ''}>${dn}</option>`).join('')}
                         </select>
-                        <input type="number" value="${link.profUp}" onchange="qtyLinks[${idx}].profUp = parseFloat(this.value)" placeholder="Prof.M" step="0.1" style="max-width: 70px;">
-                        <input type="number" value="${link.profDown}" onchange="qtyLinks[${idx}].profDown = parseFloat(this.value)" placeholder="Prof.J" step="0.1" style="max-width: 70px;">
-                        <button class="btn-small btn-remove" onclick="removeQtyLink(${idx})">✕</button>
+                        <input type="number" value="${link.profUp}" onchange="qtyLinks[${idx}].profUp = parseFloat(this.value)" placeholder="Prof.M" step="0.1" title="Profundidade no PV de montante (m)" style="max-width: 70px;">
+                        <input type="number" value="${link.profDown}" onchange="qtyLinks[${idx}].profDown = parseFloat(this.value)" placeholder="Prof.J" step="0.1" title="Profundidade no PV de jusante (m)" style="max-width: 70px;">
+                        <button class="btn-small btn-remove" onclick="removeQtyLink(${idx})" title="Remover trecho">✕</button>
                     </div>
                 `;
             });
