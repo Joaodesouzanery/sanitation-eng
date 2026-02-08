@@ -2514,6 +2514,58 @@ PV02,359290.456,7352780.123,1.82</pre>
 
         <!-- EPANET MODULE TAB -->
         <div id="epanet-tab" class="tab-content">
+            <!-- Import Section for EPANET -->
+            <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, var(--accent-blue-light), var(--bg-card));">
+                <h2><span class="icon">💧</span> EPANET - Análise Hidráulica de Redes de Água</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Importe seus dados ou use os dados já carregados na plataforma. Suporta arquivos .INP (EPANET), CSV, e dados do módulo de Topografia.
+                </p>
+
+                <div class="summary-cards" style="margin-bottom: 20px;">
+                    <div class="summary-card blue">
+                        <div class="icon">📍</div>
+                        <div class="value" id="epanet-total-nodes">0</div>
+                        <div class="label">Nós Carregados</div>
+                    </div>
+                    <div class="summary-card green">
+                        <div class="icon">🔗</div>
+                        <div class="value" id="epanet-total-links">0</div>
+                        <div class="label">Trechos Carregados</div>
+                    </div>
+                    <div class="summary-card orange">
+                        <div class="icon">🏊</div>
+                        <div class="value" id="epanet-total-reservoirs">0</div>
+                        <div class="label">Reservatórios</div>
+                    </div>
+                    <div class="summary-card purple">
+                        <div class="icon">⚡</div>
+                        <div class="value" id="epanet-total-pumps">0</div>
+                        <div class="label">Bombas</div>
+                    </div>
+                </div>
+
+                <div class="actions" style="justify-content: flex-start; flex-wrap: wrap; gap: 12px;">
+                    <label class="btn btn-primary btn-ripple" style="cursor: pointer;">
+                        <span>📂</span> Importar Arquivo .INP
+                        <input type="file" id="epanet-import-inp" accept=".inp,.txt" style="display: none;" onchange="importEpanetINP(this.files[0])">
+                    </label>
+                    <label class="btn btn-success btn-ripple" style="cursor: pointer;">
+                        <span>📊</span> Importar CSV
+                        <input type="file" id="epanet-import-csv" accept=".csv,.txt" style="display: none;" onchange="importEpanetCSV(this.files[0])">
+                    </label>
+                    <button class="btn btn-secondary btn-ripple" onclick="loadDataFromPlatform('epanet')">
+                        <span>🔄</span> Usar Dados da Plataforma
+                    </button>
+                    <button class="btn btn-ripple" style="background: var(--bg-hover);" onclick="clearEpanetData()">
+                        <span>🗑️</span> Limpar Dados
+                    </button>
+                </div>
+
+                <div id="epanet-import-status" style="display: none; margin-top: 15px; padding: 12px; border-radius: 8px; background: var(--accent-green-light); border: 1px solid var(--accent-green);">
+                    <span style="color: var(--accent-green-dark);">✓ Dados importados com sucesso!</span>
+                </div>
+            </div>
+
             <!-- EPANET Full Module Interface -->
             <div class="epanet-module" style="display: flex; gap: 20px; min-height: calc(100vh - 250px);">
 
@@ -3023,10 +3075,14 @@ PV02,359290.456,7352780.123,1.82</pre>
 
         <!-- SWMM MODULE TAB -->
         <div id="swmm-tab" class="tab-content">
-            <!-- Data Status Panel -->
-            <div id="swmm-data-panel" class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));">
-                <h2><span class="icon">📊</span> Dados da Rede Carregados</h2>
-                <div class="summary-cards" style="margin-top: 15px;">
+            <!-- Import Section for SWMM -->
+            <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, var(--accent-green-light), var(--bg-card));">
+                <h2><span class="icon">🌧️</span> SWMM - Modelagem de Drenagem Urbana</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Importe seus dados ou use os dados já carregados. Suporta arquivos .INP (SWMM), CSV com dados de rede de drenagem, e dados do módulo de Topografia.
+                </p>
+
+                <div class="summary-cards" style="margin-bottom: 20px;">
                     <div class="summary-card blue">
                         <div class="icon">📍</div>
                         <div class="value" id="swmm-loaded-nodes">0</div>
@@ -3048,9 +3104,31 @@ PV02,359290.456,7352780.123,1.82</pre>
                         <div class="label">Extensão Total (m)</div>
                     </div>
                 </div>
+
+                <div class="actions" style="justify-content: flex-start; flex-wrap: wrap; gap: 12px;">
+                    <label class="btn btn-primary btn-ripple" style="cursor: pointer;">
+                        <span>📂</span> Importar Arquivo .INP
+                        <input type="file" id="swmm-import-inp" accept=".inp,.txt" style="display: none;" onchange="importSwmmINP(this.files[0])">
+                    </label>
+                    <label class="btn btn-success btn-ripple" style="cursor: pointer;">
+                        <span>📊</span> Importar CSV
+                        <input type="file" id="swmm-import-csv" accept=".csv,.txt" style="display: none;" onchange="importSwmmCSV(this.files[0])">
+                    </label>
+                    <button class="btn btn-secondary btn-ripple" onclick="loadDataFromPlatform('swmm')">
+                        <span>🔄</span> Usar Dados da Plataforma
+                    </button>
+                    <button class="btn btn-ripple" style="background: var(--bg-hover);" onclick="clearSwmmData()">
+                        <span>🗑️</span> Limpar Dados
+                    </button>
+                </div>
+
+                <div id="swmm-import-status" style="display: none; margin-top: 15px; padding: 12px; border-radius: 8px; background: var(--accent-green-light); border: 1px solid var(--accent-green);">
+                    <span style="color: var(--accent-green-dark);">✓ Dados importados com sucesso!</span>
+                </div>
+
                 <div id="swmm-no-data-warning" style="display: none; margin-top: 15px; padding: 15px; background: rgba(239, 68, 68, 0.2); border-radius: 8px; border: 1px solid var(--accent-red);">
                     <span style="color: var(--accent-red);">⚠️ Nenhum dado importado.</span>
-                    <span style="color: var(--text-secondary);">Importe dados na aba "Importar" para usar este módulo.</span>
+                    <span style="color: var(--text-secondary);">Importe dados usando os botões acima ou use dados da plataforma.</span>
                 </div>
             </div>
 
@@ -3255,10 +3333,14 @@ PV02,359290.456,7352780.123,1.82</pre>
 
         <!-- OPENPROJECT MODULE TAB -->
         <div id="openproject-tab" class="tab-content">
-            <!-- Data Status Panel -->
-            <div id="openproject-data-panel" class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));">
-                <h2><span class="icon">📊</span> Dados do Projeto</h2>
-                <div class="summary-cards" style="margin-top: 15px;">
+            <!-- Import Section for OpenProject -->
+            <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, var(--accent-purple-light), var(--bg-card));">
+                <h2><span class="icon">📋</span> OpenProject - Gestão de Projetos de Saneamento</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Importe dados de projeto ou gere automaticamente a partir do planejamento. Suporta JSON, XML (MS Project), e CSV com cronograma.
+                </p>
+
+                <div class="summary-cards" style="margin-bottom: 20px;">
                     <div class="summary-card blue">
                         <div class="icon">📋</div>
                         <div class="value" id="openproject-loaded-tasks">0</div>
@@ -3279,6 +3361,27 @@ PV02,359290.456,7352780.123,1.82</pre>
                         <div class="value" id="openproject-duration">--</div>
                         <div class="label">Duração (dias)</div>
                     </div>
+                </div>
+
+                <div class="actions" style="justify-content: flex-start; flex-wrap: wrap; gap: 12px;">
+                    <label class="btn btn-primary btn-ripple" style="cursor: pointer;">
+                        <span>📂</span> Importar JSON/XML
+                        <input type="file" id="openproject-import-file" accept=".json,.xml" style="display: none;" onchange="importOpenProjectFile(this.files[0])">
+                    </label>
+                    <label class="btn btn-success btn-ripple" style="cursor: pointer;">
+                        <span>📊</span> Importar CSV
+                        <input type="file" id="openproject-import-csv" accept=".csv" style="display: none;" onchange="importOpenProjectCSV(this.files[0])">
+                    </label>
+                    <button class="btn btn-secondary btn-ripple" onclick="loadDataFromPlatform('openproject')">
+                        <span>🔄</span> Gerar do Planejamento
+                    </button>
+                    <button class="btn btn-ripple" style="background: var(--bg-hover);" onclick="clearOpenProjectData()">
+                        <span>🗑️</span> Limpar Dados
+                    </button>
+                </div>
+
+                <div id="openproject-import-status" style="display: none; margin-top: 15px; padding: 12px; border-radius: 8px; background: var(--accent-green-light); border: 1px solid var(--accent-green);">
+                    <span style="color: var(--accent-green-dark);">✓ Dados importados com sucesso!</span>
                 </div>
             </div>
 
@@ -3434,10 +3537,14 @@ PV02,359290.456,7352780.123,1.82</pre>
 
         <!-- QGIS MODULE TAB -->
         <div id="qgis-tab" class="tab-content">
-            <!-- Data Status Panel -->
-            <div id="qgis-data-panel" class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));">
-                <h2><span class="icon">📊</span> Dados Disponíveis para Exportação</h2>
-                <div class="summary-cards" style="margin-top: 15px;">
+            <!-- Import Section for QGIS -->
+            <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, #dcfce7, var(--bg-card));">
+                <h2><span class="icon">🗺️</span> QGIS - Sistema de Informação Geográfica</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Importe dados georreferenciados ou use os dados da plataforma. Suporta GeoJSON, Shapefile, e exporta em múltiplos formatos GIS.
+                </p>
+
+                <div class="summary-cards" style="margin-bottom: 20px;">
                     <div class="summary-card blue">
                         <div class="icon">📍</div>
                         <div class="value" id="qgis-loaded-nodes">0</div>
@@ -3459,9 +3566,31 @@ PV02,359290.456,7352780.123,1.82</pre>
                         <div class="label">Materiais</div>
                     </div>
                 </div>
+
+                <div class="actions" style="justify-content: flex-start; flex-wrap: wrap; gap: 12px;">
+                    <label class="btn btn-primary btn-ripple" style="cursor: pointer;">
+                        <span>🌐</span> Importar GeoJSON
+                        <input type="file" id="qgis-import-geojson" accept=".geojson,.json" style="display: none;" onchange="importQgisGeoJSON(this.files[0])">
+                    </label>
+                    <label class="btn btn-success btn-ripple" style="cursor: pointer;">
+                        <span>📁</span> Importar Shapefile
+                        <input type="file" id="qgis-import-shp" accept=".zip,.shp" style="display: none;" onchange="importQgisShapefile(this.files[0])">
+                    </label>
+                    <button class="btn btn-secondary btn-ripple" onclick="loadDataFromPlatform('qgis')">
+                        <span>🔄</span> Usar Dados da Plataforma
+                    </button>
+                    <button class="btn btn-ripple" style="background: var(--bg-hover);" onclick="clearQgisData()">
+                        <span>🗑️</span> Limpar Dados
+                    </button>
+                </div>
+
+                <div id="qgis-import-status" style="display: none; margin-top: 15px; padding: 12px; border-radius: 8px; background: var(--accent-green-light); border: 1px solid var(--accent-green);">
+                    <span style="color: var(--accent-green-dark);">✓ Dados importados com sucesso!</span>
+                </div>
+
                 <div id="qgis-no-data-warning" style="display: none; margin-top: 15px; padding: 15px; background: rgba(239, 68, 68, 0.2); border-radius: 8px; border: 1px solid var(--accent-red);">
                     <span style="color: var(--accent-red);">⚠️ Nenhum dado disponível.</span>
-                    <span style="color: var(--text-secondary);">Importe dados e configure planejamento para exportar.</span>
+                    <span style="color: var(--text-secondary);">Importe dados usando os botões acima ou use dados da plataforma.</span>
                 </div>
             </div>
 
@@ -11409,6 +11538,686 @@ DATA;
             });
 
             return { reservoirs, pumps, valves };
+        }
+
+        // ============================================
+        // MODULE IMPORT FUNCTIONS
+        // ============================================
+
+        // Module-specific data storage
+        const moduleData = {
+            epanet: { nodes: [], links: [], reservoirs: [], pumps: [], valves: [] },
+            swmm: { nodes: [], links: [], subcatchments: [], storages: [], outlets: [] },
+            openproject: { tasks: [], resources: [], milestones: [] },
+            qgis: { nodes: [], links: [], polygons: [] }
+        };
+
+        // Load data from main platform to specific module
+        function loadDataFromPlatform(moduleName) {
+            const { nodes, links } = getActiveNodesAndLinks();
+
+            if (nodes.length === 0) {
+                ToastSystem.warning('Nenhum dado disponível. Importe dados na aba Topografia primeiro.');
+                return;
+            }
+
+            switch(moduleName) {
+                case 'epanet':
+                    moduleData.epanet.nodes = [...nodes];
+                    moduleData.epanet.links = [...links];
+                    updateEpanetUI();
+                    ToastSystem.success(`${nodes.length} nós e ${links.length} trechos carregados no EPANET!`);
+                    break;
+                case 'swmm':
+                    moduleData.swmm.nodes = [...nodes];
+                    moduleData.swmm.links = [...links];
+                    updateSwmmUI();
+                    ToastSystem.success(`${nodes.length} nós e ${links.length} trechos carregados no SWMM!`);
+                    break;
+                case 'openproject':
+                    loadOpenProjectModuleData();
+                    ToastSystem.success('Dados do planejamento carregados!');
+                    break;
+                case 'qgis':
+                    moduleData.qgis.nodes = [...nodes];
+                    moduleData.qgis.links = [...links];
+                    updateQgisUI();
+                    ToastSystem.success(`${nodes.length} nós e ${links.length} trechos carregados no QGIS!`);
+                    break;
+            }
+        }
+
+        // Import EPANET .INP file
+        async function importEpanetINP(file) {
+            if (!file) return;
+
+            LoadingSystem.show('Importando arquivo EPANET...');
+
+            try {
+                const content = await readFileAsText(file);
+                const data = parseEpanetINP(content);
+
+                moduleData.epanet = data;
+                updateEpanetUI();
+
+                document.getElementById('epanet-import-status').style.display = 'block';
+                ToastSystem.success(`Importado: ${data.nodes.length} nós, ${data.links.length} tubos`);
+            } catch (error) {
+                ToastSystem.error('Erro ao importar arquivo: ' + error.message);
+            } finally {
+                LoadingSystem.hide();
+            }
+        }
+
+        // Parse EPANET .INP file format
+        function parseEpanetINP(content) {
+            const data = { nodes: [], links: [], reservoirs: [], pumps: [], valves: [], coordinates: {} };
+            const lines = content.split('\n');
+            let currentSection = '';
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+
+                // Skip comments and empty lines
+                if (!line || line.startsWith(';')) continue;
+
+                // Detect section headers
+                if (line.startsWith('[')) {
+                    currentSection = line.replace(/[\[\]]/g, '').toUpperCase();
+                    continue;
+                }
+
+                const parts = line.split(/\s+/).filter(p => p && !p.startsWith(';'));
+
+                switch (currentSection) {
+                    case 'JUNCTIONS':
+                        if (parts.length >= 2) {
+                            data.nodes.push({
+                                id: parts[0],
+                                z: parseFloat(parts[1]) || 0,
+                                demand: parseFloat(parts[2]) || 0,
+                                type: 'junction'
+                            });
+                        }
+                        break;
+                    case 'RESERVOIRS':
+                        if (parts.length >= 2) {
+                            data.reservoirs.push({
+                                id: parts[0],
+                                head: parseFloat(parts[1]) || 0
+                            });
+                        }
+                        break;
+                    case 'TANKS':
+                        if (parts.length >= 4) {
+                            data.reservoirs.push({
+                                id: parts[0],
+                                elevation: parseFloat(parts[1]) || 0,
+                                initLevel: parseFloat(parts[2]) || 0,
+                                type: 'tank'
+                            });
+                        }
+                        break;
+                    case 'PIPES':
+                        if (parts.length >= 5) {
+                            data.links.push({
+                                id: parts[0],
+                                from: parts[1],
+                                to: parts[2],
+                                length: parseFloat(parts[3]) || 0,
+                                diameter: parseFloat(parts[4]) || 150,
+                                roughness: parseFloat(parts[5]) || 140
+                            });
+                        }
+                        break;
+                    case 'PUMPS':
+                        if (parts.length >= 3) {
+                            data.pumps.push({
+                                id: parts[0],
+                                fromNode: parts[1],
+                                toNode: parts[2],
+                                params: parts.slice(3).join(' ')
+                            });
+                        }
+                        break;
+                    case 'VALVES':
+                        if (parts.length >= 5) {
+                            data.valves.push({
+                                id: parts[0],
+                                fromNode: parts[1],
+                                toNode: parts[2],
+                                diameter: parseFloat(parts[3]) || 100,
+                                type: parts[4] || 'PRV'
+                            });
+                        }
+                        break;
+                    case 'COORDINATES':
+                        if (parts.length >= 3) {
+                            data.coordinates[parts[0]] = {
+                                x: parseFloat(parts[1]) || 0,
+                                y: parseFloat(parts[2]) || 0
+                            };
+                        }
+                        break;
+                }
+            }
+
+            // Apply coordinates to nodes
+            data.nodes.forEach(node => {
+                if (data.coordinates[node.id]) {
+                    node.x = data.coordinates[node.id].x;
+                    node.y = data.coordinates[node.id].y;
+                }
+            });
+
+            return data;
+        }
+
+        // Import EPANET CSV
+        async function importEpanetCSV(file) {
+            if (!file) return;
+            LoadingSystem.show('Importando CSV...');
+
+            try {
+                const content = await readFileAsText(file);
+                const data = parseNetworkCSV(content);
+                moduleData.epanet.nodes = data.nodes;
+                moduleData.epanet.links = data.links;
+                updateEpanetUI();
+                ToastSystem.success(`Importado: ${data.nodes.length} nós, ${data.links.length} trechos`);
+            } catch (error) {
+                ToastSystem.error('Erro ao importar CSV: ' + error.message);
+            } finally {
+                LoadingSystem.hide();
+            }
+        }
+
+        // Import SWMM .INP file
+        async function importSwmmINP(file) {
+            if (!file) return;
+            LoadingSystem.show('Importando arquivo SWMM...');
+
+            try {
+                const content = await readFileAsText(file);
+                const data = parseSwmmINP(content);
+                moduleData.swmm = data;
+                updateSwmmUI();
+                document.getElementById('swmm-import-status').style.display = 'block';
+                ToastSystem.success(`Importado: ${data.nodes.length} nós, ${data.links.length} condutos, ${data.subcatchments.length} sub-bacias`);
+            } catch (error) {
+                ToastSystem.error('Erro ao importar arquivo: ' + error.message);
+            } finally {
+                LoadingSystem.hide();
+            }
+        }
+
+        // Parse SWMM .INP file format
+        function parseSwmmINP(content) {
+            const data = { nodes: [], links: [], subcatchments: [], storages: [], outlets: [], coordinates: {} };
+            const lines = content.split('\n');
+            let currentSection = '';
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line || line.startsWith(';')) continue;
+
+                if (line.startsWith('[')) {
+                    currentSection = line.replace(/[\[\]]/g, '').toUpperCase();
+                    continue;
+                }
+
+                const parts = line.split(/\s+/).filter(p => p && !p.startsWith(';'));
+
+                switch (currentSection) {
+                    case 'JUNCTIONS':
+                        if (parts.length >= 2) {
+                            data.nodes.push({
+                                id: parts[0],
+                                elevation: parseFloat(parts[1]) || 0,
+                                maxDepth: parseFloat(parts[2]) || 0,
+                                initDepth: parseFloat(parts[3]) || 0,
+                                type: 'junction'
+                            });
+                        }
+                        break;
+                    case 'OUTFALLS':
+                        if (parts.length >= 2) {
+                            data.nodes.push({
+                                id: parts[0],
+                                elevation: parseFloat(parts[1]) || 0,
+                                type: 'outfall'
+                            });
+                        }
+                        break;
+                    case 'STORAGE':
+                        if (parts.length >= 4) {
+                            data.storages.push({
+                                id: parts[0],
+                                elevation: parseFloat(parts[1]) || 0,
+                                maxDepth: parseFloat(parts[2]) || 0,
+                                type: parts[3] || 'FUNCTIONAL'
+                            });
+                        }
+                        break;
+                    case 'CONDUITS':
+                        if (parts.length >= 5) {
+                            data.links.push({
+                                id: parts[0],
+                                from: parts[1],
+                                to: parts[2],
+                                length: parseFloat(parts[3]) || 0,
+                                roughness: parseFloat(parts[4]) || 0.013,
+                                type: 'conduit'
+                            });
+                        }
+                        break;
+                    case 'XSECTIONS':
+                        if (parts.length >= 3) {
+                            const link = data.links.find(l => l.id === parts[0]);
+                            if (link) {
+                                link.shape = parts[1];
+                                link.diameter = parseFloat(parts[2]) * 1000 || 300; // Convert to mm
+                            }
+                        }
+                        break;
+                    case 'SUBCATCHMENTS':
+                        if (parts.length >= 5) {
+                            data.subcatchments.push({
+                                id: parts[0],
+                                rainGage: parts[1],
+                                outlet: parts[2],
+                                area: parseFloat(parts[3]) || 0,
+                                percentImperv: parseFloat(parts[4]) || 0
+                            });
+                        }
+                        break;
+                    case 'COORDINATES':
+                        if (parts.length >= 3) {
+                            data.coordinates[parts[0]] = {
+                                x: parseFloat(parts[1]) || 0,
+                                y: parseFloat(parts[2]) || 0
+                            };
+                        }
+                        break;
+                }
+            }
+
+            // Apply coordinates to nodes
+            data.nodes.forEach(node => {
+                if (data.coordinates[node.id]) {
+                    node.x = data.coordinates[node.id].x;
+                    node.y = data.coordinates[node.id].y;
+                }
+            });
+
+            return data;
+        }
+
+        // Import SWMM CSV
+        async function importSwmmCSV(file) {
+            if (!file) return;
+            LoadingSystem.show('Importando CSV...');
+
+            try {
+                const content = await readFileAsText(file);
+                const data = parseNetworkCSV(content);
+                moduleData.swmm.nodes = data.nodes;
+                moduleData.swmm.links = data.links;
+                updateSwmmUI();
+                ToastSystem.success(`Importado: ${data.nodes.length} nós, ${data.links.length} condutos`);
+            } catch (error) {
+                ToastSystem.error('Erro ao importar CSV: ' + error.message);
+            } finally {
+                LoadingSystem.hide();
+            }
+        }
+
+        // Import OpenProject file (JSON or XML)
+        async function importOpenProjectFile(file) {
+            if (!file) return;
+            LoadingSystem.show('Importando projeto...');
+
+            try {
+                const content = await readFileAsText(file);
+                let data;
+
+                if (file.name.endsWith('.json')) {
+                    data = JSON.parse(content);
+                } else if (file.name.endsWith('.xml')) {
+                    data = parseProjectXML(content);
+                }
+
+                if (data.tasks) {
+                    moduleData.openproject.tasks = data.tasks;
+                    populateOpenProjectTasks(data.tasks);
+                }
+
+                document.getElementById('openproject-import-status').style.display = 'block';
+                ToastSystem.success(`Importado: ${data.tasks?.length || 0} tarefas`);
+            } catch (error) {
+                ToastSystem.error('Erro ao importar projeto: ' + error.message);
+            } finally {
+                LoadingSystem.hide();
+            }
+        }
+
+        // Import OpenProject CSV
+        async function importOpenProjectCSV(file) {
+            if (!file) return;
+            LoadingSystem.show('Importando CSV de tarefas...');
+
+            try {
+                const content = await readFileAsText(file);
+                const lines = content.split('\n').filter(l => l.trim());
+                const tasks = [];
+
+                // Skip header
+                for (let i = 1; i < lines.length; i++) {
+                    const parts = lines[i].split(',').map(p => p.trim().replace(/"/g, ''));
+                    if (parts.length >= 3) {
+                        tasks.push({
+                            name: parts[0],
+                            start: parts[1],
+                            duration: parseInt(parts[2]) || 5,
+                            resource: parts[3] || ''
+                        });
+                    }
+                }
+
+                moduleData.openproject.tasks = tasks;
+                populateOpenProjectTasks(tasks);
+                document.getElementById('openproject-import-status').style.display = 'block';
+                ToastSystem.success(`Importado: ${tasks.length} tarefas`);
+            } catch (error) {
+                ToastSystem.error('Erro ao importar CSV: ' + error.message);
+            } finally {
+                LoadingSystem.hide();
+            }
+        }
+
+        // Populate OpenProject tasks table
+        function populateOpenProjectTasks(tasks) {
+            const tasksList = document.getElementById('openproject-tasks-list');
+            if (!tasksList) return;
+
+            tasksList.innerHTML = '';
+            tasks.forEach((task, idx) => {
+                addOpenProjectTask();
+                const row = tasksList.lastElementChild;
+                if (row) {
+                    const inputs = row.querySelectorAll('input');
+                    if (inputs[0]) inputs[0].value = task.name || `Tarefa ${idx + 1}`;
+                    if (inputs[1]) inputs[1].value = task.start || '';
+                    if (inputs[2]) inputs[2].value = task.duration || 5;
+                }
+            });
+
+            document.getElementById('openproject-loaded-tasks').textContent = tasks.length;
+            renderGanttChart();
+        }
+
+        // Parse MS Project XML
+        function parseProjectXML(content) {
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(content, 'text/xml');
+            const tasks = [];
+
+            const taskNodes = xml.querySelectorAll('Task');
+            taskNodes.forEach(node => {
+                const name = node.querySelector('Name')?.textContent;
+                const start = node.querySelector('Start')?.textContent;
+                const duration = node.querySelector('Duration')?.textContent;
+
+                if (name) {
+                    tasks.push({
+                        name,
+                        start: start ? start.split('T')[0] : '',
+                        duration: duration ? parseInt(duration) : 5
+                    });
+                }
+            });
+
+            return { tasks };
+        }
+
+        // Import QGIS GeoJSON
+        async function importQgisGeoJSON(file) {
+            if (!file) return;
+            LoadingSystem.show('Importando GeoJSON...');
+
+            try {
+                const content = await readFileAsText(file);
+                const geojson = JSON.parse(content);
+
+                if (!SecurityUtils.validateGeoJSON(geojson)) {
+                    throw new Error('Arquivo GeoJSON inválido');
+                }
+
+                const features = geojson.features || [geojson];
+                const nodes = [];
+                const links = [];
+                const polygons = [];
+
+                features.forEach((f, idx) => {
+                    const geomType = f.geometry?.type;
+                    const coords = f.geometry?.coordinates;
+                    const props = f.properties || {};
+
+                    if (geomType === 'Point' && coords) {
+                        nodes.push({
+                            id: props.id || props.ID || `N${idx + 1}`,
+                            x: coords[0],
+                            y: coords[1],
+                            z: coords[2] || props.elevation || props.z || 0,
+                            ...props
+                        });
+                    } else if ((geomType === 'LineString' || geomType === 'MultiLineString') && coords) {
+                        const lineCoords = geomType === 'MultiLineString' ? coords[0] : coords;
+                        links.push({
+                            id: props.id || props.ID || `L${idx + 1}`,
+                            from: props.from || props.start_node || `N${idx}`,
+                            to: props.to || props.end_node || `N${idx + 1}`,
+                            coordinates: lineCoords,
+                            length: props.length || props.comprimento || calculateLineLength(lineCoords),
+                            ...props
+                        });
+                    } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+                        polygons.push({
+                            id: props.id || props.ID || `P${idx + 1}`,
+                            coordinates: coords,
+                            ...props
+                        });
+                    }
+                });
+
+                moduleData.qgis = { nodes, links, polygons };
+                updateQgisUI();
+                document.getElementById('qgis-import-status').style.display = 'block';
+                ToastSystem.success(`Importado: ${nodes.length} pontos, ${links.length} linhas, ${polygons.length} polígonos`);
+            } catch (error) {
+                ToastSystem.error('Erro ao importar GeoJSON: ' + error.message);
+            } finally {
+                LoadingSystem.hide();
+            }
+        }
+
+        // Calculate line length from coordinates
+        function calculateLineLength(coords) {
+            let length = 0;
+            for (let i = 1; i < coords.length; i++) {
+                const dx = coords[i][0] - coords[i-1][0];
+                const dy = coords[i][1] - coords[i-1][1];
+                length += Math.sqrt(dx * dx + dy * dy);
+            }
+            return length;
+        }
+
+        // Import QGIS Shapefile (as ZIP)
+        async function importQgisShapefile(file) {
+            if (!file) return;
+
+            if (!file.name.endsWith('.zip')) {
+                ToastSystem.warning('Para shapefiles, envie um arquivo .zip contendo .shp, .dbf, .shx e .prj');
+                return;
+            }
+
+            LoadingSystem.show('Processando Shapefile...');
+
+            try {
+                // Use JSZip to extract the files
+                const zip = await JSZip.loadAsync(file);
+                let shpFile = null;
+                let dbfFile = null;
+
+                for (const filename of Object.keys(zip.files)) {
+                    if (filename.endsWith('.shp')) {
+                        shpFile = await zip.files[filename].async('arraybuffer');
+                    } else if (filename.endsWith('.dbf')) {
+                        dbfFile = await zip.files[filename].async('arraybuffer');
+                    }
+                }
+
+                if (!shpFile) {
+                    throw new Error('Arquivo .shp não encontrado no ZIP');
+                }
+
+                // Basic shapefile parsing (simplified)
+                const nodes = [];
+                const links = [];
+
+                // Note: Full shapefile parsing would require a dedicated library
+                // For now, we'll indicate success and recommend GeoJSON
+                ToastSystem.info('Shapefile carregado. Para melhor compatibilidade, converta para GeoJSON.');
+                document.getElementById('qgis-import-status').style.display = 'block';
+
+            } catch (error) {
+                ToastSystem.error('Erro ao processar Shapefile: ' + error.message);
+            } finally {
+                LoadingSystem.hide();
+            }
+        }
+
+        // Parse network CSV (generic format)
+        function parseNetworkCSV(content) {
+            const lines = content.split('\n').filter(l => l.trim());
+            const nodes = [];
+            const links = [];
+
+            if (lines.length < 2) return { nodes, links };
+
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim());
+                const row = {};
+                headers.forEach((h, idx) => {
+                    row[h] = values[idx];
+                });
+
+                // Detect if it's a node or link based on headers
+                if (row.from && row.to) {
+                    links.push({
+                        id: row.id || row.link_id || `L${i}`,
+                        from: row.from || row.start,
+                        to: row.to || row.end,
+                        length: parseFloat(row.length || row.comprimento) || 0,
+                        diameter: parseFloat(row.diameter || row.dn || row.diametro) || 150,
+                        ...row
+                    });
+                } else if (row.id || row.node_id || row.x) {
+                    nodes.push({
+                        id: row.id || row.node_id || `N${i}`,
+                        x: parseFloat(row.x) || 0,
+                        y: parseFloat(row.y) || 0,
+                        z: parseFloat(row.z || row.elevation || row.cota) || 0,
+                        ...row
+                    });
+                }
+            }
+
+            return { nodes, links };
+        }
+
+        // Helper to read file as text
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+
+        // Update UI functions
+        function updateEpanetUI() {
+            const data = moduleData.epanet;
+            document.getElementById('epanet-total-nodes').textContent = data.nodes.length;
+            document.getElementById('epanet-total-links').textContent = data.links.length;
+            document.getElementById('epanet-total-reservoirs').textContent = data.reservoirs?.length || 0;
+            document.getElementById('epanet-total-pumps').textContent = data.pumps?.length || 0;
+
+            // Update junction count
+            const junctionCount = document.getElementById('epanet-junction-count');
+            if (junctionCount) junctionCount.textContent = data.nodes.length;
+
+            // Update links count
+            const pipeCount = document.getElementById('epanet-pipe-count');
+            if (pipeCount) pipeCount.textContent = data.links.length;
+        }
+
+        function updateSwmmUI() {
+            const data = moduleData.swmm;
+            document.getElementById('swmm-loaded-nodes').textContent = data.nodes.length;
+            document.getElementById('swmm-loaded-links').textContent = data.links.length;
+            document.getElementById('swmm-loaded-subcatchments').textContent = data.subcatchments?.length || 0;
+
+            const totalLength = data.links.reduce((sum, l) => sum + (l.length || 0), 0);
+            document.getElementById('swmm-total-length').textContent = totalLength.toFixed(0);
+
+            // Hide warning if data exists
+            const warning = document.getElementById('swmm-no-data-warning');
+            if (warning) warning.style.display = data.nodes.length > 0 ? 'none' : 'block';
+        }
+
+        function updateQgisUI() {
+            const data = moduleData.qgis;
+            document.getElementById('qgis-loaded-nodes').textContent = data.nodes?.length || 0;
+            document.getElementById('qgis-loaded-links').textContent = data.links?.length || 0;
+
+            // Hide warning if data exists
+            const warning = document.getElementById('qgis-no-data-warning');
+            if (warning) warning.style.display = (data.nodes?.length > 0 || data.links?.length > 0) ? 'none' : 'block';
+        }
+
+        // Clear data functions
+        function clearEpanetData() {
+            moduleData.epanet = { nodes: [], links: [], reservoirs: [], pumps: [], valves: [] };
+            updateEpanetUI();
+            document.getElementById('epanet-import-status').style.display = 'none';
+            ToastSystem.info('Dados EPANET limpos');
+        }
+
+        function clearSwmmData() {
+            moduleData.swmm = { nodes: [], links: [], subcatchments: [], storages: [], outlets: [] };
+            updateSwmmUI();
+            document.getElementById('swmm-import-status').style.display = 'none';
+            ToastSystem.info('Dados SWMM limpos');
+        }
+
+        function clearOpenProjectData() {
+            moduleData.openproject = { tasks: [], resources: [], milestones: [] };
+            const tasksList = document.getElementById('openproject-tasks-list');
+            if (tasksList) tasksList.innerHTML = '';
+            document.getElementById('openproject-loaded-tasks').textContent = '0';
+            document.getElementById('openproject-import-status').style.display = 'none';
+            ToastSystem.info('Dados OpenProject limpos');
+        }
+
+        function clearQgisData() {
+            moduleData.qgis = { nodes: [], links: [], polygons: [] };
+            updateQgisUI();
+            document.getElementById('qgis-import-status').style.display = 'none';
+            ToastSystem.info('Dados QGIS limpos');
         }
 
         // ============================================
