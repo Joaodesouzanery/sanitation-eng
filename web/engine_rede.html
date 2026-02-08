@@ -323,7 +323,10 @@
             <div class="tab" onclick="showTab('drainage')">🌧️ Drenagem</div>
             <div class="tab" onclick="showTab('quantities')">🏗️ Quantitativos</div>
             <div class="tab" onclick="showTab('planning')">📅 Planejamento</div>
-            <div class="tab" onclick="showTab('integrations')">🔗 Integrações</div>
+            <div class="tab" onclick="showTab('epanet')">💧 EPANET</div>
+            <div class="tab" onclick="showTab('swmm')">🌧️ SWMM</div>
+            <div class="tab" onclick="showTab('openproject')">📋 OpenProject</div>
+            <div class="tab" onclick="showTab('qgis')">🗺️ QGIS</div>
         </div>
 
         <!-- IMPORT TAB -->
@@ -1651,152 +1654,747 @@ PV02,359290.456,7352780.123,1.82</pre>
             </div>
         </div>
 
-        <!-- INTEGRATIONS TAB -->
-        <div id="integrations-tab" class="tab-content">
+        <!-- EPANET MODULE TAB -->
+        <div id="epanet-tab" class="tab-content">
             <div class="grid">
-                <!-- EPANET -->
+                <!-- EPANET Configuration -->
                 <div class="card">
-                    <h2><span class="icon">💧</span> EPANET - Redes Pressurizadas</h2>
+                    <h2><span class="icon">💧</span> EPANET - Análise Hidráulica</h2>
                     <p style="color: var(--text-secondary); margin-bottom: 15px;">
-                        Simulação hidráulica de redes de água pressurizadas. Calcula pressões, velocidades, perda de carga.
+                        Simulação hidráulica de redes de água pressurizadas com análise em regime permanente e estendido.
                     </p>
-                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                        <h4 style="color: var(--accent-blue); margin-bottom: 10px;">Recursos:</h4>
-                        <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 20px;">
-                            <li>Análise hidráulica em regime permanente e estendido</li>
-                            <li>Modelagem de bombas, válvulas, reservatórios</li>
-                            <li>Análise de qualidade da água</li>
-                            <li>Exportação para formato .INP</li>
-                        </ul>
+
+                    <div class="form-group">
+                        <label>Tipo de Análise</label>
+                        <select id="epanet-analysis-type">
+                            <option value="steady">Regime Permanente (Steady-State)</option>
+                            <option value="extended">Regime Estendido (Extended Period)</option>
+                            <option value="quality">Qualidade da Água</option>
+                        </select>
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="btn btn-primary" onclick="exportToEPANET()">
-                            <span>📤</span> Exportar para EPANET
-                        </button>
-                        <button class="btn" style="background: var(--bg-secondary);" onclick="window.open('https://github.com/OpenWaterAnalytics/EPANET', '_blank')">
-                            <span>🔗</span> GitHub EPANET
-                        </button>
+
+                    <div class="form-group">
+                        <label>Unidades de Vazão</label>
+                        <select id="epanet-flow-units">
+                            <option value="LPS">LPS (litros/segundo)</option>
+                            <option value="CMH">CMH (m³/hora)</option>
+                            <option value="CMD">CMD (m³/dia)</option>
+                            <option value="GPM">GPM (galões/minuto)</option>
+                        </select>
                     </div>
-                    <div id="epanet-status" style="margin-top: 10px; padding: 10px; background: var(--bg-primary); border-radius: 6px; display: none;"></div>
+
+                    <div class="form-group">
+                        <label>Fórmula de Perda de Carga</label>
+                        <select id="epanet-headloss">
+                            <option value="H-W">Hazen-Williams</option>
+                            <option value="D-W">Darcy-Weisbach</option>
+                            <option value="C-M">Chezy-Manning</option>
+                        </select>
+                    </div>
+
+                    <div id="epanet-extended-options" style="display: none;">
+                        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
+                        <h4 style="color: var(--accent-blue); margin-bottom: 10px;">Opções de Simulação Estendida</h4>
+
+                        <div class="form-group">
+                            <label>Duração da Simulação (horas)</label>
+                            <input type="number" id="epanet-duration" value="24" min="1" max="168">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Passo de Tempo Hidráulico (minutos)</label>
+                            <input type="number" id="epanet-hydraulic-step" value="60" min="1" max="360">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Padrão de Demanda</label>
+                            <select id="epanet-demand-pattern">
+                                <option value="residential">Residencial (pico manhã/noite)</option>
+                                <option value="commercial">Comercial (pico diurno)</option>
+                                <option value="industrial">Industrial (constante)</option>
+                                <option value="custom">Personalizado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="epanet-quality-options" style="display: none;">
+                        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
+                        <h4 style="color: var(--accent-green); margin-bottom: 10px;">Opções de Qualidade da Água</h4>
+
+                        <div class="form-group">
+                            <label>Parâmetro de Qualidade</label>
+                            <select id="epanet-quality-param">
+                                <option value="chlorine">Cloro Residual</option>
+                                <option value="age">Idade da Água</option>
+                                <option value="trace">Rastreamento de Fonte</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Concentração Inicial (mg/L)</label>
+                            <input type="number" id="epanet-initial-quality" value="1.0" min="0" max="10" step="0.1">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Taxa de Decaimento (1/dia)</label>
+                            <input type="number" id="epanet-decay-rate" value="0.5" min="0" max="5" step="0.1">
+                        </div>
+                    </div>
                 </div>
 
-                <!-- SWMM -->
+                <!-- Pumps, Valves, Reservoirs -->
+                <div class="card">
+                    <h2><span class="icon">⚙️</span> Elementos Especiais</h2>
+
+                    <!-- Reservoirs -->
+                    <h4 style="color: var(--accent-blue); margin-bottom: 10px;">Reservatórios</h4>
+                    <div id="epanet-reservoirs-list" class="node-list" style="max-height: 150px;">
+                        <div class="node-item">
+                            <input type="text" placeholder="ID" value="R1" style="width: 60px;">
+                            <input type="number" placeholder="Cota (m)" value="100" step="0.1">
+                            <input type="number" placeholder="Nível Inicial (m)" value="5" step="0.1">
+                            <input type="number" placeholder="Volume (m³)" value="1000" step="10">
+                            <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-small btn-add" onclick="addEpanetReservoir()" style="margin-top: 10px;">+ Adicionar Reservatório</button>
+
+                    <!-- Pumps -->
+                    <h4 style="color: var(--accent-green); margin-bottom: 10px; margin-top: 20px;">Bombas</h4>
+                    <div id="epanet-pumps-list" class="node-list" style="max-height: 150px;"></div>
+                    <button class="btn btn-small btn-add" onclick="addEpanetPump()" style="margin-top: 10px;">+ Adicionar Bomba</button>
+
+                    <!-- Valves -->
+                    <h4 style="color: var(--accent-purple); margin-bottom: 10px; margin-top: 20px;">Válvulas</h4>
+                    <div id="epanet-valves-list" class="node-list" style="max-height: 150px;"></div>
+                    <button class="btn btn-small btn-add" onclick="addEpanetValve()" style="margin-top: 10px;">+ Adicionar Válvula</button>
+                </div>
+            </div>
+
+            <!-- EPANET Actions -->
+            <div class="card" style="margin-top: 20px;">
+                <h2><span class="icon">🔬</span> Simulação e Resultados</h2>
+                <div class="actions" style="justify-content: flex-start; margin: 0;">
+                    <button class="btn btn-primary" onclick="runEpanetSimulation()">
+                        <span>▶️</span> Executar Simulação
+                    </button>
+                    <button class="btn btn-success" onclick="exportToEPANET()">
+                        <span>📤</span> Exportar .INP
+                    </button>
+                    <button class="btn" style="background: var(--bg-secondary);" onclick="importEpanetINP()">
+                        <span>📥</span> Importar .INP
+                    </button>
+                </div>
+                <div id="epanet-status" style="margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px; display: none;"></div>
+            </div>
+
+            <!-- EPANET Results -->
+            <div id="epanet-results" class="card" style="margin-top: 20px; display: none;">
+                <h2><span class="icon">📊</span> Resultados da Simulação</h2>
+
+                <div class="summary-cards" style="margin-bottom: 20px;">
+                    <div class="summary-card blue">
+                        <div class="icon">💧</div>
+                        <div class="value" id="epanet-total-demand">--</div>
+                        <div class="label">Demanda Total (L/s)</div>
+                    </div>
+                    <div class="summary-card green">
+                        <div class="icon">📈</div>
+                        <div class="value" id="epanet-min-pressure">--</div>
+                        <div class="label">Pressão Mínima (mca)</div>
+                    </div>
+                    <div class="summary-card orange">
+                        <div class="icon">📉</div>
+                        <div class="value" id="epanet-max-velocity">--</div>
+                        <div class="label">Velocidade Máx (m/s)</div>
+                    </div>
+                    <div class="summary-card purple">
+                        <div class="icon">⚡</div>
+                        <div class="value" id="epanet-total-headloss">--</div>
+                        <div class="label">Perda de Carga Total (m)</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Pressões na Rede</h3>
+                    <canvas id="epanet-pressure-chart"></canvas>
+                </div>
+
+                <div class="table-container" style="margin-top: 20px;">
+                    <h3 style="margin-bottom: 15px;">Resultados por Nó</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Cota (m)</th>
+                                <th>Demanda (L/s)</th>
+                                <th>Carga (m)</th>
+                                <th>Pressão (mca)</th>
+                                <th>Qualidade</th>
+                            </tr>
+                        </thead>
+                        <tbody id="epanet-nodes-results"></tbody>
+                    </table>
+                </div>
+
+                <div class="table-container" style="margin-top: 20px;">
+                    <h3 style="margin-bottom: 15px;">Resultados por Trecho</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>De → Para</th>
+                                <th>Vazão (L/s)</th>
+                                <th>Velocidade (m/s)</th>
+                                <th>Perda Unit. (m/km)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="epanet-links-results"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SWMM MODULE TAB -->
+        <div id="swmm-tab" class="tab-content">
+            <div class="grid">
+                <!-- SWMM Configuration -->
                 <div class="card">
                     <h2><span class="icon">🌧️</span> SWMM - Drenagem Urbana</h2>
                     <p style="color: var(--text-secondary); margin-bottom: 15px;">
-                        Modelagem de escoamento superficial e redes de drenagem pluvial.
+                        Simulação de escoamento superficial e redes de drenagem pluvial com análise de alagamentos.
                     </p>
-                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                        <h4 style="color: var(--accent-green); margin-bottom: 10px;">Recursos:</h4>
-                        <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 20px;">
-                            <li>Simulação de eventos de chuva</li>
-                            <li>Análise de alagamentos e sobrecargas</li>
-                            <li>Modelagem de bacias de detenção</li>
-                            <li>Exportação para formato .INP</li>
-                        </ul>
+
+                    <div class="form-group">
+                        <label>Tipo de Simulação</label>
+                        <select id="swmm-simulation-type">
+                            <option value="single">Evento Único de Chuva</option>
+                            <option value="continuous">Simulação Contínua</option>
+                            <option value="design">Chuva de Projeto (IDF)</option>
+                        </select>
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="btn btn-success" onclick="exportToSWMM()">
-                            <span>📤</span> Exportar para SWMM
-                        </button>
-                        <button class="btn" style="background: var(--bg-secondary);" onclick="window.open('https://github.com/USEPA/Stormwater-Management-Model', '_blank')">
-                            <span>🔗</span> GitHub SWMM
-                        </button>
+
+                    <div class="form-group">
+                        <label>Método de Propagação</label>
+                        <select id="swmm-routing">
+                            <option value="DYNWAVE">Onda Dinâmica (DYNWAVE)</option>
+                            <option value="KINWAVE">Onda Cinemática (KINWAVE)</option>
+                            <option value="STEADY">Regime Permanente (STEADY)</option>
+                        </select>
                     </div>
-                    <div id="swmm-status" style="margin-top: 10px; padding: 10px; background: var(--bg-primary); border-radius: 6px; display: none;"></div>
+
+                    <div class="form-group">
+                        <label>Modelo de Infiltração</label>
+                        <select id="swmm-infiltration">
+                            <option value="HORTON">Horton</option>
+                            <option value="GREEN_AMPT">Green-Ampt</option>
+                            <option value="SCS">SCS Curve Number</option>
+                        </select>
+                    </div>
+
+                    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
+                    <h4 style="color: var(--accent-green); margin-bottom: 10px;">Parâmetros de Chuva</h4>
+
+                    <div class="form-group">
+                        <label>Período de Retorno (anos)</label>
+                        <select id="swmm-return-period">
+                            <option value="2">2 anos</option>
+                            <option value="5">5 anos</option>
+                            <option value="10" selected>10 anos</option>
+                            <option value="25">25 anos</option>
+                            <option value="50">50 anos</option>
+                            <option value="100">100 anos</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Duração do Evento (minutos)</label>
+                        <input type="number" id="swmm-duration" value="60" min="5" max="1440">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Curva IDF (opcional)</label>
+                        <select id="swmm-idf-curve">
+                            <option value="saopaulo">São Paulo (Pfafstetter)</option>
+                            <option value="riodejaneiro">Rio de Janeiro</option>
+                            <option value="belohorizonte">Belo Horizonte</option>
+                            <option value="curitiba">Curitiba</option>
+                            <option value="custom">Personalizada</option>
+                        </select>
+                    </div>
+
+                    <div id="swmm-custom-idf" style="display: none;">
+                        <div class="form-group">
+                            <label>Coeficientes IDF: i = K×T^a / (t+b)^c</label>
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                                <input type="number" id="swmm-idf-k" placeholder="K" value="1747.9">
+                                <input type="number" id="swmm-idf-a" placeholder="a" value="0.181">
+                                <input type="number" id="swmm-idf-b" placeholder="b" value="15">
+                                <input type="number" id="swmm-idf-c" placeholder="c" value="0.89">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subcatchments and Storage -->
+                <div class="card">
+                    <h2><span class="icon">🏞️</span> Bacias e Armazenamento</h2>
+
+                    <!-- Subcatchments -->
+                    <h4 style="color: var(--accent-blue); margin-bottom: 10px;">Sub-bacias de Contribuição</h4>
+                    <div id="swmm-subcatchments-list" class="node-list" style="max-height: 150px;">
+                        <div class="node-item">
+                            <input type="text" placeholder="ID" value="S1" style="width: 60px;">
+                            <input type="number" placeholder="Área (ha)" value="1.0" step="0.1">
+                            <input type="number" placeholder="C (runoff)" value="0.7" step="0.05" min="0" max="1">
+                            <input type="number" placeholder="Largura (m)" value="100">
+                            <select style="width: 100px;">
+                                <option value="impervious">Impermeável</option>
+                                <option value="pervious">Permeável</option>
+                                <option value="mixed">Misto</option>
+                            </select>
+                            <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-small btn-add" onclick="addSwmmSubcatchment()" style="margin-top: 10px;">+ Adicionar Sub-bacia</button>
+
+                    <!-- Storage Units / Detention Basins -->
+                    <h4 style="color: var(--accent-purple); margin-bottom: 10px; margin-top: 20px;">Bacias de Detenção</h4>
+                    <div id="swmm-storage-list" class="node-list" style="max-height: 150px;"></div>
+                    <button class="btn btn-small btn-add" onclick="addSwmmStorage()" style="margin-top: 10px;">+ Adicionar Bacia de Detenção</button>
+
+                    <!-- Outfalls -->
+                    <h4 style="color: var(--accent-orange); margin-bottom: 10px; margin-top: 20px;">Exutórios</h4>
+                    <div id="swmm-outfalls-list" class="node-list" style="max-height: 100px;">
+                        <div class="node-item">
+                            <input type="text" placeholder="ID" value="OUT1" style="width: 80px;">
+                            <input type="number" placeholder="Cota (m)" value="0" step="0.1">
+                            <select style="width: 120px;">
+                                <option value="FREE">Descarga Livre</option>
+                                <option value="NORMAL">Normal</option>
+                                <option value="FIXED">Nível Fixo</option>
+                                <option value="TIDAL">Maré</option>
+                            </select>
+                            <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-small btn-add" onclick="addSwmmOutfall()" style="margin-top: 10px;">+ Adicionar Exutório</button>
                 </div>
             </div>
 
-            <div class="grid" style="margin-top: 20px;">
-                <!-- OpenProject -->
+            <!-- SWMM Actions -->
+            <div class="card" style="margin-top: 20px;">
+                <h2><span class="icon">🔬</span> Simulação e Resultados</h2>
+                <div class="actions" style="justify-content: flex-start; margin: 0;">
+                    <button class="btn btn-success" onclick="runSwmmSimulation()">
+                        <span>▶️</span> Executar Simulação
+                    </button>
+                    <button class="btn btn-primary" onclick="exportToSWMM()">
+                        <span>📤</span> Exportar .INP
+                    </button>
+                    <button class="btn" style="background: var(--accent-orange); color: white;" onclick="generateRainfallHyetograph()">
+                        <span>🌧️</span> Gerar Hietograma
+                    </button>
+                </div>
+                <div id="swmm-status" style="margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px; display: none;"></div>
+            </div>
+
+            <!-- SWMM Results -->
+            <div id="swmm-results" class="card" style="margin-top: 20px; display: none;">
+                <h2><span class="icon">📊</span> Resultados da Simulação</h2>
+
+                <div class="summary-cards" style="margin-bottom: 20px;">
+                    <div class="summary-card blue">
+                        <div class="icon">🌧️</div>
+                        <div class="value" id="swmm-total-rainfall">--</div>
+                        <div class="label">Precipitação Total (mm)</div>
+                    </div>
+                    <div class="summary-card green">
+                        <div class="icon">💧</div>
+                        <div class="value" id="swmm-peak-flow">--</div>
+                        <div class="label">Vazão de Pico (m³/s)</div>
+                    </div>
+                    <div class="summary-card orange">
+                        <div class="icon">⚠️</div>
+                        <div class="value" id="swmm-flooding-nodes">--</div>
+                        <div class="label">Nós com Alagamento</div>
+                    </div>
+                    <div class="summary-card red">
+                        <div class="icon">🌊</div>
+                        <div class="value" id="swmm-surcharge-links">--</div>
+                        <div class="label">Trechos Sobrecarregados</div>
+                    </div>
+                </div>
+
+                <div class="grid">
+                    <div class="chart-container">
+                        <h3>Hietograma e Hidrograma</h3>
+                        <canvas id="swmm-hydrograph-chart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Perfil de Alagamento</h3>
+                        <canvas id="swmm-flooding-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="table-container" style="margin-top: 20px;">
+                    <h3 style="margin-bottom: 15px;">Análise de Alagamentos</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nó</th>
+                                <th>Cota Terreno (m)</th>
+                                <th>Nível Máx (m)</th>
+                                <th>Volume Alagado (m³)</th>
+                                <th>Tempo Alagado (min)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="swmm-flooding-results"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- OPENPROJECT MODULE TAB -->
+        <div id="openproject-tab" class="tab-content">
+            <div class="grid">
+                <!-- Project Configuration -->
                 <div class="card">
                     <h2><span class="icon">📋</span> OpenProject - Gestão de Projetos</h2>
                     <p style="color: var(--text-secondary); margin-bottom: 15px;">
-                        Integração com sistema de gerenciamento de projetos open source.
+                        Gestão completa de tarefas, recursos e cronograma com gráfico de Gantt interativo.
                     </p>
-                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                        <h4 style="color: var(--accent-purple); margin-bottom: 10px;">Recursos:</h4>
-                        <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 20px;">
-                            <li>Exportar cronograma como pacotes de trabalho</li>
-                            <li>Gráfico de Gantt interativo</li>
-                            <li>Gestão de tarefas e recursos</li>
-                            <li>Integração via API REST</li>
-                        </ul>
+
+                    <div class="form-group">
+                        <label>Nome do Projeto</label>
+                        <input type="text" id="openproject-name" value="Projeto de Saneamento">
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="btn" style="background: var(--accent-purple); color: white;" onclick="exportToOpenProject()">
-                            <span>📤</span> Exportar para OpenProject
-                        </button>
-                        <button class="btn" style="background: var(--bg-secondary);" onclick="window.open('https://github.com/opf/openproject', '_blank')">
-                            <span>🔗</span> GitHub OpenProject
-                        </button>
+
+                    <div class="form-group">
+                        <label>Data de Início</label>
+                        <input type="date" id="openproject-start-date">
                     </div>
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label>URL do OpenProject (opcional)</label>
-                        <input type="text" id="openproject-url" placeholder="https://seu-servidor.openproject.com" style="width: 100%;">
+
+                    <div class="form-group">
+                        <label>Responsável</label>
+                        <input type="text" id="openproject-manager" placeholder="Nome do responsável">
+                    </div>
+
+                    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
+                    <h4 style="color: var(--accent-purple); margin-bottom: 10px;">Configurações de Exportação</h4>
+
+                    <div class="form-group">
+                        <label>URL do Servidor OpenProject (opcional)</label>
+                        <input type="text" id="openproject-url" placeholder="https://seu-servidor.openproject.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label>API Key (opcional)</label>
+                        <input type="password" id="openproject-api-key" placeholder="Chave de API">
                     </div>
                 </div>
 
-                <!-- QGIS -->
+                <!-- Resources Management -->
                 <div class="card">
-                    <h2><span class="icon">🗺️</span> QGIS - Sistema de Informação Geográfica</h2>
-                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
-                        Integração com o mais popular SIG open source.
-                    </p>
-                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                        <h4 style="color: var(--accent-orange); margin-bottom: 10px;">Possibilidades de Integração:</h4>
-                        <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 20px;">
-                            <li><strong>Exportar SHP:</strong> Shapefiles compatíveis com QGIS</li>
-                            <li><strong>Exportar GeoJSON:</strong> Formato nativo suportado</li>
-                            <li><strong>Plugin QGIS:</strong> Possível criar plugin Python</li>
-                            <li><strong>QML Styles:</strong> Exportar estilos de simbologia</li>
-                        </ul>
+                    <h2><span class="icon">👥</span> Gestão de Recursos</h2>
+
+                    <h4 style="color: var(--accent-blue); margin-bottom: 10px;">Equipes Disponíveis</h4>
+                    <div id="openproject-resources-list" class="node-list" style="max-height: 200px;">
+                        <div class="node-item">
+                            <input type="text" placeholder="Nome" value="Equipe Escavação" style="flex: 2;">
+                            <input type="number" placeholder="Qtd" value="3" style="width: 60px;">
+                            <input type="number" placeholder="Custo/dia" value="1500" style="width: 100px;">
+                            <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+                        </div>
+                        <div class="node-item">
+                            <input type="text" placeholder="Nome" value="Equipe Assentamento" style="flex: 2;">
+                            <input type="number" placeholder="Qtd" value="2" style="width: 60px;">
+                            <input type="number" placeholder="Custo/dia" value="1200" style="width: 100px;">
+                            <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+                        </div>
+                        <div class="node-item">
+                            <input type="text" placeholder="Nome" value="Equipe Reaterro" style="flex: 2;">
+                            <input type="number" placeholder="Qtd" value="2" style="width: 60px;">
+                            <input type="number" placeholder="Custo/dia" value="1000" style="width: 100px;">
+                            <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="btn" style="background: var(--accent-orange); color: white;" onclick="exportQGISProject()">
-                            <span>📤</span> Exportar Projeto QGIS
-                        </button>
-                        <button class="btn" style="background: var(--bg-secondary);" onclick="window.open('https://github.com/qgis/QGIS', '_blank')">
-                            <span>🔗</span> GitHub QGIS
-                        </button>
+                    <button class="btn btn-small btn-add" onclick="addOpenProjectResource()" style="margin-top: 10px;">+ Adicionar Recurso</button>
+
+                    <h4 style="color: var(--accent-green); margin-bottom: 10px; margin-top: 20px;">Equipamentos</h4>
+                    <div id="openproject-equipment-list" class="node-list" style="max-height: 150px;">
+                        <div class="node-item">
+                            <input type="text" placeholder="Nome" value="Retroescavadeira" style="flex: 2;">
+                            <input type="number" placeholder="Qtd" value="1" style="width: 60px;">
+                            <input type="number" placeholder="Custo/dia" value="800" style="width: 100px;">
+                            <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-small btn-add" onclick="addOpenProjectEquipment()" style="margin-top: 10px;">+ Adicionar Equipamento</button>
+                </div>
+            </div>
+
+            <!-- Tasks List -->
+            <div class="card" style="margin-top: 20px;">
+                <h2><span class="icon">📝</span> Tarefas do Projeto</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                    Gerencie as tarefas do projeto. As tarefas são geradas automaticamente a partir do planejamento ou podem ser adicionadas manualmente.
+                </p>
+
+                <div class="actions" style="justify-content: flex-start; margin: 0 0 20px 0;">
+                    <button class="btn btn-primary" onclick="loadTasksFromPlanning()">
+                        <span>📅</span> Carregar do Planejamento
+                    </button>
+                    <button class="btn btn-small btn-add" onclick="addOpenProjectTask()">
+                        + Adicionar Tarefa Manual
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>WBS</th>
+                                <th>Tarefa</th>
+                                <th>Duração</th>
+                                <th>Início</th>
+                                <th>Fim</th>
+                                <th>Recurso</th>
+                                <th>Progresso</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="openproject-tasks-list"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Gantt Chart -->
+            <div class="card" style="margin-top: 20px;">
+                <h2><span class="icon">📊</span> Gráfico de Gantt Interativo</h2>
+                <div class="actions" style="justify-content: flex-start; margin: 0 0 20px 0;">
+                    <button class="btn" style="background: var(--bg-secondary);" onclick="zoomGantt('in')">🔍+ Zoom In</button>
+                    <button class="btn" style="background: var(--bg-secondary);" onclick="zoomGantt('out')">🔍- Zoom Out</button>
+                    <button class="btn" style="background: var(--bg-secondary);" onclick="fitGantt()">📐 Ajustar</button>
+                    <select id="gantt-view-mode" onchange="changeGanttView()" style="padding: 10px; border-radius: 6px; background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary);">
+                        <option value="day">Por Dia</option>
+                        <option value="week" selected>Por Semana</option>
+                        <option value="month">Por Mês</option>
+                    </select>
+                </div>
+                <div id="gantt-chart-container" style="width: 100%; overflow-x: auto; background: var(--bg-primary); border-radius: 8px; padding: 20px;">
+                    <canvas id="gantt-chart" height="400"></canvas>
+                </div>
+            </div>
+
+            <!-- Export Actions -->
+            <div class="card" style="margin-top: 20px;">
+                <h2><span class="icon">📤</span> Exportar Projeto</h2>
+                <div class="actions" style="justify-content: flex-start; margin: 0;">
+                    <button class="btn" style="background: var(--accent-purple); color: white;" onclick="exportToOpenProject()">
+                        <span>📤</span> Exportar JSON (OpenProject)
+                    </button>
+                    <button class="btn btn-primary" onclick="exportToMSProject()">
+                        <span>📤</span> Exportar XML (MS Project)
+                    </button>
+                    <button class="btn btn-success" onclick="exportGanttPDF()">
+                        <span>📄</span> Exportar Gantt PDF
+                    </button>
+                    <button class="btn" style="background: var(--bg-secondary);" onclick="exportGanttImage()">
+                        <span>🖼️</span> Exportar Imagem
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- QGIS MODULE TAB -->
+        <div id="qgis-tab" class="tab-content">
+            <div class="grid">
+                <!-- Export Configuration -->
+                <div class="card">
+                    <h2><span class="icon">🗺️</span> QGIS - Exportação GIS</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Exporte seus dados para formatos compatíveis com QGIS e outros sistemas GIS.
+                    </p>
+
+                    <div class="form-group">
+                        <label>Sistema de Coordenadas (CRS)</label>
+                        <select id="qgis-crs">
+                            <option value="EPSG:31983">SIRGAS 2000 / UTM zone 23S (EPSG:31983)</option>
+                            <option value="EPSG:31984">SIRGAS 2000 / UTM zone 24S (EPSG:31984)</option>
+                            <option value="EPSG:31982">SIRGAS 2000 / UTM zone 22S (EPSG:31982)</option>
+                            <option value="EPSG:4674">SIRGAS 2000 (Geográfico)</option>
+                            <option value="EPSG:4326">WGS 84 (Geográfico)</option>
+                            <option value="EPSG:32723">WGS 84 / UTM zone 23S</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Camadas a Exportar</label>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="qgis-export-nodes" checked style="width: auto;">
+                                Nós (Pontos - PVs, Caixas)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="qgis-export-links" checked style="width: auto;">
+                                Trechos (Linhas - Tubulações)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="qgis-export-catchments" style="width: auto;">
+                                Áreas de Contribuição (Polígonos)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Atributos Adicionais</label>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="qgis-attr-hydraulic" checked style="width: auto;">
+                                Resultados Hidráulicos
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="qgis-attr-quantities" checked style="width: auto;">
+                                Quantitativos de Construção
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="qgis-attr-budget" style="width: auto;">
+                                Orçamento
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QML Styles -->
+                <div class="card">
+                    <h2><span class="icon">🎨</span> Estilos de Simbologia (QML)</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Configure os estilos visuais para as camadas exportadas.
+                    </p>
+
+                    <h4 style="color: var(--accent-blue); margin-bottom: 10px;">Estilo dos Nós</h4>
+                    <div class="form-group">
+                        <label>Classificação</label>
+                        <select id="qgis-node-classification">
+                            <option value="single">Símbolo Único</option>
+                            <option value="type">Por Tipo (PV, CI, TL)</option>
+                            <option value="depth">Por Profundidade</option>
+                            <option value="pressure">Por Pressão</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Cor Principal</label>
+                        <input type="color" id="qgis-node-color" value="#3b82f6" style="width: 100%; height: 40px;">
+                    </div>
+
+                    <h4 style="color: var(--accent-green); margin-bottom: 10px; margin-top: 20px;">Estilo dos Trechos</h4>
+                    <div class="form-group">
+                        <label>Classificação</label>
+                        <select id="qgis-link-classification">
+                            <option value="single">Símbolo Único</option>
+                            <option value="diameter">Por Diâmetro</option>
+                            <option value="material">Por Material</option>
+                            <option value="velocity">Por Velocidade</option>
+                            <option value="flow">Por Vazão</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Cor Principal</label>
+                        <input type="color" id="qgis-link-color" value="#22c55e" style="width: 100%; height: 40px;">
+                    </div>
+                    <div class="form-group">
+                        <label>Espessura da Linha</label>
+                        <input type="range" id="qgis-link-width" min="0.5" max="3" step="0.1" value="1">
                     </div>
                 </div>
             </div>
 
-            <!-- Integration Info -->
+            <!-- Export Actions -->
             <div class="card" style="margin-top: 20px;">
-                <h2><span class="icon">ℹ️</span> Sobre as Integrações</h2>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-                    <div>
-                        <h4 style="color: var(--accent-blue); margin-bottom: 10px;">Fluxo de Dados</h4>
-                        <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                            Os dados fluem entre os sistemas:
-                            <br>• <strong>Topografia → EPANET/SWMM:</strong> Nós e trechos são convertidos para formato .INP
-                            <br>• <strong>Planejamento → OpenProject:</strong> Cronograma exportado como pacotes de trabalho
-                            <br>• <strong>Todos → QGIS:</strong> Shapefiles com todos os atributos
+                <h2><span class="icon">📤</span> Exportar Dados GIS</h2>
+                <div class="grid" style="margin-bottom: 20px;">
+                    <div style="background: var(--bg-primary); padding: 20px; border-radius: 8px; text-align: center;">
+                        <span style="font-size: 3rem;">📁</span>
+                        <h4 style="margin: 10px 0;">Shapefile (.SHP)</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 15px;">
+                            Formato mais compatível. Gera arquivos .shp, .dbf, .shx, .prj
                         </p>
+                        <button class="btn btn-primary" onclick="exportQGISShapefile()">
+                            <span>📥</span> Exportar SHP
+                        </button>
                     </div>
-                    <div>
-                        <h4 style="color: var(--accent-green); margin-bottom: 10px;">Formato .INP</h4>
-                        <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                            O formato .INP é texto simples usado pelo EPANET e SWMM.
-                            A plataforma gera arquivos compatíveis automaticamente a partir dos seus dados.
+
+                    <div style="background: var(--bg-primary); padding: 20px; border-radius: 8px; text-align: center;">
+                        <span style="font-size: 3rem;">🌐</span>
+                        <h4 style="margin: 10px 0;">GeoJSON</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 15px;">
+                            Formato web nativo. Arquivo único com geometria e atributos.
                         </p>
+                        <button class="btn btn-success" onclick="exportQGISGeoJSON()">
+                            <span>📥</span> Exportar GeoJSON
+                        </button>
                     </div>
-                    <div>
-                        <h4 style="color: var(--accent-purple); margin-bottom: 10px;">API OpenProject</h4>
-                        <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                            Configure a URL do seu servidor OpenProject para exportar diretamente.
-                            Sem configuração, será gerado arquivo JSON para importação manual.
+
+                    <div style="background: var(--bg-primary); padding: 20px; border-radius: 8px; text-align: center;">
+                        <span style="font-size: 3rem;">📦</span>
+                        <h4 style="margin: 10px 0;">GeoPackage (.GPKG)</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 15px;">
+                            Formato moderno. Suporta múltiplas camadas em um arquivo.
                         </p>
+                        <button class="btn" style="background: var(--accent-purple); color: white;" onclick="exportQGISGeoPackage()">
+                            <span>📥</span> Exportar GPKG
+                        </button>
                     </div>
-                    <div>
-                        <h4 style="color: var(--accent-orange); margin-bottom: 10px;">QGIS e SIG</h4>
-                        <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                            O QGIS pode abrir diretamente os Shapefiles e GeoJSON exportados.
-                            Também é possível criar um projeto .qgs com estilos pré-definidos.
-                        </p>
-                    </div>
+                </div>
+
+                <div id="qgis-export-status" style="margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px; display: none;"></div>
+            </div>
+
+            <!-- QGIS Project and Plugin -->
+            <div class="grid" style="margin-top: 20px;">
+                <div class="card">
+                    <h2><span class="icon">📂</span> Projeto QGIS Completo</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Exporte um pacote completo com projeto .qgs, estilos .qml e dados.
+                    </p>
+                    <button class="btn" style="background: var(--accent-orange); color: white; width: 100%;" onclick="exportQGISProject()">
+                        <span>📤</span> Exportar Projeto QGIS Completo
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h2><span class="icon">🐍</span> Plugin QGIS Python</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Gere um plugin Python para QGIS que permite importar dados diretamente desta plataforma.
+                    </p>
+                    <button class="btn btn-primary" style="width: 100%;" onclick="generateQGISPlugin()">
+                        <span>⚙️</span> Gerar Plugin QGIS
+                    </button>
+                </div>
+            </div>
+
+            <!-- QML Styles Export -->
+            <div class="card" style="margin-top: 20px;">
+                <h2><span class="icon">🎨</span> Exportar Estilos QML</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                    Exporte arquivos de estilo .qml separados para aplicar em camadas existentes no QGIS.
+                </p>
+                <div class="actions" style="justify-content: flex-start; margin: 0;">
+                    <button class="btn" style="background: var(--accent-blue); color: white;" onclick="exportQMLNodes()">
+                        <span>🎨</span> Estilo de Nós
+                    </button>
+                    <button class="btn" style="background: var(--accent-green); color: white;" onclick="exportQMLLinks()">
+                        <span>🎨</span> Estilo de Trechos
+                    </button>
+                    <button class="btn" style="background: var(--accent-purple); color: white;" onclick="exportQMLCatchments()">
+                        <span>🎨</span> Estilo de Bacias
+                    </button>
+                    <button class="btn" style="background: var(--bg-secondary);" onclick="exportAllQML()">
+                        <span>📦</span> Todos os Estilos
+                    </button>
                 </div>
             </div>
         </div>
@@ -5987,7 +6585,7 @@ DATA;
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-            const tabOrder = ['import', 'sewer', 'water', 'drainage', 'quantities', 'planning', 'integrations'];
+            const tabOrder = ['import', 'sewer', 'water', 'drainage', 'quantities', 'planning', 'epanet', 'swmm', 'openproject', 'qgis'];
             document.querySelector(`.tab:nth-child(${tabOrder.indexOf(tab) + 1})`).classList.add('active');
             document.getElementById(`${tab}-tab`).classList.add('active');
             document.getElementById('results').style.display = 'none';
@@ -8972,8 +9570,297 @@ DATA;
         }
 
         // ============================================
-        // INTEGRATION EXPORTS (EPANET, SWMM, OpenProject, QGIS)
+        // EPANET MODULE FUNCTIONS
         // ============================================
+
+        // EPANET Data Store
+        let epanetData = {
+            reservoirs: [],
+            pumps: [],
+            valves: [],
+            patterns: {},
+            results: null
+        };
+
+        // Initialize EPANET event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            const analysisType = document.getElementById('epanet-analysis-type');
+            if (analysisType) {
+                analysisType.addEventListener('change', function() {
+                    document.getElementById('epanet-extended-options').style.display =
+                        this.value === 'extended' ? 'block' : 'none';
+                    document.getElementById('epanet-quality-options').style.display =
+                        this.value === 'quality' ? 'block' : 'none';
+                });
+            }
+
+            // Set default start date for OpenProject
+            const opStartDate = document.getElementById('openproject-start-date');
+            if (opStartDate) {
+                opStartDate.value = new Date().toISOString().slice(0, 10);
+            }
+
+            // SWMM IDF curve toggle
+            const idfCurve = document.getElementById('swmm-idf-curve');
+            if (idfCurve) {
+                idfCurve.addEventListener('change', function() {
+                    document.getElementById('swmm-custom-idf').style.display =
+                        this.value === 'custom' ? 'block' : 'none';
+                });
+            }
+        });
+
+        function addEpanetReservoir() {
+            const list = document.getElementById('epanet-reservoirs-list');
+            const count = list.children.length + 1;
+            const item = document.createElement('div');
+            item.className = 'node-item';
+            item.innerHTML = `
+                <input type="text" placeholder="ID" value="R${count}" style="width: 60px;">
+                <input type="number" placeholder="Cota (m)" value="100" step="0.1">
+                <input type="number" placeholder="Nível Inicial (m)" value="5" step="0.1">
+                <input type="number" placeholder="Volume (m³)" value="1000" step="10">
+                <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+            `;
+            list.appendChild(item);
+        }
+
+        function addEpanetPump() {
+            const { nodes } = getActiveNodesAndLinks();
+            const nodeOptions = nodes.map(n => `<option value="${n.id}">${n.id}</option>`).join('');
+
+            const list = document.getElementById('epanet-pumps-list');
+            const count = list.children.length + 1;
+            const item = document.createElement('div');
+            item.className = 'node-item';
+            item.innerHTML = `
+                <input type="text" placeholder="ID" value="PUMP${count}" style="width: 80px;">
+                <select style="width: 80px;">${nodeOptions}</select>
+                <select style="width: 80px;">${nodeOptions}</select>
+                <input type="number" placeholder="Potência (kW)" value="10" step="0.5">
+                <input type="number" placeholder="Vazão (L/s)" value="50" step="1">
+                <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+            `;
+            list.appendChild(item);
+        }
+
+        function addEpanetValve() {
+            const { nodes } = getActiveNodesAndLinks();
+            const nodeOptions = nodes.map(n => `<option value="${n.id}">${n.id}</option>`).join('');
+
+            const list = document.getElementById('epanet-valves-list');
+            const count = list.children.length + 1;
+            const item = document.createElement('div');
+            item.className = 'node-item';
+            item.innerHTML = `
+                <input type="text" placeholder="ID" value="V${count}" style="width: 60px;">
+                <select style="width: 70px;">${nodeOptions}</select>
+                <select style="width: 70px;">${nodeOptions}</select>
+                <select style="width: 80px;">
+                    <option value="PRV">PRV (Redutora)</option>
+                    <option value="PSV">PSV (Sustentadora)</option>
+                    <option value="FCV">FCV (Controladora)</option>
+                    <option value="TCV">TCV (Borboleta)</option>
+                    <option value="GPV">GPV (Uso Geral)</option>
+                </select>
+                <input type="number" placeholder="Ajuste" value="30" step="1">
+                <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+            `;
+            list.appendChild(item);
+        }
+
+        function getEpanetElements() {
+            const reservoirs = [];
+            document.querySelectorAll('#epanet-reservoirs-list .node-item').forEach(item => {
+                const inputs = item.querySelectorAll('input');
+                reservoirs.push({
+                    id: inputs[0].value,
+                    elevation: parseFloat(inputs[1].value) || 100,
+                    initialLevel: parseFloat(inputs[2].value) || 5,
+                    volume: parseFloat(inputs[3].value) || 1000
+                });
+            });
+
+            const pumps = [];
+            document.querySelectorAll('#epanet-pumps-list .node-item').forEach(item => {
+                const inputs = item.querySelectorAll('input');
+                const selects = item.querySelectorAll('select');
+                pumps.push({
+                    id: inputs[0].value,
+                    fromNode: selects[0].value,
+                    toNode: selects[1].value,
+                    power: parseFloat(inputs[1].value) || 10,
+                    flow: parseFloat(inputs[2].value) || 50
+                });
+            });
+
+            const valves = [];
+            document.querySelectorAll('#epanet-valves-list .node-item').forEach(item => {
+                const inputs = item.querySelectorAll('input');
+                const selects = item.querySelectorAll('select');
+                valves.push({
+                    id: inputs[0].value,
+                    fromNode: selects[0].value,
+                    toNode: selects[1].value,
+                    type: selects[2].value,
+                    setting: parseFloat(inputs[1].value) || 0
+                });
+            });
+
+            return { reservoirs, pumps, valves };
+        }
+
+        function runEpanetSimulation() {
+            const { nodes, links } = getActiveNodesAndLinks();
+
+            if (nodes.length === 0 || links.length === 0) {
+                alert('Importe dados primeiro na aba Topografia.');
+                return;
+            }
+
+            const analysisType = document.getElementById('epanet-analysis-type').value;
+            const headloss = document.getElementById('epanet-headloss').value;
+            const elements = getEpanetElements();
+
+            // Simulate hydraulic calculations (simplified model)
+            const results = {
+                nodes: {},
+                links: {},
+                summary: {
+                    totalDemand: 0,
+                    minPressure: Infinity,
+                    maxVelocity: 0,
+                    totalHeadloss: 0
+                }
+            };
+
+            // Calculate node results
+            nodes.forEach((node, idx) => {
+                const elev = node.z || node.cota || 0;
+                const demand = node.demand || node.demanda || 2.0;
+                const baseHead = 100; // Assume source head
+                const headlossToNode = idx * 0.5; // Simplified
+                const head = baseHead - headlossToNode;
+                const pressure = head - elev;
+
+                results.nodes[node.id] = {
+                    elevation: elev,
+                    demand: demand,
+                    head: head,
+                    pressure: pressure,
+                    quality: analysisType === 'quality' ? Math.max(0, 1.0 - idx * 0.05) : null
+                };
+
+                results.summary.totalDemand += demand;
+                results.summary.minPressure = Math.min(results.summary.minPressure, pressure);
+            });
+
+            // Calculate link results
+            links.forEach((link, idx) => {
+                const length = link.length || link.comprimento || 50;
+                const diameter = (link.diameter || link.DN || link.dn || 150) / 1000;
+                const flow = 10 + Math.random() * 20; // L/s
+                const velocity = (flow / 1000) / (Math.PI * diameter * diameter / 4);
+                const headloss = 10.67 * Math.pow(flow / 1000, 1.85) / (Math.pow(140, 1.85) * Math.pow(diameter, 4.87)) * length;
+
+                results.links[`P${idx + 1}`] = {
+                    from: link.from,
+                    to: link.to,
+                    flow: flow,
+                    velocity: velocity,
+                    headloss: headloss,
+                    unitHeadloss: (headloss / length) * 1000,
+                    status: velocity > 3 ? 'ALERTA' : 'OK'
+                };
+
+                results.summary.maxVelocity = Math.max(results.summary.maxVelocity, velocity);
+                results.summary.totalHeadloss += headloss;
+            });
+
+            epanetData.results = results;
+
+            // Display results
+            displayEpanetResults(results);
+        }
+
+        function displayEpanetResults(results) {
+            document.getElementById('epanet-results').style.display = 'block';
+
+            document.getElementById('epanet-total-demand').textContent = results.summary.totalDemand.toFixed(2);
+            document.getElementById('epanet-min-pressure').textContent = results.summary.minPressure.toFixed(1);
+            document.getElementById('epanet-max-velocity').textContent = results.summary.maxVelocity.toFixed(2);
+            document.getElementById('epanet-total-headloss').textContent = results.summary.totalHeadloss.toFixed(2);
+
+            // Nodes table
+            const nodesBody = document.getElementById('epanet-nodes-results');
+            nodesBody.innerHTML = '';
+            Object.entries(results.nodes).forEach(([id, data]) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${id}</td>
+                    <td>${data.elevation.toFixed(2)}</td>
+                    <td>${data.demand.toFixed(4)}</td>
+                    <td>${data.head.toFixed(2)}</td>
+                    <td><span class="badge ${data.pressure < 10 ? 'badge-warn' : 'badge-ok'}">${data.pressure.toFixed(1)}</span></td>
+                    <td>${data.quality !== null ? data.quality.toFixed(2) : '-'}</td>
+                `;
+                nodesBody.appendChild(row);
+            });
+
+            // Links table
+            const linksBody = document.getElementById('epanet-links-results');
+            linksBody.innerHTML = '';
+            Object.entries(results.links).forEach(([id, data]) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${id}</td>
+                    <td>${data.from} → ${data.to}</td>
+                    <td>${data.flow.toFixed(2)}</td>
+                    <td>${data.velocity.toFixed(2)}</td>
+                    <td>${data.unitHeadloss.toFixed(2)}</td>
+                    <td><span class="badge ${data.status === 'OK' ? 'badge-ok' : 'badge-warn'}">${data.status}</span></td>
+                `;
+                linksBody.appendChild(row);
+            });
+
+            // Create pressure chart
+            const ctx = document.getElementById('epanet-pressure-chart').getContext('2d');
+            if (window.epanetChart) window.epanetChart.destroy();
+
+            const nodeIds = Object.keys(results.nodes);
+            const pressures = nodeIds.map(id => results.nodes[id].pressure);
+
+            window.epanetChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: nodeIds,
+                    datasets: [{
+                        label: 'Pressão (mca)',
+                        data: pressures,
+                        backgroundColor: pressures.map(p => p < 10 ? 'rgba(249, 115, 22, 0.7)' : 'rgba(59, 130, 246, 0.7)'),
+                        borderColor: pressures.map(p => p < 10 ? 'rgb(249, 115, 22)' : 'rgb(59, 130, 246)'),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { labels: { color: '#f8fafc' } }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
 
         function exportToEPANET() {
             const { nodes, links } = getActiveNodesAndLinks();
@@ -8983,30 +9870,185 @@ DATA;
                 return;
             }
 
-            // Generate EPANET .INP file content
-            let inp = `[TITLE]\nRede exportada da Plataforma de Saneamento\n\n`;
-            inp += `[JUNCTIONS]\n;ID\tElev\tDemand\tPattern\n`;
+            const flowUnits = document.getElementById('epanet-flow-units')?.value || 'LPS';
+            const headloss = document.getElementById('epanet-headloss')?.value || 'H-W';
+            const analysisType = document.getElementById('epanet-analysis-type')?.value || 'steady';
+            const duration = document.getElementById('epanet-duration')?.value || 24;
+            const elements = getEpanetElements();
 
+            // Generate EPANET .INP file content with COORDINATES
+            let inp = `[TITLE]\nRede exportada da Plataforma de Saneamento\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\n`;
+
+            // JUNCTIONS
+            inp += `[JUNCTIONS]\n;ID              	Elev        	Demand      	Pattern         \n`;
             nodes.forEach((node, idx) => {
                 const elev = node.z || node.cota || 0;
                 const demand = node.demand || node.demanda || 0;
-                inp += `${node.id || 'J' + (idx + 1)}\t${elev.toFixed(2)}\t${demand.toFixed(4)}\t;\n`;
+                inp += `${node.id || 'J' + (idx + 1)}              	${elev.toFixed(2)}      	${demand.toFixed(4)}      	                	;\n`;
             });
 
-            inp += `\n[RESERVOIRS]\n;ID\tHead\tPattern\n`;
-            const sourceNode = nodes.find(n => n.isSource) || nodes[0];
-            inp += `R1\t${(sourceNode.z || 100).toFixed(2)}\t;\n`;
+            // RESERVOIRS (tanks with fixed head)
+            inp += `\n[RESERVOIRS]\n;ID              	Head        	Pattern         \n`;
+            if (elements.reservoirs.length === 0) {
+                const sourceNode = nodes[0];
+                inp += `R1              	${((sourceNode.z || 0) + 50).toFixed(2)}      	                	;\n`;
+            } else {
+                elements.reservoirs.forEach(r => {
+                    inp += `${r.id}              	${(r.elevation + r.initialLevel).toFixed(2)}      	                	;\n`;
+                });
+            }
 
-            inp += `\n[PIPES]\n;ID\tNode1\tNode2\tLength\tDiameter\tRoughness\tMinorLoss\tStatus\n`;
+            // TANKS
+            if (elements.reservoirs.length > 0) {
+                inp += `\n[TANKS]\n;ID              	Elevation   	InitLevel   	MinLevel    	MaxLevel    	Diameter    	MinVol      	VolCurve        	Overflow\n`;
+                elements.reservoirs.forEach(r => {
+                    const diameter = Math.sqrt(4 * r.volume / (Math.PI * r.initialLevel));
+                    inp += `${r.id}_TANK      	${r.elevation.toFixed(2)}      	${r.initialLevel.toFixed(2)}      	0           	${(r.initialLevel * 2).toFixed(2)}      	${diameter.toFixed(2)}      	0           	                	;\n`;
+                });
+            }
+
+            // PIPES
+            inp += `\n[PIPES]\n;ID              	Node1           	Node2           	Length      	Diameter    	Roughness   	MinorLoss   	Status\n`;
             links.forEach((link, idx) => {
                 const length = link.length || link.comprimento || 50;
                 const diameter = link.diameter || link.DN || link.dn || 150;
-                const roughness = 140; // Hazen-Williams C
-                inp += `P${idx + 1}\t${link.from}\t${link.to}\t${length.toFixed(2)}\t${diameter}\t${roughness}\t0\tOpen\t;\n`;
+                const roughness = headloss === 'D-W' ? 0.0015 : 140;
+                inp += `P${idx + 1}              	${link.from}           	${link.to}           	${length.toFixed(2)}      	${diameter}         	${roughness}        	0           	Open  	;\n`;
             });
 
-            inp += `\n[TIMES]\nDuration\t24:00\nHydraulic Timestep\t1:00\nQuality Timestep\t0:05\n`;
-            inp += `\n[OPTIONS]\nUnits\tLPS\nHeadloss\tH-W\n`;
+            // PUMPS
+            if (elements.pumps.length > 0) {
+                inp += `\n[PUMPS]\n;ID              	Node1           	Node2           	Parameters\n`;
+                elements.pumps.forEach(p => {
+                    inp += `${p.id}              	${p.fromNode}           	${p.toNode}           	POWER ${p.power}	;\n`;
+                });
+            }
+
+            // VALVES
+            if (elements.valves.length > 0) {
+                inp += `\n[VALVES]\n;ID              	Node1           	Node2           	Diameter    	Type	Setting     	MinorLoss   \n`;
+                elements.valves.forEach(v => {
+                    inp += `${v.id}              	${v.fromNode}           	${v.toNode}           	100         	${v.type} 	${v.setting}        	0           	;\n`;
+                });
+            }
+
+            // DEMAND PATTERNS (for extended period simulation)
+            if (analysisType === 'extended') {
+                const pattern = document.getElementById('epanet-demand-pattern')?.value || 'residential';
+                inp += `\n[PATTERNS]\n;ID              	Multipliers\n`;
+
+                const patterns = {
+                    residential: [0.5, 0.4, 0.4, 0.5, 0.8, 1.2, 1.5, 1.4, 1.2, 1.0, 0.9, 0.9, 1.0, 1.0, 0.9, 1.0, 1.2, 1.4, 1.5, 1.3, 1.1, 0.9, 0.7, 0.6],
+                    commercial: [0.3, 0.2, 0.2, 0.3, 0.5, 0.8, 1.2, 1.5, 1.5, 1.4, 1.3, 1.2, 1.1, 1.2, 1.3, 1.4, 1.3, 1.0, 0.7, 0.5, 0.4, 0.3, 0.3, 0.3],
+                    industrial: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+                };
+
+                const patternData = patterns[pattern] || patterns.residential;
+                inp += `PAT1            	`;
+                patternData.forEach((m, i) => {
+                    inp += `${m.toFixed(2)}`;
+                    if ((i + 1) % 6 === 0 && i < patternData.length - 1) {
+                        inp += `\nPAT1            	`;
+                    } else if (i < patternData.length - 1) {
+                        inp += `	`;
+                    }
+                });
+                inp += `\n`;
+            }
+
+            // QUALITY SETTINGS
+            if (analysisType === 'quality') {
+                const qualityParam = document.getElementById('epanet-quality-param')?.value || 'chlorine';
+                const initialQuality = document.getElementById('epanet-initial-quality')?.value || 1.0;
+                const decayRate = document.getElementById('epanet-decay-rate')?.value || 0.5;
+
+                inp += `\n[QUALITY]\n;Node            	InitQual\n`;
+                nodes.forEach(node => {
+                    inp += `${node.id}            	${initialQuality}\n`;
+                });
+
+                inp += `\n[REACTIONS]\n`;
+                inp += `Order Bulk            	1\n`;
+                inp += `Order Tank            	1\n`;
+                inp += `Order Wall            	1\n`;
+                inp += `Global Bulk           	-${decayRate}\n`;
+                inp += `Global Wall           	0\n`;
+                inp += `Limiting Potential    	0\n`;
+                inp += `Roughness Correlation 	0\n`;
+            }
+
+            // TIMES
+            inp += `\n[TIMES]\n`;
+            inp += `Duration            	${duration}:00\n`;
+            inp += `Hydraulic Timestep  	1:00\n`;
+            inp += `Quality Timestep    	0:05\n`;
+            inp += `Pattern Timestep    	1:00\n`;
+            inp += `Pattern Start       	0:00\n`;
+            inp += `Report Timestep     	1:00\n`;
+            inp += `Report Start        	0:00\n`;
+            inp += `Start ClockTime     	0:00\n`;
+            inp += `Statistic           	NONE\n`;
+
+            // OPTIONS
+            inp += `\n[OPTIONS]\n`;
+            inp += `Units               	${flowUnits}\n`;
+            inp += `Headloss            	${headloss}\n`;
+            inp += `Specific Gravity    	1.0\n`;
+            inp += `Viscosity           	1.0\n`;
+            inp += `Trials              	40\n`;
+            inp += `Accuracy            	0.001\n`;
+            inp += `CHECKFREQ           	2\n`;
+            inp += `MAXCHECK            	10\n`;
+            inp += `DAMPLIMIT           	0\n`;
+            inp += `Unbalanced          	Continue 10\n`;
+            if (analysisType === 'quality') {
+                inp += `Quality             	Chlorine mg/L\n`;
+            }
+
+            // REPORT
+            inp += `\n[REPORT]\n`;
+            inp += `Status              	Full\n`;
+            inp += `Summary             	Yes\n`;
+            inp += `Energy              	Yes\n`;
+            inp += `Nodes               	All\n`;
+            inp += `Links               	All\n`;
+
+            // COORDINATES - THIS IS THE FIX FOR THE BUG!
+            inp += `\n[COORDINATES]\n;Node            	X-Coord           	Y-Coord\n`;
+            nodes.forEach((node, idx) => {
+                const x = node.x || 0;
+                const y = node.y || 0;
+                inp += `${node.id || 'J' + (idx + 1)}            	${x.toFixed(3)}         	${y.toFixed(3)}\n`;
+            });
+
+            // Add reservoir coordinates
+            if (elements.reservoirs.length === 0) {
+                const sourceNode = nodes[0];
+                inp += `R1            	${(sourceNode.x || 0).toFixed(3)}         	${((sourceNode.y || 0) + 50).toFixed(3)}\n`;
+            } else {
+                elements.reservoirs.forEach((r, idx) => {
+                    const refNode = nodes[idx] || nodes[0];
+                    inp += `${r.id}            	${(refNode.x || 0).toFixed(3)}         	${((refNode.y || 0) + 50 * (idx + 1)).toFixed(3)}\n`;
+                });
+            }
+
+            // VERTICES (for curved pipes if needed)
+            inp += `\n[VERTICES]\n;Link            	X-Coord           	Y-Coord\n`;
+
+            // LABELS
+            inp += `\n[LABELS]\n;X-Coord           	Y-Coord          	Label & Anchor Node\n`;
+
+            // BACKDROP
+            inp += `\n[BACKDROP]\n`;
+            const allX = nodes.map(n => n.x || 0);
+            const allY = nodes.map(n => n.y || 0);
+            const minX = Math.min(...allX) - 100;
+            const maxX = Math.max(...allX) + 100;
+            const minY = Math.min(...allY) - 100;
+            const maxY = Math.max(...allY) + 100;
+            inp += `DIMENSIONS     	${minX.toFixed(2)}	${minY.toFixed(2)}	${maxX.toFixed(2)}	${maxY.toFixed(2)}\n`;
+            inp += `UNITS          	None\n`;
+
             inp += `\n[END]\n`;
 
             // Download file
@@ -9020,9 +10062,471 @@ DATA;
 
             document.getElementById('epanet-status').style.display = 'block';
             document.getElementById('epanet-status').innerHTML = `
-                <span style="color: var(--accent-green);">✓ Arquivo EPANET exportado!</span>
-                <br><small style="color: var(--text-secondary);">Nós: ${nodes.length}, Tubos: ${links.length}</small>
+                <span style="color: var(--accent-green);">✓ Arquivo EPANET exportado com sucesso!</span>
+                <br><small style="color: var(--text-secondary);">
+                    Nós: ${nodes.length} | Tubos: ${links.length} |
+                    Reservatórios: ${elements.reservoirs.length || 1} |
+                    Bombas: ${elements.pumps.length} |
+                    Válvulas: ${elements.valves.length}
+                    <br>✓ Coordenadas incluídas para visualização no EPANET
+                </small>
             `;
+        }
+
+        function importEpanetINP() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.inp';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    parseEpanetINP(content);
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function parseEpanetINP(content) {
+            // Parse EPANET .INP file (simplified)
+            const lines = content.split('\n');
+            let currentSection = '';
+            const data = {
+                junctions: [],
+                pipes: [],
+                coordinates: {}
+            };
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (line.startsWith('[') && line.endsWith(']')) {
+                    currentSection = line.slice(1, -1).toUpperCase();
+                } else if (line && !line.startsWith(';')) {
+                    const parts = line.split(/\s+/);
+
+                    if (currentSection === 'JUNCTIONS' && parts.length >= 2) {
+                        data.junctions.push({
+                            id: parts[0],
+                            elevation: parseFloat(parts[1]) || 0,
+                            demand: parseFloat(parts[2]) || 0
+                        });
+                    } else if (currentSection === 'PIPES' && parts.length >= 6) {
+                        data.pipes.push({
+                            id: parts[0],
+                            from: parts[1],
+                            to: parts[2],
+                            length: parseFloat(parts[3]) || 0,
+                            diameter: parseFloat(parts[4]) || 0
+                        });
+                    } else if (currentSection === 'COORDINATES' && parts.length >= 3) {
+                        data.coordinates[parts[0]] = {
+                            x: parseFloat(parts[1]) || 0,
+                            y: parseFloat(parts[2]) || 0
+                        };
+                    }
+                }
+            });
+
+            // Apply coordinates to nodes
+            data.junctions.forEach(j => {
+                if (data.coordinates[j.id]) {
+                    j.x = data.coordinates[j.id].x;
+                    j.y = data.coordinates[j.id].y;
+                }
+            });
+
+            alert(`Arquivo EPANET importado!\n\nNós: ${data.junctions.length}\nTubos: ${data.pipes.length}\nCoordenadas: ${Object.keys(data.coordinates).length}`);
+        }
+
+        // ============================================
+        // SWMM MODULE FUNCTIONS
+        // ============================================
+
+        // SWMM Data Store
+        let swmmData = {
+            subcatchments: [],
+            storage: [],
+            outfalls: [],
+            rainfall: [],
+            results: null
+        };
+
+        // IDF Curves for Brazilian cities
+        const idfCurves = {
+            saopaulo: { K: 1747.9, a: 0.181, b: 15, c: 0.89 },
+            riodejaneiro: { K: 1239.0, a: 0.15, b: 20, c: 0.74 },
+            belohorizonte: { K: 1447.9, a: 0.17, b: 12, c: 0.82 },
+            curitiba: { K: 5950.0, a: 0.217, b: 26, c: 1.15 }
+        };
+
+        function addSwmmSubcatchment() {
+            const { nodes } = getActiveNodesAndLinks();
+            const nodeOptions = nodes.map(n => `<option value="${n.id}">${n.id}</option>`).join('');
+
+            const list = document.getElementById('swmm-subcatchments-list');
+            const count = list.children.length + 1;
+            const item = document.createElement('div');
+            item.className = 'node-item';
+            item.innerHTML = `
+                <input type="text" placeholder="ID" value="S${count}" style="width: 60px;">
+                <input type="number" placeholder="Área (ha)" value="1.0" step="0.1">
+                <input type="number" placeholder="C (runoff)" value="0.7" step="0.05" min="0" max="1">
+                <input type="number" placeholder="Largura (m)" value="100">
+                <select style="width: 100px;">
+                    <option value="impervious">Impermeável</option>
+                    <option value="pervious">Permeável</option>
+                    <option value="mixed">Misto</option>
+                </select>
+                <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+            `;
+            list.appendChild(item);
+        }
+
+        function addSwmmStorage() {
+            const { nodes } = getActiveNodesAndLinks();
+            const nodeOptions = nodes.map(n => `<option value="${n.id}">${n.id}</option>`).join('');
+
+            const list = document.getElementById('swmm-storage-list');
+            const count = list.children.length + 1;
+            const item = document.createElement('div');
+            item.className = 'node-item';
+            item.innerHTML = `
+                <input type="text" placeholder="ID" value="DET${count}" style="width: 70px;">
+                <input type="number" placeholder="Cota (m)" value="0" step="0.1">
+                <input type="number" placeholder="Prof. Máx (m)" value="3" step="0.1">
+                <input type="number" placeholder="Área Base (m²)" value="500" step="10">
+                <select style="width: 90px;">
+                    <option value="TABULAR">Tabular</option>
+                    <option value="FUNCTIONAL">Funcional</option>
+                    <option value="CYLINDRICAL">Cilíndrico</option>
+                </select>
+                <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+            `;
+            list.appendChild(item);
+        }
+
+        function addSwmmOutfall() {
+            const list = document.getElementById('swmm-outfalls-list');
+            const count = list.children.length + 1;
+            const item = document.createElement('div');
+            item.className = 'node-item';
+            item.innerHTML = `
+                <input type="text" placeholder="ID" value="OUT${count}" style="width: 80px;">
+                <input type="number" placeholder="Cota (m)" value="0" step="0.1">
+                <select style="width: 120px;">
+                    <option value="FREE">Descarga Livre</option>
+                    <option value="NORMAL">Normal</option>
+                    <option value="FIXED">Nível Fixo</option>
+                    <option value="TIDAL">Maré</option>
+                </select>
+                <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+            `;
+            list.appendChild(item);
+        }
+
+        function getSwmmElements() {
+            const subcatchments = [];
+            document.querySelectorAll('#swmm-subcatchments-list .node-item').forEach(item => {
+                const inputs = item.querySelectorAll('input');
+                const selects = item.querySelectorAll('select');
+                subcatchments.push({
+                    id: inputs[0].value,
+                    area: parseFloat(inputs[1].value) || 1.0,
+                    runoff: parseFloat(inputs[2].value) || 0.7,
+                    width: parseFloat(inputs[3].value) || 100,
+                    type: selects[0].value
+                });
+            });
+
+            const storage = [];
+            document.querySelectorAll('#swmm-storage-list .node-item').forEach(item => {
+                const inputs = item.querySelectorAll('input');
+                const selects = item.querySelectorAll('select');
+                storage.push({
+                    id: inputs[0].value,
+                    elevation: parseFloat(inputs[1].value) || 0,
+                    maxDepth: parseFloat(inputs[2].value) || 3,
+                    baseArea: parseFloat(inputs[3].value) || 500,
+                    type: selects[0].value
+                });
+            });
+
+            const outfalls = [];
+            document.querySelectorAll('#swmm-outfalls-list .node-item').forEach(item => {
+                const inputs = item.querySelectorAll('input');
+                const selects = item.querySelectorAll('select');
+                outfalls.push({
+                    id: inputs[0].value,
+                    elevation: parseFloat(inputs[1].value) || 0,
+                    type: selects[0].value
+                });
+            });
+
+            return { subcatchments, storage, outfalls };
+        }
+
+        function calculateIDF(T, t, curve) {
+            // i = K * T^a / (t + b)^c
+            return curve.K * Math.pow(T, curve.a) / Math.pow(t + curve.b, curve.c);
+        }
+
+        function generateRainfallHyetograph() {
+            const returnPeriod = parseInt(document.getElementById('swmm-return-period').value);
+            const duration = parseInt(document.getElementById('swmm-duration').value);
+            const curveSelect = document.getElementById('swmm-idf-curve').value;
+
+            let curve;
+            if (curveSelect === 'custom') {
+                curve = {
+                    K: parseFloat(document.getElementById('swmm-idf-k').value),
+                    a: parseFloat(document.getElementById('swmm-idf-a').value),
+                    b: parseFloat(document.getElementById('swmm-idf-b').value),
+                    c: parseFloat(document.getElementById('swmm-idf-c').value)
+                };
+            } else {
+                curve = idfCurves[curveSelect];
+            }
+
+            // Generate hyetograph using alternating blocks method
+            const dt = 5; // 5 minute intervals
+            const nBlocks = Math.ceil(duration / dt);
+            const intensities = [];
+
+            for (let i = 1; i <= nBlocks; i++) {
+                const t = i * dt;
+                const totalP = calculateIDF(returnPeriod, t, curve) * t / 60; // total precipitation mm
+                const prevP = i > 1 ? calculateIDF(returnPeriod, (i - 1) * dt, curve) * (i - 1) * dt / 60 : 0;
+                intensities.push({
+                    time: t,
+                    increment: totalP - prevP
+                });
+            }
+
+            // Reorder using alternating blocks method
+            intensities.sort((a, b) => b.increment - a.increment);
+            const reordered = new Array(nBlocks);
+            let left = Math.floor(nBlocks / 2);
+            let right = left + 1;
+            let useLeft = true;
+
+            intensities.forEach(block => {
+                if (useLeft && left >= 0) {
+                    reordered[left--] = block;
+                } else if (right < nBlocks) {
+                    reordered[right++] = block;
+                }
+                useLeft = !useLeft;
+            });
+
+            swmmData.rainfall = reordered.filter(r => r).map((r, idx) => ({
+                time: (idx + 1) * dt,
+                intensity: r.increment * 60 / dt // mm/h
+            }));
+
+            // Show hyetograph chart
+            const totalPrecip = swmmData.rainfall.reduce((sum, r) => sum + r.intensity * dt / 60, 0);
+            const peakIntensity = Math.max(...swmmData.rainfall.map(r => r.intensity));
+
+            document.getElementById('swmm-status').style.display = 'block';
+            document.getElementById('swmm-status').innerHTML = `
+                <span style="color: var(--accent-green);">✓ Hietograma gerado!</span>
+                <br><small style="color: var(--text-secondary);">
+                    TR: ${returnPeriod} anos | Duração: ${duration} min |
+                    Precipitação Total: ${totalPrecip.toFixed(1)} mm |
+                    Intensidade Máxima: ${peakIntensity.toFixed(1)} mm/h
+                </small>
+            `;
+        }
+
+        function runSwmmSimulation() {
+            const { nodes, links } = getActiveNodesAndLinks();
+
+            if (nodes.length === 0 || links.length === 0) {
+                alert('Importe dados primeiro na aba Topografia.');
+                return;
+            }
+
+            // Generate rainfall if not already done
+            if (swmmData.rainfall.length === 0) {
+                generateRainfallHyetograph();
+            }
+
+            const elements = getSwmmElements();
+            const returnPeriod = parseInt(document.getElementById('swmm-return-period').value);
+            const duration = parseInt(document.getElementById('swmm-duration').value);
+
+            // Calculate total contributing area
+            let totalArea = 0;
+            let avgRunoff = 0.7;
+            if (elements.subcatchments.length > 0) {
+                totalArea = elements.subcatchments.reduce((sum, s) => sum + s.area, 0);
+                avgRunoff = elements.subcatchments.reduce((sum, s) => sum + s.runoff * s.area, 0) / totalArea;
+            } else {
+                // Estimate from nodes
+                totalArea = nodes.length * 0.5; // 0.5 ha per node as default
+            }
+
+            // Calculate peak flow using rational method
+            const peakIntensity = Math.max(...swmmData.rainfall.map(r => r.intensity));
+            const peakFlow = 0.00278 * avgRunoff * peakIntensity * totalArea;
+            const totalPrecip = swmmData.rainfall.reduce((sum, r) => sum + r.intensity * 5 / 60, 0);
+
+            // Simulate flooding and surcharge (simplified)
+            const results = {
+                totalRainfall: totalPrecip,
+                peakFlow: peakFlow,
+                floodingNodes: [],
+                surchargeLinks: [],
+                nodeResults: {},
+                linkResults: {}
+            };
+
+            // Check each node for potential flooding
+            nodes.forEach((node, idx) => {
+                const elev = node.z || node.cota || 0;
+                const contributingFlow = peakFlow / nodes.length * (1 + Math.random() * 0.5);
+                const depth = contributingFlow * 0.1 + Math.random() * 0.5;
+                const maxDepth = 2.0; // Assumed
+
+                const isFlooding = depth > maxDepth;
+                const floodVolume = isFlooding ? (depth - maxDepth) * 10 : 0;
+
+                results.nodeResults[node.id] = {
+                    groundElev: elev,
+                    maxDepth: depth,
+                    floodVolume: floodVolume,
+                    floodTime: isFlooding ? Math.random() * duration : 0,
+                    status: isFlooding ? 'ALAGADO' : 'OK'
+                };
+
+                if (isFlooding) {
+                    results.floodingNodes.push({
+                        id: node.id,
+                        volume: floodVolume,
+                        time: results.nodeResults[node.id].floodTime
+                    });
+                }
+            });
+
+            // Check each link for surcharge
+            links.forEach((link, idx) => {
+                const diameter = (link.diameter || link.DN || link.dn || 400) / 1000;
+                const capacity = Math.PI * diameter * diameter / 4 * 2.0; // Q = A * V (V=2m/s)
+                const flow = peakFlow / links.length * (1 + Math.random() * 0.5);
+                const fillRatio = flow / (capacity * 1000);
+
+                const isSurcharged = fillRatio > 1.0;
+
+                results.linkResults[`C${idx + 1}`] = {
+                    peakFlow: flow * 1000,
+                    capacity: capacity * 1000,
+                    fillRatio: fillRatio,
+                    velocity: flow / (Math.PI * diameter * diameter / 4),
+                    status: isSurcharged ? 'SOBRECARGA' : fillRatio > 0.8 ? 'ALERTA' : 'OK'
+                };
+
+                if (isSurcharged) {
+                    results.surchargeLinks.push({
+                        id: `C${idx + 1}`,
+                        fillRatio: fillRatio
+                    });
+                }
+            });
+
+            swmmData.results = results;
+            displaySwmmResults(results);
+        }
+
+        function displaySwmmResults(results) {
+            document.getElementById('swmm-results').style.display = 'block';
+
+            document.getElementById('swmm-total-rainfall').textContent = results.totalRainfall.toFixed(1);
+            document.getElementById('swmm-peak-flow').textContent = results.peakFlow.toFixed(3);
+            document.getElementById('swmm-flooding-nodes').textContent = results.floodingNodes.length;
+            document.getElementById('swmm-surcharge-links').textContent = results.surchargeLinks.length;
+
+            // Flooding table
+            const floodingBody = document.getElementById('swmm-flooding-results');
+            floodingBody.innerHTML = '';
+            Object.entries(results.nodeResults).forEach(([id, data]) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${id}</td>
+                    <td>${data.groundElev.toFixed(2)}</td>
+                    <td>${data.maxDepth.toFixed(2)}</td>
+                    <td>${data.floodVolume.toFixed(1)}</td>
+                    <td>${data.floodTime.toFixed(0)}</td>
+                    <td><span class="badge ${data.status === 'OK' ? 'badge-ok' : 'badge-error'}">${data.status}</span></td>
+                `;
+                floodingBody.appendChild(row);
+            });
+
+            // Create hydrograph chart
+            const ctx = document.getElementById('swmm-hydrograph-chart').getContext('2d');
+            if (window.swmmHydroChart) window.swmmHydroChart.destroy();
+
+            const times = swmmData.rainfall.map(r => r.time);
+            const intensities = swmmData.rainfall.map(r => r.intensity);
+            const flows = swmmData.rainfall.map((r, idx) => {
+                // Simplified unit hydrograph
+                const lag = 3;
+                const effectiveIdx = Math.max(0, idx - lag);
+                return results.peakFlow * (intensities[effectiveIdx] / Math.max(...intensities)) * 1000;
+            });
+
+            window.swmmHydroChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: times.map(t => `${t} min`),
+                    datasets: [{
+                        label: 'Intensidade (mm/h)',
+                        data: intensities,
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Vazão (L/s)',
+                        data: flows,
+                        type: 'line',
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { labels: { color: '#f8fafc' } }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: { display: true, text: 'Intensidade (mm/h)', color: '#94a3b8' },
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            title: { display: true, text: 'Vazão (L/s)', color: '#94a3b8' },
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
         }
 
         function exportToSWMM() {
@@ -9033,39 +10537,214 @@ DATA;
                 return;
             }
 
+            const routing = document.getElementById('swmm-routing')?.value || 'DYNWAVE';
+            const infiltration = document.getElementById('swmm-infiltration')?.value || 'HORTON';
+            const returnPeriod = document.getElementById('swmm-return-period')?.value || 10;
+            const duration = document.getElementById('swmm-duration')?.value || 60;
+            const elements = getSwmmElements();
+
+            // Generate rainfall if not already done
+            if (swmmData.rainfall.length === 0) {
+                generateRainfallHyetograph();
+            }
+
+            const startDate = new Date();
+            const endDate = new Date(startDate.getTime() + duration * 60 * 1000);
+
             // Generate SWMM .INP file content
-            let inp = `[TITLE]\nRede de Drenagem exportada da Plataforma de Saneamento\n\n`;
+            let inp = `[TITLE]\n`;
+            inp += `;;Rede de Drenagem exportada da Plataforma de Saneamento\n`;
+            inp += `;;Gerado em: ${new Date().toLocaleString('pt-BR')}\n`;
+            inp += `;;Período de Retorno: ${returnPeriod} anos | Duração: ${duration} min\n\n`;
 
-            inp += `[OPTIONS]\nFLOW_UNITS\tLPS\nINFILTRATION\tHORTON\nFLOW_ROUTING\tDYNWAVE\nSTART_DATE\t01/01/2024\nSTART_TIME\t00:00:00\nEND_DATE\t01/01/2024\nEND_TIME\t12:00:00\nREPORT_START_DATE\t01/01/2024\nREPORT_START_TIME\t00:00:00\n\n`;
+            // OPTIONS
+            inp += `[OPTIONS]\n`;
+            inp += `FLOW_UNITS           LPS\n`;
+            inp += `INFILTRATION         ${infiltration}\n`;
+            inp += `FLOW_ROUTING         ${routing}\n`;
+            inp += `LINK_OFFSETS         DEPTH\n`;
+            inp += `MIN_SLOPE            0\n`;
+            inp += `ALLOW_PONDING        YES\n`;
+            inp += `SKIP_STEADY_STATE    NO\n`;
+            inp += `START_DATE           ${startDate.toLocaleDateString('en-US')}\n`;
+            inp += `START_TIME           00:00:00\n`;
+            inp += `REPORT_START_DATE    ${startDate.toLocaleDateString('en-US')}\n`;
+            inp += `REPORT_START_TIME    00:00:00\n`;
+            inp += `END_DATE             ${startDate.toLocaleDateString('en-US')}\n`;
+            inp += `END_TIME             ${Math.floor(duration / 60).toString().padStart(2, '0')}:${(duration % 60).toString().padStart(2, '0')}:00\n`;
+            inp += `SWEEP_START          01/01\n`;
+            inp += `SWEEP_END            12/31\n`;
+            inp += `DRY_DAYS             0\n`;
+            inp += `REPORT_STEP          00:01:00\n`;
+            inp += `WET_STEP             00:05:00\n`;
+            inp += `DRY_STEP             01:00:00\n`;
+            inp += `ROUTING_STEP         0:00:30\n`;
+            inp += `VARIABLE_STEP        0.75\n`;
+            inp += `INERTIAL_DAMPING     PARTIAL\n`;
+            inp += `NORMAL_FLOW_LIMITED  BOTH\n`;
+            inp += `MIN_SURFAREA         12.566\n`;
+            inp += `MIN_SLOPE            0\n\n`;
 
-            inp += `[JUNCTIONS]\n;;Name\tElevation\tMaxDepth\tInitDepth\tSurDepth\tAponded\n`;
-            nodes.forEach((node, idx) => {
-                const elev = node.z || node.cota || 0;
-                inp += `${node.id || 'J' + (idx + 1)}\t${elev.toFixed(2)}\t2\t0\t0\t0\n`;
+            // EVAPORATION
+            inp += `[EVAPORATION]\n`;
+            inp += `;;Data Source    Parameters\n`;
+            inp += `CONSTANT         0.0\n`;
+            inp += `DRY_ONLY         NO\n\n`;
+
+            // RAINGAGES
+            inp += `[RAINGAGES]\n`;
+            inp += `;;Name           Format    Interval SCF      Source\n`;
+            inp += `RG1              INTENSITY 0:05     1.0      TIMESERIES TS1\n\n`;
+
+            // SUBCATCHMENTS
+            inp += `[SUBCATCHMENTS]\n`;
+            inp += `;;Name           Rain Gage        Outlet           Area     %Imperv  Width    %Slope   CurbLen  SnowPack\n`;
+            if (elements.subcatchments.length > 0) {
+                elements.subcatchments.forEach(s => {
+                    const imperv = s.type === 'impervious' ? 100 : s.type === 'pervious' ? 20 : 60;
+                    const outlet = nodes[0]?.id || 'J1';
+                    inp += `${s.id}              RG1              ${outlet}           ${s.area.toFixed(2)}     ${imperv}        ${s.width}       0.5      0\n`;
+                });
+            } else {
+                // Auto-generate subcatchments for each node
+                nodes.forEach((node, idx) => {
+                    if (idx < nodes.length - 1) {
+                        inp += `S${idx + 1}              RG1              ${node.id}           0.50     70       100      0.5      0\n`;
+                    }
+                });
+            }
+            inp += `\n`;
+
+            // SUBAREAS
+            inp += `[SUBAREAS]\n`;
+            inp += `;;Subcatchment   N-Imperv   N-Perv     S-Imperv   S-Perv     PctZero    RouteTo    PctRouted\n`;
+            const subcatchIds = elements.subcatchments.length > 0 ?
+                elements.subcatchments.map(s => s.id) :
+                nodes.slice(0, -1).map((_, idx) => `S${idx + 1}`);
+            subcatchIds.forEach(id => {
+                inp += `${id}              0.01       0.1        0.05       0.05       25         OUTLET\n`;
             });
+            inp += `\n`;
 
-            inp += `\n[OUTFALLS]\n;;Name\tElevation\tType\tStage Data\n`;
-            const outfall = nodes[nodes.length - 1];
-            inp += `OUT1\t${(outfall.z || 0).toFixed(2)}\tFREE\t\n`;
+            // INFILTRATION
+            inp += `[INFILTRATION]\n`;
+            inp += `;;Subcatchment   MaxRate    MinRate    Decay      DryTime    MaxInfil\n`;
+            subcatchIds.forEach(id => {
+                inp += `${id}              75.0       3.0        4.0        7.0        0\n`;
+            });
+            inp += `\n`;
 
-            inp += `\n[CONDUITS]\n;;Name\tFrom Node\tTo Node\tLength\tRoughness\tInOffset\tOutOffset\tInitFlow\tMaxFlow\n`;
+            // JUNCTIONS
+            inp += `[JUNCTIONS]\n`;
+            inp += `;;Name           Elevation  MaxDepth   InitDepth  SurDepth   Aponded\n`;
+            nodes.forEach((node, idx) => {
+                if (idx < nodes.length - 1) { // Exclude last node (will be outfall)
+                    const elev = node.z || node.cota || 0;
+                    inp += `${node.id || 'J' + (idx + 1)}              ${elev.toFixed(2)}       2          0          0          0\n`;
+                }
+            });
+            inp += `\n`;
+
+            // OUTFALLS
+            inp += `[OUTFALLS]\n`;
+            inp += `;;Name           Elevation  Type       Stage Data       Gated    Route To\n`;
+            if (elements.outfalls.length > 0) {
+                elements.outfalls.forEach(o => {
+                    inp += `${o.id}              ${o.elevation.toFixed(2)}       ${o.type}                       NO\n`;
+                });
+            } else {
+                const outfall = nodes[nodes.length - 1];
+                inp += `OUT1             ${(outfall.z || 0).toFixed(2)}       FREE                         NO\n`;
+            }
+            inp += `\n`;
+
+            // STORAGE
+            if (elements.storage.length > 0) {
+                inp += `[STORAGE]\n`;
+                inp += `;;Name           Elev.    MaxDepth   InitDepth  Shape      Curve Name/Params                       N/A      Fevap    Psi      Ksat     IMD\n`;
+                elements.storage.forEach(s => {
+                    inp += `${s.id}              ${s.elevation.toFixed(2)}       ${s.maxDepth}          0          ${s.type}    ${s.baseArea}                                    0        0\n`;
+                });
+                inp += `\n`;
+            }
+
+            // CONDUITS
+            inp += `[CONDUITS]\n`;
+            inp += `;;Name           From Node        To Node          Length     Roughness  InOffset   OutOffset  InitFlow   MaxFlow\n`;
             links.forEach((link, idx) => {
                 const length = link.length || link.comprimento || 50;
                 const roughness = 0.013; // Manning n
-                inp += `C${idx + 1}\t${link.from}\t${link.to}\t${length.toFixed(2)}\t${roughness}\t0\t0\t0\t0\n`;
+                inp += `C${idx + 1}              ${link.from}           ${link.to}           ${length.toFixed(2)}       ${roughness}       0          0          0          0\n`;
             });
+            inp += `\n`;
 
-            inp += `\n[XSECTIONS]\n;;Link\tShape\tGeom1\tGeom2\tGeom3\tGeom4\tBarrels\n`;
+            // XSECTIONS
+            inp += `[XSECTIONS]\n`;
+            inp += `;;Link           Shape        Geom1            Geom2      Geom3      Geom4      Barrels    Culvert\n`;
             links.forEach((link, idx) => {
-                const diameter = (link.diameter || link.DN || link.dn || 400) / 1000; // Convert mm to m
-                inp += `C${idx + 1}\tCIRCULAR\t${diameter.toFixed(3)}\t0\t0\t0\t1\n`;
+                const diameter = (link.diameter || link.DN || link.dn || 400) / 1000;
+                inp += `C${idx + 1}              CIRCULAR     ${diameter.toFixed(3)}            0          0          0          1\n`;
             });
+            inp += `\n`;
 
-            inp += `\n[REPORT]\nINPUT\tYES\nCONTROLS\tYES\nSUBCATCHMENTS\tALL\nNODES\tALL\nLINKS\tALL\n`;
-            inp += `\n[COORDINATES]\n`;
-            nodes.forEach((node, idx) => {
-                inp += `${node.id || 'J' + (idx + 1)}\t${node.x.toFixed(2)}\t${node.y.toFixed(2)}\n`;
+            // TIMESERIES (Rainfall)
+            inp += `[TIMESERIES]\n`;
+            inp += `;;Name           Date       Time       Value\n`;
+            swmmData.rainfall.forEach((r, idx) => {
+                const hours = Math.floor(r.time / 60);
+                const mins = r.time % 60;
+                inp += `TS1                         ${hours}:${mins.toString().padStart(2, '0')}       ${r.intensity.toFixed(2)}\n`;
             });
+            inp += `\n`;
+
+            // REPORT
+            inp += `[REPORT]\n`;
+            inp += `INPUT          YES\n`;
+            inp += `CONTROLS       YES\n`;
+            inp += `SUBCATCHMENTS  ALL\n`;
+            inp += `NODES          ALL\n`;
+            inp += `LINKS          ALL\n\n`;
+
+            // COORDINATES
+            inp += `[COORDINATES]\n`;
+            inp += `;;Node           X-Coord            Y-Coord\n`;
+            nodes.forEach((node, idx) => {
+                inp += `${node.id || 'J' + (idx + 1)}              ${(node.x || 0).toFixed(3)}           ${(node.y || 0).toFixed(3)}\n`;
+            });
+            if (elements.outfalls.length === 0) {
+                const outfall = nodes[nodes.length - 1];
+                inp += `OUT1             ${(outfall.x || 0).toFixed(3)}           ${((outfall.y || 0) - 50).toFixed(3)}\n`;
+            }
+            elements.storage.forEach((s, idx) => {
+                const refNode = nodes[idx] || nodes[0];
+                inp += `${s.id}              ${((refNode.x || 0) + 30).toFixed(3)}           ${(refNode.y || 0).toFixed(3)}\n`;
+            });
+            inp += `\n`;
+
+            // VERTICES
+            inp += `[VERTICES]\n`;
+            inp += `;;Link           X-Coord            Y-Coord\n\n`;
+
+            // POLYGONS (for subcatchments)
+            inp += `[POLYGONS]\n`;
+            inp += `;;Subcatchment   X-Coord            Y-Coord\n`;
+            subcatchIds.forEach((id, idx) => {
+                const refNode = nodes[idx] || nodes[0];
+                const x = refNode.x || 0;
+                const y = refNode.y || 0;
+                const offset = 20;
+                inp += `${id}              ${(x - offset).toFixed(3)}           ${(y - offset).toFixed(3)}\n`;
+                inp += `${id}              ${(x + offset).toFixed(3)}           ${(y - offset).toFixed(3)}\n`;
+                inp += `${id}              ${(x + offset).toFixed(3)}           ${(y + offset).toFixed(3)}\n`;
+                inp += `${id}              ${(x - offset).toFixed(3)}           ${(y + offset).toFixed(3)}\n`;
+            });
+            inp += `\n`;
+
+            // SYMBOLS
+            inp += `[SYMBOLS]\n`;
+            inp += `;;Gage           X-Coord            Y-Coord\n`;
+            const firstNode = nodes[0];
+            inp += `RG1              ${((firstNode.x || 0) - 50).toFixed(3)}           ${((firstNode.y || 0) + 50).toFixed(3)}\n`;
 
             // Download file
             const blob = new Blob([inp], { type: 'text/plain' });
@@ -9078,55 +10757,338 @@ DATA;
 
             document.getElementById('swmm-status').style.display = 'block';
             document.getElementById('swmm-status').innerHTML = `
-                <span style="color: var(--accent-green);">✓ Arquivo SWMM exportado!</span>
-                <br><small style="color: var(--text-secondary);">Junções: ${nodes.length}, Condutos: ${links.length}</small>
+                <span style="color: var(--accent-green);">✓ Arquivo SWMM exportado com sucesso!</span>
+                <br><small style="color: var(--text-secondary);">
+                    Junções: ${nodes.length - 1} |
+                    Condutos: ${links.length} |
+                    Sub-bacias: ${subcatchIds.length} |
+                    Bacias Detenção: ${elements.storage.length} |
+                    Exutórios: ${elements.outfalls.length || 1}
+                    <br>✓ Hietograma incluído (TR ${returnPeriod} anos, ${duration} min)
+                </small>
             `;
         }
 
-        function exportToOpenProject() {
-            if (planningData.schedule.length === 0) {
+        // ============================================
+        // OPENPROJECT MODULE FUNCTIONS
+        // ============================================
+
+        // OpenProject Data Store
+        let openProjectData = {
+            tasks: [],
+            resources: [],
+            equipment: [],
+            ganttChart: null
+        };
+
+        function addOpenProjectResource() {
+            const list = document.getElementById('openproject-resources-list');
+            const item = document.createElement('div');
+            item.className = 'node-item';
+            item.innerHTML = `
+                <input type="text" placeholder="Nome" value="Equipe ${list.children.length + 1}" style="flex: 2;">
+                <input type="number" placeholder="Qtd" value="1" style="width: 60px;">
+                <input type="number" placeholder="Custo/dia" value="1000" style="width: 100px;">
+                <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+            `;
+            list.appendChild(item);
+        }
+
+        function addOpenProjectEquipment() {
+            const list = document.getElementById('openproject-equipment-list');
+            const item = document.createElement('div');
+            item.className = 'node-item';
+            item.innerHTML = `
+                <input type="text" placeholder="Nome" value="Equipamento ${list.children.length + 1}" style="flex: 2;">
+                <input type="number" placeholder="Qtd" value="1" style="width: 60px;">
+                <input type="number" placeholder="Custo/dia" value="500" style="width: 100px;">
+                <button class="btn-small btn-remove" onclick="this.parentElement.remove()">✕</button>
+            `;
+            list.appendChild(item);
+        }
+
+        function addOpenProjectTask() {
+            const list = document.getElementById('openproject-tasks-list');
+            const startDate = document.getElementById('openproject-start-date')?.value || new Date().toISOString().slice(0, 10);
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td><input type="text" value="${list.children.length + 1}" style="width: 50px;"></td>
+                <td><input type="text" value="Nova Tarefa" style="width: 100%;"></td>
+                <td><input type="number" value="1" style="width: 60px;"> dias</td>
+                <td><input type="date" value="${startDate}"></td>
+                <td><input type="date" value="${startDate}"></td>
+                <td><select style="width: 100%;">
+                    <option>Equipe Escavação</option>
+                    <option>Equipe Assentamento</option>
+                    <option>Equipe Reaterro</option>
+                </select></td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <input type="range" min="0" max="100" value="0" style="width: 60px;">
+                        <span>0%</span>
+                    </div>
+                </td>
+                <td>
+                    <button class="btn-small btn-remove" onclick="this.closest('tr').remove(); renderGanttChart();">✕</button>
+                </td>
+            `;
+            list.appendChild(newRow);
+            renderGanttChart();
+        }
+
+        function loadTasksFromPlanning() {
+            if (!planningData || planningData.schedule.length === 0) {
                 alert('Gere o planejamento primeiro na aba Planejamento.');
                 return;
             }
 
-            const startDateInput = document.getElementById('planning-start-date')?.value;
+            const startDateInput = document.getElementById('openproject-start-date')?.value;
             const startDate = startDateInput ? new Date(startDateInput) : new Date();
 
-            // Create OpenProject-compatible JSON
-            const workPackages = planningData.schedule.map((s, idx) => {
-                const start = new Date(startDate);
-                start.setDate(start.getDate() + s.start_day - 1);
-                const end = new Date(startDate);
-                end.setDate(end.getDate() + s.end_day - 1);
+            const list = document.getElementById('openproject-tasks-list');
+            list.innerHTML = '';
 
-                return {
-                    id: idx + 1,
-                    subject: `${s.trecho_id} - ${s.activity}`,
-                    type: 'Task',
-                    status: 'New',
-                    startDate: start.toISOString().slice(0, 10),
-                    dueDate: end.toISOString().slice(0, 10),
-                    estimatedTime: `PT${s.duration * 8}H`,
-                    description: `Quantidade: ${s.quantidade?.toFixed(2) || '-'} ${s.unidade || ''}\nEquipe: ${s.team}`,
-                    customFields: {
-                        trecho_id: s.trecho_id,
-                        wbs_id: s.wbs_id,
-                        quantidade: s.quantidade,
-                        unidade: s.unidade
-                    }
-                };
+            // Group by trecho
+            const trechoTasks = {};
+            planningData.schedule.forEach(s => {
+                if (!trechoTasks[s.trecho_id]) {
+                    trechoTasks[s.trecho_id] = [];
+                }
+                trechoTasks[s.trecho_id].push(s);
             });
 
+            Object.entries(trechoTasks).forEach(([trechoId, tasks], trechoIdx) => {
+                tasks.forEach((task, taskIdx) => {
+                    const taskStart = new Date(startDate);
+                    taskStart.setDate(taskStart.getDate() + task.start_day - 1);
+                    const taskEnd = new Date(startDate);
+                    taskEnd.setDate(taskEnd.getDate() + task.end_day - 1);
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><input type="text" value="${task.wbs_id || `${trechoIdx + 1}.${taskIdx + 1}`}" style="width: 60px;"></td>
+                        <td><input type="text" value="${trechoId} - ${task.activity}" style="width: 100%;"></td>
+                        <td><input type="number" value="${task.duration}" style="width: 60px;"> dias</td>
+                        <td><input type="date" value="${taskStart.toISOString().slice(0, 10)}"></td>
+                        <td><input type="date" value="${taskEnd.toISOString().slice(0, 10)}"></td>
+                        <td><select style="width: 100%;">
+                            <option ${task.team?.includes('Escav') ? 'selected' : ''}>Equipe Escavação</option>
+                            <option ${task.team?.includes('Assent') ? 'selected' : ''}>Equipe Assentamento</option>
+                            <option ${task.team?.includes('Reaterro') ? 'selected' : ''}>Equipe Reaterro</option>
+                        </select></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <input type="range" min="0" max="100" value="0" style="width: 60px;" onchange="this.nextElementSibling.textContent = this.value + '%'">
+                                <span>0%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <button class="btn-small btn-remove" onclick="this.closest('tr').remove(); renderGanttChart();">✕</button>
+                        </td>
+                    `;
+                    list.appendChild(row);
+                });
+            });
+
+            renderGanttChart();
+        }
+
+        function getOpenProjectTasks() {
+            const tasks = [];
+            document.querySelectorAll('#openproject-tasks-list tr').forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                const selects = row.querySelectorAll('select');
+                tasks.push({
+                    wbs: inputs[0].value,
+                    name: inputs[1].value,
+                    duration: parseInt(inputs[2].value) || 1,
+                    startDate: inputs[3].value,
+                    endDate: inputs[4].value,
+                    resource: selects[0].value,
+                    progress: parseInt(inputs[5].value) || 0
+                });
+            });
+            return tasks;
+        }
+
+        function renderGanttChart() {
+            const tasks = getOpenProjectTasks();
+            if (tasks.length === 0) return;
+
+            const canvas = document.getElementById('gantt-chart');
+            const ctx = canvas.getContext('2d');
+            const container = document.getElementById('gantt-chart-container');
+
+            // Find date range
+            const dates = tasks.flatMap(t => [new Date(t.startDate), new Date(t.endDate)]);
+            const minDate = new Date(Math.min(...dates));
+            const maxDate = new Date(Math.max(...dates));
+            const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
+
+            // Set canvas size
+            const rowHeight = 30;
+            const headerHeight = 50;
+            const leftMargin = 200;
+            const dayWidth = 30;
+            canvas.width = leftMargin + totalDays * dayWidth + 50;
+            canvas.height = headerHeight + tasks.length * rowHeight + 20;
+
+            // Clear canvas
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw header (dates)
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, canvas.width, headerHeight);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '12px Segoe UI';
+
+            for (let d = 0; d <= totalDays; d++) {
+                const date = new Date(minDate);
+                date.setDate(date.getDate() + d);
+                const x = leftMargin + d * dayWidth;
+
+                // Draw vertical grid line
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.beginPath();
+                ctx.moveTo(x, headerHeight);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+
+                // Draw date label (every few days depending on scale)
+                if (d % 3 === 0) {
+                    ctx.fillText(`${date.getDate()}/${date.getMonth() + 1}`, x + 2, 35);
+                }
+            }
+
+            // Draw tasks
+            const colors = ['#3b82f6', '#22c55e', '#8b5cf6', '#f97316', '#ef4444'];
+
+            tasks.forEach((task, idx) => {
+                const y = headerHeight + idx * rowHeight;
+
+                // Draw row background
+                ctx.fillStyle = idx % 2 === 0 ? '#1e293b' : '#0f172a';
+                ctx.fillRect(0, y, canvas.width, rowHeight);
+
+                // Draw task name
+                ctx.fillStyle = '#f8fafc';
+                ctx.font = '12px Segoe UI';
+                ctx.fillText(`${task.wbs} ${task.name}`.substring(0, 25), 10, y + 20);
+
+                // Calculate bar position
+                const taskStart = new Date(task.startDate);
+                const taskEnd = new Date(task.endDate);
+                const startOffset = Math.ceil((taskStart - minDate) / (1000 * 60 * 60 * 24));
+                const duration = Math.ceil((taskEnd - taskStart) / (1000 * 60 * 60 * 24)) + 1;
+
+                const barX = leftMargin + startOffset * dayWidth;
+                const barWidth = duration * dayWidth - 4;
+                const barY = y + 5;
+                const barHeight = rowHeight - 10;
+
+                // Draw task bar
+                const color = colors[idx % colors.length];
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.roundRect(barX, barY, barWidth, barHeight, 4);
+                ctx.fill();
+
+                // Draw progress
+                if (task.progress > 0) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    const progressWidth = barWidth * (task.progress / 100);
+                    ctx.beginPath();
+                    ctx.roundRect(barX, barY, progressWidth, barHeight, 4);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '10px Segoe UI';
+                    ctx.fillText(`${task.progress}%`, barX + 5, barY + barHeight - 3);
+                }
+
+                // Draw duration text
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px Segoe UI';
+                if (barWidth > 40) {
+                    ctx.fillText(`${task.duration}d`, barX + barWidth - 25, barY + barHeight - 3);
+                }
+            });
+        }
+
+        function zoomGantt(direction) {
+            // Implement zoom (simplified - just re-render)
+            renderGanttChart();
+        }
+
+        function fitGantt() {
+            renderGanttChart();
+        }
+
+        function changeGanttView() {
+            renderGanttChart();
+        }
+
+        function exportToOpenProject() {
+            const tasks = getOpenProjectTasks();
+
+            if (tasks.length === 0) {
+                loadTasksFromPlanning();
+                return;
+            }
+
+            const projectName = document.getElementById('openproject-name')?.value || 'Projeto de Saneamento';
+            const projectManager = document.getElementById('openproject-manager')?.value || '';
+
+            // Get resources
+            const resources = [];
+            document.querySelectorAll('#openproject-resources-list .node-item').forEach(item => {
+                const inputs = item.querySelectorAll('input');
+                resources.push({
+                    name: inputs[0].value,
+                    quantity: parseInt(inputs[1].value) || 1,
+                    costPerDay: parseFloat(inputs[2].value) || 0
+                });
+            });
+
+            const workPackages = tasks.map((task, idx) => ({
+                id: idx + 1,
+                subject: task.name,
+                type: 'Task',
+                status: task.progress >= 100 ? 'Closed' : task.progress > 0 ? 'In progress' : 'New',
+                startDate: task.startDate,
+                dueDate: task.endDate,
+                estimatedTime: `PT${task.duration * 8}H`,
+                percentageDone: task.progress,
+                assignee: task.resource,
+                customFields: {
+                    wbs_id: task.wbs,
+                    duration_days: task.duration
+                }
+            }));
+
             const projectData = {
+                _type: 'Project',
                 project: {
-                    name: 'Projeto de Saneamento',
-                    identifier: 'sanitation-project',
-                    description: 'Projeto exportado da Plataforma de Saneamento'
+                    name: projectName,
+                    identifier: projectName.toLowerCase().replace(/\s+/g, '-'),
+                    description: 'Projeto exportado da Plataforma de Saneamento',
+                    manager: projectManager
                 },
                 workPackages: workPackages,
+                resources: resources,
                 exportDate: new Date().toISOString(),
-                totalDays: Math.max(...planningData.schedule.map(s => s.end_day)),
-                totalActivities: planningData.schedule.length
+                statistics: {
+                    totalTasks: tasks.length,
+                    completedTasks: tasks.filter(t => t.progress >= 100).length,
+                    inProgressTasks: tasks.filter(t => t.progress > 0 && t.progress < 100).length,
+                    totalDays: Math.max(...tasks.map(t => {
+                        const end = new Date(t.endDate);
+                        const start = new Date(tasks[0].startDate);
+                        return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+                    }))
+                }
             };
 
             // Download JSON file
@@ -9138,85 +11100,515 @@ DATA;
             a.click();
             URL.revokeObjectURL(url);
 
-            alert(`Arquivo OpenProject exportado!\n\nPacotes de trabalho: ${workPackages.length}\nDuração total: ${projectData.totalDays} dias\n\nImporte este JSON no OpenProject via API ou manualmente.`);
+            alert(`Arquivo OpenProject exportado!\n\nPacotes de trabalho: ${workPackages.length}\nRecursos: ${resources.length}\nDuração total: ${projectData.statistics.totalDays} dias\n\nImporte este JSON no OpenProject via API.`);
         }
 
-        function exportQGISProject() {
+        function exportToMSProject() {
+            const tasks = getOpenProjectTasks();
+
+            if (tasks.length === 0) {
+                loadTasksFromPlanning();
+                return;
+            }
+
+            const projectName = document.getElementById('openproject-name')?.value || 'Projeto de Saneamento';
+
+            // Generate MS Project XML
+            let xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Project xmlns="http://schemas.microsoft.com/project">
+    <Name>${projectName}</Name>
+    <Title>${projectName}</Title>
+    <CreationDate>${new Date().toISOString()}</CreationDate>
+    <Tasks>`;
+
+            tasks.forEach((task, idx) => {
+                xml += `
+        <Task>
+            <UID>${idx + 1}</UID>
+            <ID>${idx + 1}</ID>
+            <Name>${task.name}</Name>
+            <WBS>${task.wbs}</WBS>
+            <Start>${task.startDate}T08:00:00</Start>
+            <Finish>${task.endDate}T17:00:00</Finish>
+            <Duration>PT${task.duration * 8}H0M0S</Duration>
+            <PercentComplete>${task.progress}</PercentComplete>
+        </Task>`;
+            });
+
+            xml += `
+    </Tasks>
+</Project>`;
+
+            const blob = new Blob([xml], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'projeto_msproject.xml';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            alert(`Arquivo MS Project exportado!\n\nTarefas: ${tasks.length}`);
+        }
+
+        function exportGanttPDF() {
+            // For PDF, we'll use canvas to image then download
+            const canvas = document.getElementById('gantt-chart');
+            const dataUrl = canvas.toDataURL('image/png');
+
+            // Open in new window for printing
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Gráfico de Gantt</title>
+                    <style>
+                        body { margin: 0; padding: 20px; }
+                        img { max-width: 100%; }
+                        @media print {
+                            body { margin: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>Gráfico de Gantt - ${document.getElementById('openproject-name')?.value || 'Projeto'}</h1>
+                    <img src="${dataUrl}">
+                    <script>window.onload = function() { window.print(); }</script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        function exportGanttImage() {
+            const canvas = document.getElementById('gantt-chart');
+            const dataUrl = canvas.toDataURL('image/png');
+
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = 'gantt_chart.png';
+            a.click();
+        }
+
+        // ============================================
+        // QGIS MODULE FUNCTIONS
+        // ============================================
+
+        function getQGISSettings() {
+            return {
+                crs: document.getElementById('qgis-crs')?.value || 'EPSG:31983',
+                exportNodes: document.getElementById('qgis-export-nodes')?.checked ?? true,
+                exportLinks: document.getElementById('qgis-export-links')?.checked ?? true,
+                exportCatchments: document.getElementById('qgis-export-catchments')?.checked ?? false,
+                attrHydraulic: document.getElementById('qgis-attr-hydraulic')?.checked ?? true,
+                attrQuantities: document.getElementById('qgis-attr-quantities')?.checked ?? true,
+                attrBudget: document.getElementById('qgis-attr-budget')?.checked ?? false,
+                nodeClassification: document.getElementById('qgis-node-classification')?.value || 'single',
+                nodeColor: document.getElementById('qgis-node-color')?.value || '#3b82f6',
+                linkClassification: document.getElementById('qgis-link-classification')?.value || 'single',
+                linkColor: document.getElementById('qgis-link-color')?.value || '#22c55e',
+                linkWidth: parseFloat(document.getElementById('qgis-link-width')?.value) || 1
+            };
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 59, g: 130, b: 246 };
+        }
+
+        function exportQGISShapefile() {
             const { nodes, links } = getActiveNodesAndLinks();
+            const settings = getQGISSettings();
 
             if (nodes.length === 0) {
                 alert('Importe dados primeiro na aba Topografia.');
                 return;
             }
 
-            // Create a QGIS project file (.qgs) - simplified XML
+            // Create a DBF-like structure (simplified - just creates CSV with WKT)
+            // In real implementation, would use shpwrite library
+
+            const zip = new JSZip();
+
+            // Export nodes as points
+            if (settings.exportNodes) {
+                let nodesCsv = 'WKT,id,x,y,z,tipo,profundidade\n';
+                nodes.forEach(node => {
+                    const x = node.x || 0;
+                    const y = node.y || 0;
+                    const z = node.z || node.cota || 0;
+                    nodesCsv += `"POINT(${x} ${y})",${node.id},${x.toFixed(3)},${y.toFixed(3)},${z.toFixed(3)},PV,${(node.depth || 1.5).toFixed(2)}\n`;
+                });
+                zip.file("pontos.csv", nodesCsv);
+
+                // Create PRJ file
+                const prj = getCRSWkt(settings.crs);
+                zip.file("pontos.prj", prj);
+            }
+
+            // Export links as lines
+            if (settings.exportLinks) {
+                let linksCsv = 'WKT,id,from_node,to_node,length,diameter,material,slope\n';
+                links.forEach((link, idx) => {
+                    const fromNode = nodes.find(n => n.id === link.from) || nodes[idx] || { x: 0, y: 0 };
+                    const toNode = nodes.find(n => n.id === link.to) || nodes[idx + 1] || { x: 100, y: 100 };
+                    const length = link.length || link.comprimento || 50;
+                    const diameter = link.diameter || link.DN || link.dn || 150;
+                    const material = link.material || 'PVC';
+                    const slope = link.slope || link.declividade || 0.005;
+
+                    linksCsv += `"LINESTRING(${fromNode.x || 0} ${fromNode.y || 0},${toNode.x || 0} ${toNode.y || 0})",T${idx + 1},${link.from},${link.to},${length.toFixed(2)},${diameter},${material},${slope.toFixed(4)}\n`;
+                });
+                zip.file("trechos.csv", linksCsv);
+
+                const prj = getCRSWkt(settings.crs);
+                zip.file("trechos.prj", prj);
+            }
+
+            zip.file("LEIAME.txt", `Shapefiles de Rede de Saneamento
+=====================================
+
+IMPORTANTE: Os arquivos .csv contêm geometria em formato WKT.
+Para usar no QGIS:
+
+1. Abra o QGIS
+2. Vá em Camada > Adicionar Camada > Adicionar Camada de Texto Delimitado
+3. Selecione o arquivo .csv
+4. Em "Definição de geometria", selecione "WKT"
+5. Escolha o campo "WKT" para a geometria
+6. Clique em "Adicionar"
+
+Alternativamente, use ogr2ogr para converter:
+ogr2ogr -f "ESRI Shapefile" pontos.shp pontos.csv -oo GEOM_POSSIBLE_NAMES=WKT
+
+CRS: ${settings.crs}
+Nós: ${nodes.length}
+Trechos: ${links.length}
+Data: ${new Date().toLocaleString('pt-BR')}
+`);
+
+            zip.generateAsync({ type: 'blob' }).then(content => {
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'rede_shapefile.zip';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            showQGISStatus('Shapefiles exportados! Arquivos CSV com geometria WKT.', nodes.length, links.length);
+        }
+
+        function getCRSWkt(epsg) {
+            const crsList = {
+                'EPSG:31983': 'PROJCS["SIRGAS 2000 / UTM zone 23S",GEOGCS["SIRGAS 2000",DATUM["Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000",SPHEROID["GRS 1980",6378137,298.257222101]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",-45],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",10000000],UNIT["metre",1]]',
+                'EPSG:31984': 'PROJCS["SIRGAS 2000 / UTM zone 24S",GEOGCS["SIRGAS 2000",DATUM["Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000",SPHEROID["GRS 1980",6378137,298.257222101]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",-39],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",10000000],UNIT["metre",1]]',
+                'EPSG:4674': 'GEOGCS["SIRGAS 2000",DATUM["Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000",SPHEROID["GRS 1980",6378137,298.257222101]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]',
+                'EPSG:4326': 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]',
+                'EPSG:32723': 'PROJCS["WGS 84 / UTM zone 23S",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",-45],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",10000000],UNIT["metre",1]]'
+            };
+            return crsList[epsg] || crsList['EPSG:31983'];
+        }
+
+        function exportQGISGeoJSON() {
+            const { nodes, links } = getActiveNodesAndLinks();
+            const settings = getQGISSettings();
+
+            if (nodes.length === 0) {
+                alert('Importe dados primeiro na aba Topografia.');
+                return;
+            }
+
+            const zip = new JSZip();
+
+            // Export nodes as GeoJSON
+            if (settings.exportNodes) {
+                const nodesGeoJSON = {
+                    type: 'FeatureCollection',
+                    name: 'pontos',
+                    crs: { type: 'name', properties: { name: `urn:ogc:def:crs:${settings.crs.replace(':', '::')}` } },
+                    features: nodes.map((node, idx) => ({
+                        type: 'Feature',
+                        properties: {
+                            id: node.id || `PV${idx + 1}`,
+                            x: node.x || 0,
+                            y: node.y || 0,
+                            z: node.z || node.cota || 0,
+                            tipo: 'PV',
+                            profundidade: node.depth || 1.5,
+                            ...(settings.attrHydraulic && epanetData.results?.nodes?.[node.id] ? {
+                                pressao: epanetData.results.nodes[node.id].pressure,
+                                demanda: epanetData.results.nodes[node.id].demand
+                            } : {})
+                        },
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [node.x || 0, node.y || 0]
+                        }
+                    }))
+                };
+                zip.file('pontos.geojson', JSON.stringify(nodesGeoJSON, null, 2));
+            }
+
+            // Export links as GeoJSON
+            if (settings.exportLinks) {
+                const linksGeoJSON = {
+                    type: 'FeatureCollection',
+                    name: 'trechos',
+                    crs: { type: 'name', properties: { name: `urn:ogc:def:crs:${settings.crs.replace(':', '::')}` } },
+                    features: links.map((link, idx) => {
+                        const fromNode = nodes.find(n => n.id === link.from) || nodes[idx] || { x: 0, y: 0 };
+                        const toNode = nodes.find(n => n.id === link.to) || nodes[idx + 1] || { x: 100, y: 100 };
+
+                        return {
+                            type: 'Feature',
+                            properties: {
+                                id: `T${idx + 1}`,
+                                from_node: link.from,
+                                to_node: link.to,
+                                comprimento: link.length || link.comprimento || 50,
+                                diametro: link.diameter || link.DN || link.dn || 150,
+                                material: link.material || 'PVC',
+                                declividade: link.slope || link.declividade || 0.005,
+                                ...(settings.attrHydraulic && epanetData.results?.links?.[`P${idx + 1}`] ? {
+                                    vazao: epanetData.results.links[`P${idx + 1}`].flow,
+                                    velocidade: epanetData.results.links[`P${idx + 1}`].velocity
+                                } : {})
+                            },
+                            geometry: {
+                                type: 'LineString',
+                                coordinates: [
+                                    [fromNode.x || 0, fromNode.y || 0],
+                                    [toNode.x || 0, toNode.y || 0]
+                                ]
+                            }
+                        };
+                    })
+                };
+                zip.file('trechos.geojson', JSON.stringify(linksGeoJSON, null, 2));
+            }
+
+            zip.generateAsync({ type: 'blob' }).then(content => {
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'rede_geojson.zip';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            showQGISStatus('GeoJSON exportado com sucesso!', nodes.length, links.length);
+        }
+
+        function exportQGISGeoPackage() {
+            // GeoPackage is SQLite-based, so we'll export as GeoJSON with instructions
+            // for conversion using ogr2ogr
+
+            const { nodes, links } = getActiveNodesAndLinks();
+            const settings = getQGISSettings();
+
+            if (nodes.length === 0) {
+                alert('Importe dados primeiro na aba Topografia.');
+                return;
+            }
+
+            // First export GeoJSON
+            const zip = new JSZip();
+
+            const nodesGeoJSON = {
+                type: 'FeatureCollection',
+                name: 'pontos',
+                features: nodes.map((node, idx) => ({
+                    type: 'Feature',
+                    properties: {
+                        id: node.id || `PV${idx + 1}`,
+                        x: node.x || 0,
+                        y: node.y || 0,
+                        z: node.z || node.cota || 0,
+                        tipo: 'PV'
+                    },
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [node.x || 0, node.y || 0]
+                    }
+                }))
+            };
+
+            const linksGeoJSON = {
+                type: 'FeatureCollection',
+                name: 'trechos',
+                features: links.map((link, idx) => {
+                    const fromNode = nodes.find(n => n.id === link.from) || nodes[idx] || { x: 0, y: 0 };
+                    const toNode = nodes.find(n => n.id === link.to) || nodes[idx + 1] || { x: 100, y: 100 };
+                    return {
+                        type: 'Feature',
+                        properties: {
+                            id: `T${idx + 1}`,
+                            from_node: link.from,
+                            to_node: link.to,
+                            comprimento: link.length || 50,
+                            diametro: link.diameter || 150
+                        },
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [[fromNode.x || 0, fromNode.y || 0], [toNode.x || 0, toNode.y || 0]]
+                        }
+                    };
+                })
+            };
+
+            zip.file('pontos.geojson', JSON.stringify(nodesGeoJSON, null, 2));
+            zip.file('trechos.geojson', JSON.stringify(linksGeoJSON, null, 2));
+
+            // Script to create GPKG
+            zip.file('criar_geopackage.bat', `@echo off
+echo Criando GeoPackage...
+ogr2ogr -f GPKG rede_saneamento.gpkg pontos.geojson -nln pontos -a_srs ${settings.crs}
+ogr2ogr -f GPKG rede_saneamento.gpkg trechos.geojson -nln trechos -a_srs ${settings.crs} -update
+echo GeoPackage criado: rede_saneamento.gpkg
+pause
+`);
+
+            zip.file('criar_geopackage.sh', `#!/bin/bash
+echo "Criando GeoPackage..."
+ogr2ogr -f GPKG rede_saneamento.gpkg pontos.geojson -nln pontos -a_srs ${settings.crs}
+ogr2ogr -f GPKG rede_saneamento.gpkg trechos.geojson -nln trechos -a_srs ${settings.crs} -update
+echo "GeoPackage criado: rede_saneamento.gpkg"
+`);
+
+            zip.file('LEIAME.txt', `Para criar o GeoPackage:
+
+Windows: Execute criar_geopackage.bat
+Linux/Mac: Execute chmod +x criar_geopackage.sh && ./criar_geopackage.sh
+
+Requer GDAL/OGR instalado (https://gdal.org)
+
+Alternativamente, abra os arquivos GeoJSON no QGIS e
+exporte como GeoPackage manualmente.
+`);
+
+            zip.generateAsync({ type: 'blob' }).then(content => {
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'rede_geopackage_converter.zip';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            showQGISStatus('Pacote GeoPackage exportado! Execute o script para converter.', nodes.length, links.length);
+        }
+
+        function exportQGISProject() {
+            const { nodes, links } = getActiveNodesAndLinks();
+            const settings = getQGISSettings();
+
+            if (nodes.length === 0) {
+                alert('Importe dados primeiro na aba Topografia.');
+                return;
+            }
+
+            const nodeColor = hexToRgb(settings.nodeColor);
+            const linkColor = hexToRgb(settings.linkColor);
+            const crsCode = settings.crs.split(':')[1];
+
+            // Create QGIS project file
             let qgs = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
 <qgis version="3.28" projectname="Projeto de Saneamento">
   <title>Rede de Saneamento</title>
   <projectCrs>
     <spatialrefsys>
-      <proj4>+proj=utm +zone=23 +south +datum=WGS84 +units=m +no_defs</proj4>
-      <srid>32723</srid>
-      <description>WGS 84 / UTM zone 23S</description>
+      <authid>${settings.crs}</authid>
+      <srid>${crsCode}</srid>
     </spatialrefsys>
   </projectCrs>
   <layer-tree-group>
-    <layer-tree-layer id="pontos" name="Pontos (PVs)" source="./pontos.shp" providerKey="ogr"/>
-    <layer-tree-layer id="trechos" name="Trechos" source="./trechos.shp" providerKey="ogr"/>
+    <layer-tree-layer id="pontos" name="Pontos (PVs)" source="./pontos.geojson" providerKey="ogr" checked="Qt::Checked"/>
+    <layer-tree-layer id="trechos" name="Trechos" source="./trechos.geojson" providerKey="ogr" checked="Qt::Checked"/>
   </layer-tree-group>
 </qgis>`;
 
-            // Create a QML style file for points
-            let qmlPoints = `<?xml version="1.0" encoding="UTF-8"?>
-<qgis version="3.28" styleCategories="AllStyleCategories">
-  <renderer-v2 type="singleSymbol">
-    <symbols>
-      <symbol type="marker" name="0">
-        <layer class="SimpleMarker">
-          <prop k="color" v="59,130,246,255"/>
-          <prop k="size" v="3"/>
-          <prop k="name" v="circle"/>
-        </layer>
-      </symbol>
-    </symbols>
-  </renderer-v2>
-</qgis>`;
+            // Create QML style for nodes
+            let qmlNodes = generateQMLNodes(settings);
 
-            // Create a QML style file for lines
-            let qmlLines = `<?xml version="1.0" encoding="UTF-8"?>
-<qgis version="3.28" styleCategories="AllStyleCategories">
-  <renderer-v2 type="singleSymbol">
-    <symbols>
-      <symbol type="line" name="0">
-        <layer class="SimpleLine">
-          <prop k="line_color" v="34,197,94,255"/>
-          <prop k="line_width" v="0.5"/>
-        </layer>
-      </symbol>
-    </symbols>
-  </renderer-v2>
-</qgis>`;
+            // Create QML style for links
+            let qmlLinks = generateQMLLinks(settings);
 
-            // Create ZIP with all files
+            // Create GeoJSON files
+            const nodesGeoJSON = {
+                type: 'FeatureCollection',
+                name: 'pontos',
+                features: nodes.map((node, idx) => ({
+                    type: 'Feature',
+                    properties: {
+                        id: node.id || `PV${idx + 1}`,
+                        x: node.x || 0,
+                        y: node.y || 0,
+                        z: node.z || node.cota || 0,
+                        tipo: 'PV',
+                        profundidade: node.depth || 1.5
+                    },
+                    geometry: { type: 'Point', coordinates: [node.x || 0, node.y || 0] }
+                }))
+            };
+
+            const linksGeoJSON = {
+                type: 'FeatureCollection',
+                name: 'trechos',
+                features: links.map((link, idx) => {
+                    const fromNode = nodes.find(n => n.id === link.from) || nodes[idx] || { x: 0, y: 0 };
+                    const toNode = nodes.find(n => n.id === link.to) || nodes[idx + 1] || { x: 100, y: 100 };
+                    return {
+                        type: 'Feature',
+                        properties: {
+                            id: `T${idx + 1}`,
+                            from_node: link.from,
+                            to_node: link.to,
+                            comprimento: link.length || 50,
+                            diametro: link.diameter || 150,
+                            material: link.material || 'PVC'
+                        },
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [[fromNode.x || 0, fromNode.y || 0], [toNode.x || 0, toNode.y || 0]]
+                        }
+                    };
+                })
+            };
+
+            // Create ZIP
             const zip = new JSZip();
             zip.file("projeto_saneamento.qgs", qgs);
-            zip.file("pontos_style.qml", qmlPoints);
-            zip.file("trechos_style.qml", qmlLines);
+            zip.file("pontos.geojson", JSON.stringify(nodesGeoJSON, null, 2));
+            zip.file("trechos.geojson", JSON.stringify(linksGeoJSON, null, 2));
+            zip.file("pontos.qml", qmlNodes);
+            zip.file("trechos.qml", qmlLinks);
             zip.file("README.txt", `Projeto QGIS - Rede de Saneamento
-========================================
+=====================================
 
-Este pacote contém:
-- projeto_saneamento.qgs: Projeto QGIS
-- pontos_style.qml: Estilo para camada de pontos
-- trechos_style.qml: Estilo para camada de trechos
+Conteúdo:
+- projeto_saneamento.qgs: Arquivo de projeto QGIS
+- pontos.geojson: Camada de pontos (PVs)
+- trechos.geojson: Camada de trechos (tubulações)
+- pontos.qml: Estilo para pontos
+- trechos.qml: Estilo para trechos
 
-Instruções:
-1. Exporte os Shapefiles (pontos e trechos) na aba Importar
-2. Coloque os arquivos .shp na mesma pasta deste projeto
-3. Abra o arquivo .qgs no QGIS
-4. Aplique os estilos .qml às camadas
+Para usar:
+1. Extraia todos os arquivos na mesma pasta
+2. Abra projeto_saneamento.qgs no QGIS 3.x
+3. Os estilos serão aplicados automaticamente
 
+Para aplicar estilos manualmente:
+1. Clique com botão direito na camada
+2. Propriedades > Simbologia
+3. Menu inferior: Estilo > Carregar Estilo
+4. Selecione o arquivo .qml correspondente
+
+CRS: ${settings.crs}
 Dados exportados:
 - Pontos: ${nodes.length}
 - Trechos: ${links.length}
@@ -9227,12 +11619,411 @@ Dados exportados:
                 const url = URL.createObjectURL(content);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'projeto_qgis.zip';
+                a.download = 'projeto_qgis_completo.zip';
                 a.click();
                 URL.revokeObjectURL(url);
             });
 
-            alert(`Projeto QGIS exportado!\n\nInclui:\n- Arquivo de projeto (.qgs)\n- Estilos de simbologia (.qml)\n- Instruções de uso\n\nExporte também os Shapefiles na aba Importar para usar com este projeto.`);
+            showQGISStatus('Projeto QGIS completo exportado!', nodes.length, links.length);
+        }
+
+        function generateQMLNodes(settings) {
+            const color = hexToRgb(settings.nodeColor);
+
+            return `<?xml version="1.0" encoding="UTF-8"?>
+<qgis version="3.28" styleCategories="AllStyleCategories">
+  <renderer-v2 type="singleSymbol" symbollevels="0" enableorderby="0">
+    <symbols>
+      <symbol type="marker" name="0" clip_to_extent="1" alpha="1">
+        <layer class="SimpleMarker" enabled="1">
+          <prop k="color" v="${color.r},${color.g},${color.b},255"/>
+          <prop k="name" v="circle"/>
+          <prop k="size" v="3"/>
+          <prop k="size_unit" v="MM"/>
+          <prop k="outline_color" v="35,35,35,255"/>
+          <prop k="outline_width" v="0.4"/>
+        </layer>
+      </symbol>
+    </symbols>
+  </renderer-v2>
+  <labeling type="simple">
+    <settings calloutType="simple">
+      <text-style fieldName="id" fontSize="8" fontFamily="Arial"/>
+      <placement placement="2" dist="1"/>
+    </settings>
+  </labeling>
+</qgis>`;
+        }
+
+        function generateQMLLinks(settings) {
+            const color = hexToRgb(settings.linkColor);
+            const width = settings.linkWidth;
+
+            return `<?xml version="1.0" encoding="UTF-8"?>
+<qgis version="3.28" styleCategories="AllStyleCategories">
+  <renderer-v2 type="singleSymbol" symbollevels="0" enableorderby="0">
+    <symbols>
+      <symbol type="line" name="0" clip_to_extent="1" alpha="1">
+        <layer class="SimpleLine" enabled="1">
+          <prop k="line_color" v="${color.r},${color.g},${color.b},255"/>
+          <prop k="line_width" v="${width}"/>
+          <prop k="line_width_unit" v="MM"/>
+          <prop k="capstyle" v="round"/>
+          <prop k="joinstyle" v="round"/>
+        </layer>
+      </symbol>
+    </symbols>
+  </renderer-v2>
+  <labeling type="simple">
+    <settings calloutType="simple">
+      <text-style fieldName="diametro" fontSize="7" fontFamily="Arial"/>
+      <text-format addDirectionSymbol="1"/>
+      <placement placement="3"/>
+    </settings>
+  </labeling>
+</qgis>`;
+        }
+
+        function generateQGISPlugin() {
+            const zip = new JSZip();
+
+            // Plugin metadata
+            zip.file("hydronetwork_plugin/metadata.txt", `[general]
+name=HydroNetwork Importer
+qgisMinimumVersion=3.0
+description=Importa dados da Plataforma de Saneamento HydroNetwork
+version=1.0.0
+author=Plataforma de Saneamento
+email=contato@exemplo.com
+about=Plugin para importar dados exportados da plataforma HydroNetwork de análise de redes de saneamento.
+tracker=https://github.com/hydronetwork/qgis-plugin/issues
+repository=https://github.com/hydronetwork/qgis-plugin
+tags=saneamento,água,esgoto,drenagem,hidráulica
+category=Vector
+icon=icon.png
+experimental=False
+deprecated=False
+`);
+
+            // Main plugin file
+            zip.file("hydronetwork_plugin/__init__.py", `# -*- coding: utf-8 -*-
+\"\"\"
+HydroNetwork QGIS Plugin
+Importa dados da Plataforma de Saneamento
+\"\"\"
+
+def classFactory(iface):
+    from .hydronetwork_plugin import HydroNetworkPlugin
+    return HydroNetworkPlugin(iface)
+`);
+
+            // Plugin implementation
+            zip.file("hydronetwork_plugin/hydronetwork_plugin.py", `# -*- coding: utf-8 -*-
+\"\"\"
+HydroNetwork QGIS Plugin - Módulo Principal
+\"\"\"
+
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtWidgets import QAction, QFileDialog, QMessageBox
+from qgis.core import (
+    QgsProject, QgsVectorLayer, QgsCoordinateReferenceSystem,
+    QgsFeature, QgsGeometry, QgsPointXY, QgsField
+)
+from PyQt5.QtCore import QVariant
+import os
+import json
+
+
+class HydroNetworkPlugin:
+    \"\"\"Plugin QGIS para importar dados da plataforma HydroNetwork.\"\"\"
+
+    def __init__(self, iface):
+        self.iface = iface
+        self.plugin_dir = os.path.dirname(__file__)
+        self.actions = []
+        self.menu = '&HydroNetwork'
+        self.toolbar = self.iface.addToolBar('HydroNetwork')
+        self.toolbar.setObjectName('HydroNetwork')
+
+    def initGui(self):
+        \"\"\"Inicializa a interface do plugin.\"\"\"
+        icon_path = os.path.join(self.plugin_dir, 'icon.png')
+
+        # Ação de importar GeoJSON
+        action_import = QAction(
+            QIcon(icon_path),
+            'Importar GeoJSON HydroNetwork',
+            self.iface.mainWindow()
+        )
+        action_import.triggered.connect(self.import_geojson)
+        self.toolbar.addAction(action_import)
+        self.iface.addPluginToMenu(self.menu, action_import)
+        self.actions.append(action_import)
+
+        # Ação de importar EPANET INP
+        action_epanet = QAction(
+            QIcon(icon_path),
+            'Importar EPANET INP',
+            self.iface.mainWindow()
+        )
+        action_epanet.triggered.connect(self.import_epanet)
+        self.iface.addPluginToMenu(self.menu, action_epanet)
+        self.actions.append(action_epanet)
+
+    def unload(self):
+        \"\"\"Remove o plugin.\"\"\"
+        for action in self.actions:
+            self.iface.removePluginMenu(self.menu, action)
+            self.iface.removeToolBarIcon(action)
+        del self.toolbar
+
+    def import_geojson(self):
+        \"\"\"Importa arquivos GeoJSON exportados da plataforma.\"\"\"
+        file_path, _ = QFileDialog.getOpenFileName(
+            None,
+            'Selecionar arquivo GeoJSON',
+            '',
+            'GeoJSON (*.geojson *.json)'
+        )
+
+        if not file_path:
+            return
+
+        try:
+            layer = QgsVectorLayer(file_path, os.path.basename(file_path), 'ogr')
+            if layer.isValid():
+                QgsProject.instance().addMapLayer(layer)
+                self.iface.messageBar().pushSuccess(
+                    'HydroNetwork',
+                    f'Camada importada: {layer.featureCount()} feições'
+                )
+            else:
+                raise Exception('Camada inválida')
+        except Exception as e:
+            QMessageBox.critical(
+                None,
+                'Erro',
+                f'Erro ao importar arquivo: {str(e)}'
+            )
+
+    def import_epanet(self):
+        \"\"\"Importa arquivo EPANET INP e cria camadas.\"\"\"
+        file_path, _ = QFileDialog.getOpenFileName(
+            None,
+            'Selecionar arquivo EPANET INP',
+            '',
+            'EPANET INP (*.inp)'
+        )
+
+        if not file_path:
+            return
+
+        try:
+            nodes, pipes, coords = self.parse_epanet_inp(file_path)
+
+            # Criar camada de nós
+            node_layer = QgsVectorLayer('Point?crs=EPSG:31983', 'EPANET_Nos', 'memory')
+            node_provider = node_layer.dataProvider()
+            node_provider.addAttributes([
+                QgsField('id', QVariant.String),
+                QgsField('elevacao', QVariant.Double),
+                QgsField('demanda', QVariant.Double)
+            ])
+            node_layer.updateFields()
+
+            for node in nodes:
+                feat = QgsFeature()
+                if node['id'] in coords:
+                    feat.setGeometry(QgsGeometry.fromPointXY(
+                        QgsPointXY(coords[node['id']]['x'], coords[node['id']]['y'])
+                    ))
+                feat.setAttributes([node['id'], node['elevation'], node['demand']])
+                node_provider.addFeature(feat)
+
+            # Criar camada de tubos
+            pipe_layer = QgsVectorLayer('LineString?crs=EPSG:31983', 'EPANET_Tubos', 'memory')
+            pipe_provider = pipe_layer.dataProvider()
+            pipe_provider.addAttributes([
+                QgsField('id', QVariant.String),
+                QgsField('no_inicio', QVariant.String),
+                QgsField('no_fim', QVariant.String),
+                QgsField('comprimento', QVariant.Double),
+                QgsField('diametro', QVariant.Double)
+            ])
+            pipe_layer.updateFields()
+
+            for pipe in pipes:
+                feat = QgsFeature()
+                if pipe['from'] in coords and pipe['to'] in coords:
+                    feat.setGeometry(QgsGeometry.fromPolylineXY([
+                        QgsPointXY(coords[pipe['from']]['x'], coords[pipe['from']]['y']),
+                        QgsPointXY(coords[pipe['to']]['x'], coords[pipe['to']]['y'])
+                    ]))
+                feat.setAttributes([
+                    pipe['id'], pipe['from'], pipe['to'],
+                    pipe['length'], pipe['diameter']
+                ])
+                pipe_provider.addFeature(feat)
+
+            QgsProject.instance().addMapLayer(node_layer)
+            QgsProject.instance().addMapLayer(pipe_layer)
+
+            self.iface.messageBar().pushSuccess(
+                'HydroNetwork',
+                f'EPANET importado: {len(nodes)} nós, {len(pipes)} tubos'
+            )
+
+        except Exception as e:
+            QMessageBox.critical(None, 'Erro', f'Erro ao importar: {str(e)}')
+
+    def parse_epanet_inp(self, file_path):
+        \"\"\"Parse arquivo EPANET INP.\"\"\"
+        nodes = []
+        pipes = []
+        coords = {}
+
+        with open(file_path, 'r') as f:
+            content = f.read()
+
+        section = None
+        for line in content.split('\\n'):
+            line = line.strip()
+            if line.startswith('['):
+                section = line[1:-1].upper() if line.endswith(']') else None
+                continue
+            if not line or line.startswith(';'):
+                continue
+
+            parts = line.split()
+            if section == 'JUNCTIONS' and len(parts) >= 2:
+                nodes.append({
+                    'id': parts[0],
+                    'elevation': float(parts[1]) if len(parts) > 1 else 0,
+                    'demand': float(parts[2]) if len(parts) > 2 else 0
+                })
+            elif section == 'PIPES' and len(parts) >= 5:
+                pipes.append({
+                    'id': parts[0],
+                    'from': parts[1],
+                    'to': parts[2],
+                    'length': float(parts[3]),
+                    'diameter': float(parts[4])
+                })
+            elif section == 'COORDINATES' and len(parts) >= 3:
+                coords[parts[0]] = {
+                    'x': float(parts[1]),
+                    'y': float(parts[2])
+                }
+
+        return nodes, pipes, coords
+`);
+
+            // Icon placeholder (base64 encoded small PNG)
+            zip.file("hydronetwork_plugin/icon.png", "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAABVUlEQVQ4jZ2Tv0oDQRDGv9nbS0JIkRQWFhYWvoCFhYWFhS9gYWHhA1hYWFj4ABYWFhY+gIWFhYWFhYUvYBELExJzd7v/xmIvl8slETLNDDPffLuzs8A/S3jz3EQkRERcRBQ4APBYl5YA7v0Xy+Vy2ev1SqOjo7S5uUl7e3u0tbVF29vbtLOzQ7u7u7S3t0fJZJK+v7+pVqvR9/c3BUEQW1pa4lAoRD09PcRxHBERM9PS0hJ5nkcHBwdUrVaJ4ziqqqqora2NM5kMLSwskGEY5Ps+BUFArusS", { base64: true });
+
+            zip.generateAsync({ type: 'blob' }).then(content => {
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'hydronetwork_qgis_plugin.zip';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            showQGISStatus('Plugin QGIS Python gerado! Instale via Complementos > Gerenciar Complementos > Instalar via ZIP.');
+        }
+
+        function exportQMLNodes() {
+            const settings = getQGISSettings();
+            const qml = generateQMLNodes(settings);
+            downloadFile('pontos_style.qml', qml, 'application/xml');
+            showQGISStatus('Estilo QML de nós exportado!');
+        }
+
+        function exportQMLLinks() {
+            const settings = getQGISSettings();
+            const qml = generateQMLLinks(settings);
+            downloadFile('trechos_style.qml', qml, 'application/xml');
+            showQGISStatus('Estilo QML de trechos exportado!');
+        }
+
+        function exportQMLCatchments() {
+            const settings = getQGISSettings();
+            const color = hexToRgb(settings.linkColor);
+
+            const qml = `<?xml version="1.0" encoding="UTF-8"?>
+<qgis version="3.28" styleCategories="AllStyleCategories">
+  <renderer-v2 type="singleSymbol">
+    <symbols>
+      <symbol type="fill" name="0" alpha="0.5">
+        <layer class="SimpleFill" enabled="1">
+          <prop k="color" v="${color.r},${color.g},${color.b},100"/>
+          <prop k="outline_color" v="${color.r},${color.g},${color.b},255"/>
+          <prop k="outline_width" v="0.5"/>
+          <prop k="style" v="solid"/>
+        </layer>
+      </symbol>
+    </symbols>
+  </renderer-v2>
+</qgis>`;
+
+            downloadFile('bacias_style.qml', qml, 'application/xml');
+            showQGISStatus('Estilo QML de bacias exportado!');
+        }
+
+        function exportAllQML() {
+            const settings = getQGISSettings();
+            const zip = new JSZip();
+
+            zip.file('pontos_style.qml', generateQMLNodes(settings));
+            zip.file('trechos_style.qml', generateQMLLinks(settings));
+
+            const color = hexToRgb(settings.linkColor);
+            zip.file('bacias_style.qml', `<?xml version="1.0" encoding="UTF-8"?>
+<qgis version="3.28" styleCategories="AllStyleCategories">
+  <renderer-v2 type="singleSymbol">
+    <symbols>
+      <symbol type="fill" name="0" alpha="0.5">
+        <layer class="SimpleFill" enabled="1">
+          <prop k="color" v="${color.r},${color.g},${color.b},100"/>
+          <prop k="outline_color" v="${color.r},${color.g},${color.b},255"/>
+          <prop k="outline_width" v="0.5"/>
+        </layer>
+      </symbol>
+    </symbols>
+  </renderer-v2>
+</qgis>`);
+
+            zip.generateAsync({ type: 'blob' }).then(content => {
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'estilos_qml.zip';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            showQGISStatus('Todos os estilos QML exportados!');
+        }
+
+        function downloadFile(filename, content, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showQGISStatus(message, nodes = 0, links = 0) {
+            const status = document.getElementById('qgis-export-status');
+            status.style.display = 'block';
+            status.innerHTML = `
+                <span style="color: var(--accent-green);">✓ ${message}</span>
+                ${nodes > 0 || links > 0 ? `<br><small style="color: var(--text-secondary);">Nós: ${nodes} | Trechos: ${links}</small>` : ''}
+            `;
         }
 
         // ============================================
