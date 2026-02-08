@@ -7494,89 +7494,71 @@ DATA;
                 return;
             }
 
-            // Build planning input data from platform data
-            const planningInput = [];
+            // Use the same conversion function as generatePlanning
+            const planningInput = convertLinksToPlanning(importedNodes, previewLinks);
 
-            // Process links/trechos
-            if (hasLinks) {
-                previewLinks.forEach((link, idx) => {
-                    // Find nodes to get elevations
-                    const nodeFrom = importedNodes.find(n => n.id === link.from || n.name === link.from);
-                    const nodeTo = importedNodes.find(n => n.id === link.to || n.name === link.to);
-
-                    const cotaMont = nodeFrom?.z || nodeFrom?.cota || nodeFrom?.elevation || 0;
-                    const cotaJus = nodeTo?.z || nodeTo?.cota || nodeTo?.elevation || 0;
-                    const length = link.length || link.comprimento || 0;
-
-                    // Calculate depth based on typical invert depth (default 1.5m)
-                    const profMont = link.depthUp || link.profMont || 1.5;
-                    const profJus = link.depthDown || link.profJus || 1.5;
-                    const avgDepth = (profMont + profJus) / 2;
-
-                    // Get diameter
-                    const dn = link.diameter || link.DN || link.dn || 150;
-
-                    planningInput.push({
-                        trecho: `T${idx + 1}`,
-                        de: link.from,
-                        para: link.to,
-                        comprimento: length,
-                        diametro: dn,
-                        profundidade: avgDepth,
-                        cotaMont: cotaMont,
-                        cotaJus: cotaJus,
-                        // Calculate volumes if not present
-                        escavacao: link.escav || (length * 0.8 * avgDepth), // width 0.8m
-                        reaterro: link.reat || (length * 0.8 * avgDepth * 0.85),
-                        material: link.material || 'PVC',
-                        tipo: link.type || 'esgoto'
-                    });
-                });
-            }
-
-            // If we have calculated costs, enhance the data
-            if (hasCosts && calculatedCosts.length > 0) {
-                calculatedCosts.forEach((cost, idx) => {
-                    if (planningInput[idx]) {
-                        planningInput[idx].escavacao = cost.escavacao || planningInput[idx].escavacao;
-                        planningInput[idx].reaterro = cost.reaterro || planningInput[idx].reaterro;
-                        planningInput[idx].custo = cost.custoTotal || cost.total || 0;
-                    }
-                });
+            if (planningInput.length === 0) {
+                alert('Erro ao converter dados. Verifique se existem trechos definidos.');
+                return;
             }
 
             // Store in planningData
             planningData.input = planningInput;
 
+            // Calculate summary stats
+            const trechos = [...new Set(planningInput.map(p => p.trecho_id))];
+            const totalLength = planningInput
+                .filter(p => p.unidade === 'm')
+                .reduce((sum, p) => sum + (p.quantidade || 0), 0);
+            const totalExcavation = planningInput
+                .filter(p => p.servico.includes('Escavação'))
+                .reduce((sum, p) => sum + (p.quantidade || 0), 0);
+
             // Show success and update UI
             const infoDiv = document.getElementById('planning-platform-info');
             if (infoDiv) {
                 infoDiv.style.display = 'block';
-                document.getElementById('planning-nodes-count').textContent = importedNodes.length;
-                document.getElementById('planning-links-count').textContent = previewLinks.length;
+                document.getElementById('planning-nodes-count').textContent = importedNodes?.length || 0;
+                document.getElementById('planning-links-count').textContent = previewLinks?.length || 0;
                 document.getElementById('planning-costs-count').textContent = calculatedCosts?.length || 0;
             }
 
-            // Show validation
-            showValidationSuccess({
-                data: planningInput,
-                stats: {
-                    totalLinks: planningInput.length,
-                    totalLength: planningInput.reduce((sum, l) => sum + (l.comprimento || 0), 0),
-                    avgDepth: planningInput.length > 0
-                        ? planningInput.reduce((sum, l) => sum + (l.profundidade || 0), 0) / planningInput.length
-                        : 0,
-                    totalExcavation: planningInput.reduce((sum, l) => sum + (l.escavacao || 0), 0),
-                    totalBackfill: planningInput.reduce((sum, l) => sum + (l.reaterro || 0), 0)
-                },
-                source: 'platform'
-            });
+            // Show validation success
+            const container = document.getElementById('planning-validation');
+            const content = document.getElementById('planning-validation-content');
+            if (container && content) {
+                container.style.display = 'block';
+                content.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
+                        <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.5rem; color: var(--accent-blue); font-weight: bold;">${trechos.length}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Trechos</div>
+                        </div>
+                        <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.5rem; color: var(--accent-green); font-weight: bold;">${totalLength.toFixed(0)}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Metros</div>
+                        </div>
+                        <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.5rem; color: var(--accent-orange); font-weight: bold;">${totalExcavation.toFixed(0)}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">m³ Escavação</div>
+                        </div>
+                        <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.5rem; color: var(--accent-purple); font-weight: bold;">${planningInput.length}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Atividades</div>
+                        </div>
+                    </div>
+                    <p style="margin-top: 10px; color: var(--accent-green); font-size: 0.9rem;">
+                        ✓ Dados carregados com sucesso! Clique em "Gerar Planejamento".
+                    </p>
+                `;
+            }
 
-            // Enable generate button
             alert(`Dados carregados com sucesso!\n\n` +
-                `Trechos: ${planningInput.length}\n` +
-                `Extensão total: ${planningInput.reduce((s, l) => s + (l.comprimento || 0), 0).toFixed(1)} m\n\n` +
-                `Agora você pode gerar o planejamento.`);
+                `Trechos: ${trechos.length}\n` +
+                `Atividades: ${planningInput.length}\n` +
+                `Extensão: ${totalLength.toFixed(1)} m\n` +
+                `Escavação: ${totalExcavation.toFixed(1)} m³\n\n` +
+                `Agora clique em "Gerar Planejamento".`);
         }
 
         // Update info when switching to planning tab
