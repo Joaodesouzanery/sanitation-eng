@@ -790,7 +790,12 @@ PV02,359290.456,7352780.123,1.82</pre>
                         </p>
                     </div>
 
-                    <button class="btn btn-small btn-add" onclick="addSewerLink()">+ Adicionar Trecho</button>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                        <button class="btn btn-small btn-add" onclick="addSewerLink()">+ Trecho Manual</button>
+                        <button class="btn btn-small" style="background: var(--accent-blue); color: white; border: none;" onclick="generateSewerLinksAuto('sequential')">🔗 Gerar Sequencial</button>
+                        <button class="btn btn-small" style="background: var(--accent-purple); color: white; border: none;" onclick="generateSewerLinksAuto('nearest')">🔗 Gerar por Proximidade</button>
+                        <button class="btn btn-small" style="background: var(--accent-orange); color: white; border: none;" onclick="clearSewerLinks()">🗑️ Limpar Trechos</button>
+                    </div>
                 </div>
             </div>
 
@@ -855,7 +860,12 @@ PV02,359290.456,7352780.123,1.82</pre>
                         </p>
                     </div>
 
-                    <button class="btn btn-small btn-add" onclick="addWaterLink()">+ Adicionar Trecho</button>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                        <button class="btn btn-small btn-add" onclick="addWaterLink()">+ Trecho Manual</button>
+                        <button class="btn btn-small" style="background: var(--accent-blue); color: white; border: none;" onclick="generateWaterLinksAuto('sequential')">🔗 Gerar Sequencial</button>
+                        <button class="btn btn-small" style="background: var(--accent-purple); color: white; border: none;" onclick="generateWaterLinksAuto('nearest')">🔗 Gerar por Proximidade</button>
+                        <button class="btn btn-small" style="background: var(--accent-orange); color: white; border: none;" onclick="clearWaterLinks()">🗑️ Limpar Trechos</button>
+                    </div>
                 </div>
             </div>
 
@@ -926,7 +936,12 @@ PV02,359290.456,7352780.123,1.82</pre>
                         </p>
                     </div>
 
-                    <button class="btn btn-small btn-add" onclick="addDrainageLink()">+ Adicionar Galeria</button>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                        <button class="btn btn-small btn-add" onclick="addDrainageLink()">+ Galeria Manual</button>
+                        <button class="btn btn-small" style="background: var(--accent-blue); color: white; border: none;" onclick="generateDrainageLinksAuto('sequential')">🔗 Gerar Sequencial</button>
+                        <button class="btn btn-small" style="background: var(--accent-purple); color: white; border: none;" onclick="generateDrainageLinksAuto('nearest')">🔗 Gerar por Proximidade</button>
+                        <button class="btn btn-small" style="background: var(--accent-orange); color: white; border: none;" onclick="clearDrainageLinks()">🗑️ Limpar Galerias</button>
+                    </div>
                 </div>
             </div>
 
@@ -4302,6 +4317,24 @@ DATA;
             renderSewerLinks();
         }
 
+        function generateSewerLinksAuto(mode = 'sequential') {
+            if (sewerNodes.length < 2) {
+                alert('Adicione pelo menos 2 nós primeiro.');
+                return;
+            }
+            sewerLinks = generateLinksFromNodes(sewerNodes, mode);
+            renderSewerLinks();
+            alert(`${sewerLinks.length} trechos gerados (${mode === 'sequential' ? 'sequencial' : 'por proximidade'}).`);
+        }
+
+        function clearSewerLinks() {
+            if (sewerLinks.length === 0) return;
+            if (confirm('Limpar todos os trechos de esgoto?')) {
+                sewerLinks = [];
+                renderSewerLinks();
+            }
+        }
+
         function renderSewerLinks() {
             const container = document.getElementById('sewer-links');
             let html = '<p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px;">Trechos: De → Para, Comprimento</p>';
@@ -4501,6 +4534,24 @@ DATA;
         function removeWaterLink(idx) {
             waterLinks.splice(idx, 1);
             renderWaterLinks();
+        }
+
+        function generateWaterLinksAuto(mode = 'sequential') {
+            if (waterNodes.length < 2) {
+                alert('Adicione pelo menos 2 nós primeiro.');
+                return;
+            }
+            waterLinks = generateLinksFromNodes(waterNodes, mode);
+            renderWaterLinks();
+            alert(`${waterLinks.length} trechos gerados (${mode === 'sequential' ? 'sequencial' : 'por proximidade'}).`);
+        }
+
+        function clearWaterLinks() {
+            if (waterLinks.length === 0) return;
+            if (confirm('Limpar todos os trechos de água?')) {
+                waterLinks = [];
+                renderWaterLinks();
+            }
         }
 
         function renderWaterLinks() {
@@ -4709,6 +4760,24 @@ DATA;
         function removeDrainageLink(idx) {
             drainageLinks.splice(idx, 1);
             renderDrainageLinks();
+        }
+
+        function generateDrainageLinksAuto(mode = 'sequential') {
+            if (drainageNodes.length < 2) {
+                alert('Adicione pelo menos 2 nós primeiro.');
+                return;
+            }
+            drainageLinks = generateLinksFromNodes(drainageNodes, mode);
+            renderDrainageLinks();
+            alert(`${drainageLinks.length} galerias geradas (${mode === 'sequential' ? 'sequencial' : 'por proximidade'}).`);
+        }
+
+        function clearDrainageLinks() {
+            if (drainageLinks.length === 0) return;
+            if (confirm('Limpar todas as galerias de drenagem?')) {
+                drainageLinks = [];
+                renderDrainageLinks();
+            }
         }
 
         function renderDrainageLinks() {
