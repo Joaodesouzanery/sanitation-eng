@@ -1163,7 +1163,79 @@
             background: var(--accent-blue);
             color: white;
         }
+
+        /* Leaflet Map Styles */
+        .leaflet-container {
+            background: #1a1a2e !important;
+            font-family: 'Inter', sans-serif;
+        }
+        .leaflet-popup-content-wrapper {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .leaflet-popup-tip {
+            background: var(--bg-card);
+        }
+        .leaflet-popup-content {
+            margin: 12px;
+        }
+        .map-toolbar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            display: flex;
+            gap: 5px;
+            flex-direction: column;
+        }
+        .map-toolbar button {
+            padding: 8px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        .map-toolbar button:hover {
+            background: var(--accent-blue);
+            color: white;
+        }
+        .map-legend {
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            z-index: 1000;
+            background: var(--bg-card);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 0.8rem;
+        }
+        .map-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+        }
+        .map-legend-color {
+            width: 20px;
+            height: 4px;
+            border-radius: 2px;
+        }
+        .map-legend-circle {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
     </style>
+
+    <!-- Leaflet CSS and JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
     <div class="container">
@@ -3608,6 +3680,72 @@ PV02,359290.456,7352780.123,1.82</pre>
                 <div id="qgis-no-data-warning" style="display: none; margin-top: 15px; padding: 15px; background: rgba(239, 68, 68, 0.2); border-radius: 8px; border: 1px solid var(--accent-red);">
                     <span style="color: var(--accent-red);">⚠️ Nenhum dado disponível.</span>
                     <span style="color: var(--text-secondary);">Importe dados usando os botões acima ou use dados da plataforma.</span>
+                </div>
+            </div>
+
+            <!-- MAPA INTERATIVO -->
+            <div class="card" style="margin-bottom: 20px;">
+                <h2><span class="icon">🗺️</span> Mapa Interativo da Rede</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                    Visualize e interaja com a rede. Clique nos elementos para ver detalhes. Use o scroll para zoom e arraste para mover.
+                </p>
+
+                <div style="position: relative;">
+                    <!-- Map Container -->
+                    <div id="qgis-interactive-map" style="width: 100%; height: 500px; border-radius: 8px; border: 1px solid var(--border-color); overflow: hidden;"></div>
+
+                    <!-- Map Toolbar -->
+                    <div class="map-toolbar">
+                        <button onclick="qgisMapFitBounds()" title="Ajustar visualização">📍 Ajustar</button>
+                        <button onclick="qgisMapToggleNodes()" title="Mostrar/Ocultar nós">⚫ Nós</button>
+                        <button onclick="qgisMapToggleLinks()" title="Mostrar/Ocultar trechos">📏 Trechos</button>
+                        <button onclick="qgisMapToggleLabels()" title="Mostrar/Ocultar rótulos">🏷️ Rótulos</button>
+                        <button onclick="qgisMapChangeBaseLayer()" title="Alterar mapa base">🗺️ Base</button>
+                        <button onclick="qgisMapExportImage()" title="Exportar como imagem">📷 Captura</button>
+                    </div>
+
+                    <!-- Map Legend -->
+                    <div class="map-legend" id="qgis-map-legend">
+                        <strong style="display: block; margin-bottom: 8px;">Legenda</strong>
+                        <div class="map-legend-item">
+                            <span class="map-legend-circle" style="background: #3b82f6;"></span>
+                            <span>Nó / PV</span>
+                        </div>
+                        <div class="map-legend-item">
+                            <span class="map-legend-circle" style="background: #f59e0b;"></span>
+                            <span>Reservatório</span>
+                        </div>
+                        <div class="map-legend-item">
+                            <span class="map-legend-color" style="background: #22c55e;"></span>
+                            <span>Trecho DN ≤ 200</span>
+                        </div>
+                        <div class="map-legend-item">
+                            <span class="map-legend-color" style="background: #8b5cf6; height: 6px;"></span>
+                            <span>Trecho DN > 200</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="qgisMapRefresh()">
+                        <span>🔄</span> Atualizar Mapa
+                    </button>
+                    <button class="btn btn-secondary" onclick="qgisMapCenterOnSelection()">
+                        <span>🎯</span> Centralizar Seleção
+                    </button>
+                    <select id="qgis-map-style" onchange="qgisMapChangeStyle(this.value)" style="padding: 10px; border-radius: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary);">
+                        <option value="default">Estilo: Padrão</option>
+                        <option value="diameter">Estilo: Por Diâmetro</option>
+                        <option value="depth">Estilo: Por Profundidade</option>
+                        <option value="velocity">Estilo: Por Velocidade</option>
+                        <option value="pressure">Estilo: Por Pressão</option>
+                    </select>
+                </div>
+
+                <!-- Info Panel for Selected Element -->
+                <div id="qgis-map-info-panel" style="display: none; margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <h4 style="margin: 0 0 10px 0; color: var(--accent-blue);">📍 Elemento Selecionado</h4>
+                    <div id="qgis-map-info-content"></div>
                 </div>
             </div>
 
@@ -13004,9 +13142,20 @@ DATA;
             document.getElementById('qgis-loaded-nodes').textContent = data.nodes?.length || 0;
             document.getElementById('qgis-loaded-links').textContent = data.links?.length || 0;
 
+            // Update additional counters
+            const tasksEl = document.getElementById('qgis-loaded-tasks');
+            if (tasksEl) {
+                tasksEl.textContent = moduleData.openproject?.tasks?.length || 0;
+            }
+
             // Hide warning if data exists
             const warning = document.getElementById('qgis-no-data-warning');
             if (warning) warning.style.display = (data.nodes?.length > 0 || data.links?.length > 0) ? 'none' : 'block';
+
+            // Auto-refresh the interactive map if it's initialized
+            if (qgisMap && (data.nodes?.length > 0 || data.links?.length > 0)) {
+                setTimeout(() => qgisMapRefresh(), 100);
+            }
         }
 
         // Clear data functions
@@ -13037,8 +13186,450 @@ DATA;
             moduleData.qgis = { nodes: [], links: [], polygons: [] };
             updateQgisUI();
             document.getElementById('qgis-import-status').style.display = 'none';
+            if (qgisMap) {
+                qgisMapLayers.nodes.clearLayers();
+                qgisMapLayers.links.clearLayers();
+                qgisMapLayers.labels.clearLayers();
+            }
             ToastSystem.info('Dados QGIS limpos');
         }
+
+        // ============================================
+        // QGIS INTERACTIVE MAP (Leaflet)
+        // ============================================
+
+        let qgisMap = null;
+        let qgisMapLayers = {
+            nodes: null,
+            links: null,
+            labels: null,
+            reservoirs: null
+        };
+        let qgisMapBaseLayers = {};
+        let qgisMapCurrentBaseIndex = 0;
+        let qgisMapShowNodes = true;
+        let qgisMapShowLinks = true;
+        let qgisMapShowLabels = false;
+        let qgisMapSelectedElement = null;
+        let qgisMapCurrentStyle = 'default';
+
+        // Initialize the interactive map
+        function initQgisMap() {
+            if (qgisMap) return; // Already initialized
+
+            const mapContainer = document.getElementById('qgis-interactive-map');
+            if (!mapContainer) return;
+
+            // Create the map centered on Brazil
+            qgisMap = L.map('qgis-interactive-map', {
+                center: [-23.5505, -46.6333], // São Paulo default
+                zoom: 12,
+                zoomControl: true,
+                attributionControl: true
+            });
+
+            // Define base layers
+            qgisMapBaseLayers = {
+                'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }),
+                'Satélite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: '© Esri',
+                    maxZoom: 18
+                }),
+                'Topo': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenTopoMap',
+                    maxZoom: 17
+                }),
+                'Escuro': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '© CartoDB',
+                    maxZoom: 19
+                })
+            };
+
+            // Add default base layer
+            qgisMapBaseLayers['OpenStreetMap'].addTo(qgisMap);
+
+            // Create layer groups
+            qgisMapLayers.links = L.layerGroup().addTo(qgisMap);
+            qgisMapLayers.nodes = L.layerGroup().addTo(qgisMap);
+            qgisMapLayers.reservoirs = L.layerGroup().addTo(qgisMap);
+            qgisMapLayers.labels = L.layerGroup();
+
+            // Add layer control
+            L.control.layers(qgisMapBaseLayers, {
+                'Nós': qgisMapLayers.nodes,
+                'Trechos': qgisMapLayers.links,
+                'Reservatórios': qgisMapLayers.reservoirs,
+                'Rótulos': qgisMapLayers.labels
+            }, { position: 'bottomright' }).addTo(qgisMap);
+
+            console.log('QGIS Interactive Map initialized');
+        }
+
+        // Refresh the map with current data
+        function qgisMapRefresh() {
+            if (!qgisMap) initQgisMap();
+            if (!qgisMap) return;
+
+            // Get all available data
+            const allData = getAllModuleData();
+            const { nodes, links } = getActiveNodesAndLinks();
+
+            const mapNodes = allData.nodes.length > 0 ? allData.nodes : nodes;
+            const mapLinks = allData.links.length > 0 ? allData.links : links;
+
+            if (mapNodes.length === 0 && mapLinks.length === 0) {
+                ToastSystem.warning('Nenhum dado para exibir no mapa.');
+                return;
+            }
+
+            // Clear existing layers
+            qgisMapLayers.nodes.clearLayers();
+            qgisMapLayers.links.clearLayers();
+            qgisMapLayers.labels.clearLayers();
+            qgisMapLayers.reservoirs.clearLayers();
+
+            // Create node lookup for links
+            const nodeLookup = {};
+            mapNodes.forEach(n => {
+                nodeLookup[n.id] = n;
+            });
+
+            // Check if we have geographic coordinates or need to generate
+            const hasGeoCoords = mapNodes.some(n => {
+                const x = n.x || 0;
+                const y = n.y || 0;
+                // Check if coordinates look like lat/lng (small numbers) or UTM (large numbers)
+                return Math.abs(x) < 180 && Math.abs(y) < 90;
+            });
+
+            // If coordinates are UTM, we need to convert or use a local projection
+            // For simplicity, we'll normalize to a viewable range
+            let bounds = [];
+
+            // Add links first (so they appear behind nodes)
+            mapLinks.forEach((link, idx) => {
+                const fromNode = nodeLookup[link.from] || nodeLookup[link.fromNode] || mapNodes[idx];
+                const toNode = nodeLookup[link.to] || nodeLookup[link.toNode] || mapNodes[idx + 1];
+
+                if (!fromNode || !toNode) return;
+
+                let lat1, lng1, lat2, lng2;
+
+                if (hasGeoCoords) {
+                    lat1 = fromNode.y || fromNode.lat || 0;
+                    lng1 = fromNode.x || fromNode.lng || 0;
+                    lat2 = toNode.y || toNode.lat || 0;
+                    lng2 = toNode.x || toNode.lng || 0;
+                } else {
+                    // Normalize UTM to viewable coordinates (pseudo-projection)
+                    const centerLat = -23.5;
+                    const centerLng = -46.6;
+                    const scale = 0.00001;
+                    lat1 = centerLat + ((fromNode.y || 0) - 7400000) * scale;
+                    lng1 = centerLng + ((fromNode.x || 0) - 330000) * scale;
+                    lat2 = centerLat + ((toNode.y || 0) - 7400000) * scale;
+                    lng2 = centerLng + ((toNode.x || 0) - 330000) * scale;
+                }
+
+                // Determine line style based on current style mode
+                const diameter = link.diameter || link.DN || link.dn || 150;
+                const depth = link.depth || link.profundidade || 1.5;
+                const velocity = link.velocity || link.velocidade || 0;
+
+                let color = '#22c55e';
+                let weight = 3;
+
+                if (qgisMapCurrentStyle === 'diameter') {
+                    if (diameter <= 100) { color = '#22c55e'; weight = 2; }
+                    else if (diameter <= 200) { color = '#3b82f6'; weight = 3; }
+                    else if (diameter <= 400) { color = '#8b5cf6'; weight = 4; }
+                    else { color = '#ef4444'; weight = 5; }
+                } else if (qgisMapCurrentStyle === 'depth') {
+                    if (depth <= 1.5) { color = '#22c55e'; weight = 2; }
+                    else if (depth <= 2.5) { color = '#f59e0b'; weight = 3; }
+                    else if (depth <= 4) { color = '#ef4444'; weight = 4; }
+                    else { color = '#7c3aed'; weight = 5; }
+                } else if (qgisMapCurrentStyle === 'velocity') {
+                    if (velocity < 0.6) { color = '#3b82f6'; weight = 3; }
+                    else if (velocity <= 3) { color = '#22c55e'; weight = 3; }
+                    else { color = '#ef4444'; weight = 4; }
+                } else {
+                    // Default style by diameter
+                    if (diameter > 200) { color = '#8b5cf6'; weight = 4; }
+                }
+
+                const polyline = L.polyline([[lat1, lng1], [lat2, lng2]], {
+                    color: color,
+                    weight: weight,
+                    opacity: 0.8
+                });
+
+                polyline.bindPopup(`
+                    <strong>Trecho: ${link.id || `T${idx + 1}`}</strong><br>
+                    De: ${link.from || fromNode.id} → Para: ${link.to || toNode.id}<br>
+                    Comprimento: ${(link.length || link.comprimento || 0).toFixed(1)} m<br>
+                    Diâmetro: ${diameter} mm<br>
+                    Material: ${link.material || 'PVC'}<br>
+                    Declividade: ${((link.slope || link.declividade || 0) * 1000).toFixed(2)} ‰
+                `);
+
+                polyline.on('click', () => showQgisMapElementInfo('link', link, idx));
+
+                qgisMapLayers.links.addLayer(polyline);
+                bounds.push([lat1, lng1], [lat2, lng2]);
+            });
+
+            // Add nodes
+            mapNodes.forEach((node, idx) => {
+                let lat, lng;
+
+                if (hasGeoCoords) {
+                    lat = node.y || node.lat || 0;
+                    lng = node.x || node.lng || 0;
+                } else {
+                    const centerLat = -23.5;
+                    const centerLng = -46.6;
+                    const scale = 0.00001;
+                    lat = centerLat + ((node.y || 0) - 7400000) * scale;
+                    lng = centerLng + ((node.x || 0) - 330000) * scale;
+                }
+
+                // Determine marker style
+                const depth = node.depth || node.profundidade || 1.5;
+                const pressure = node.pressure || node.pressao || 0;
+                let color = '#3b82f6';
+                let radius = 6;
+
+                if (qgisMapCurrentStyle === 'depth') {
+                    if (depth <= 1.5) { color = '#22c55e'; }
+                    else if (depth <= 2.5) { color = '#f59e0b'; }
+                    else if (depth <= 4) { color = '#ef4444'; }
+                    else { color = '#7c3aed'; }
+                } else if (qgisMapCurrentStyle === 'pressure') {
+                    if (pressure < 10) { color = '#ef4444'; }
+                    else if (pressure <= 50) { color = '#22c55e'; }
+                    else { color = '#f59e0b'; }
+                }
+
+                const marker = L.circleMarker([lat, lng], {
+                    radius: radius,
+                    fillColor: color,
+                    color: '#ffffff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+
+                marker.bindPopup(`
+                    <strong>Nó: ${node.id || `PV${idx + 1}`}</strong><br>
+                    X: ${(node.x || 0).toFixed(2)}<br>
+                    Y: ${(node.y || 0).toFixed(2)}<br>
+                    Cota: ${(node.z || node.cota || 0).toFixed(2)} m<br>
+                    Profundidade: ${depth.toFixed(2)} m<br>
+                    ${pressure ? `Pressão: ${pressure.toFixed(1)} mca` : ''}
+                `);
+
+                marker.on('click', () => showQgisMapElementInfo('node', node, idx));
+
+                qgisMapLayers.nodes.addLayer(marker);
+
+                // Add label
+                const label = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        className: 'map-label',
+                        html: `<span style="background: rgba(0,0,0,0.7); color: white; padding: 2px 5px; border-radius: 3px; font-size: 10px; white-space: nowrap;">${node.id || `PV${idx + 1}`}</span>`,
+                        iconSize: [50, 20],
+                        iconAnchor: [25, -10]
+                    })
+                });
+                qgisMapLayers.labels.addLayer(label);
+
+                bounds.push([lat, lng]);
+            });
+
+            // Add reservoirs if available
+            const reservoirs = moduleData.epanet?.reservoirs || [];
+            reservoirs.forEach((res, idx) => {
+                let lat, lng;
+                if (hasGeoCoords) {
+                    lat = res.y || res.lat || -23.5;
+                    lng = res.x || res.lng || -46.6;
+                } else {
+                    lat = -23.5 + idx * 0.01;
+                    lng = -46.6 + idx * 0.01;
+                }
+
+                const marker = L.circleMarker([lat, lng], {
+                    radius: 10,
+                    fillColor: '#f59e0b',
+                    color: '#ffffff',
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                });
+
+                marker.bindPopup(`
+                    <strong>Reservatório: ${res.id}</strong><br>
+                    Carga: ${res.head || 0} m
+                `);
+
+                qgisMapLayers.reservoirs.addLayer(marker);
+            });
+
+            // Fit map to bounds
+            if (bounds.length > 0) {
+                qgisMap.fitBounds(bounds, { padding: [50, 50] });
+            }
+
+            // Update UI counters
+            document.getElementById('qgis-loaded-nodes').textContent = mapNodes.length;
+            document.getElementById('qgis-loaded-links').textContent = mapLinks.length;
+
+            ToastSystem.success(`Mapa atualizado: ${mapNodes.length} nós e ${mapLinks.length} trechos`);
+        }
+
+        // Show element info in panel
+        function showQgisMapElementInfo(type, element, idx) {
+            const panel = document.getElementById('qgis-map-info-panel');
+            const content = document.getElementById('qgis-map-info-content');
+
+            if (!panel || !content) return;
+
+            panel.style.display = 'block';
+            qgisMapSelectedElement = { type, element, idx };
+
+            if (type === 'node') {
+                content.innerHTML = `
+                    <table style="width: 100%; font-size: 0.9rem;">
+                        <tr><td style="color: var(--text-secondary);">ID:</td><td><strong>${element.id || `PV${idx + 1}`}</strong></td></tr>
+                        <tr><td style="color: var(--text-secondary);">Coordenada X:</td><td>${(element.x || 0).toFixed(3)}</td></tr>
+                        <tr><td style="color: var(--text-secondary);">Coordenada Y:</td><td>${(element.y || 0).toFixed(3)}</td></tr>
+                        <tr><td style="color: var(--text-secondary);">Cota Terreno:</td><td>${(element.z || element.cota || 0).toFixed(3)} m</td></tr>
+                        <tr><td style="color: var(--text-secondary);">Profundidade:</td><td>${(element.depth || element.profundidade || 1.5).toFixed(2)} m</td></tr>
+                        ${element.pressure ? `<tr><td style="color: var(--text-secondary);">Pressão:</td><td>${element.pressure.toFixed(1)} mca</td></tr>` : ''}
+                        ${element.demand ? `<tr><td style="color: var(--text-secondary);">Demanda:</td><td>${element.demand.toFixed(3)} L/s</td></tr>` : ''}
+                    </table>
+                `;
+            } else if (type === 'link') {
+                const costs = typeof calculateLinkCosts === 'function' ?
+                    calculateLinkCosts(element.length || 50, element.diameter || 150, element.depth || 1.5, element.material || 'PVC') :
+                    { total: 0 };
+
+                content.innerHTML = `
+                    <table style="width: 100%; font-size: 0.9rem;">
+                        <tr><td style="color: var(--text-secondary);">ID:</td><td><strong>${element.id || `T${idx + 1}`}</strong></td></tr>
+                        <tr><td style="color: var(--text-secondary);">De → Para:</td><td>${element.from || 'N/A'} → ${element.to || 'N/A'}</td></tr>
+                        <tr><td style="color: var(--text-secondary);">Comprimento:</td><td>${(element.length || element.comprimento || 0).toFixed(2)} m</td></tr>
+                        <tr><td style="color: var(--text-secondary);">Diâmetro:</td><td>${element.diameter || element.DN || 150} mm</td></tr>
+                        <tr><td style="color: var(--text-secondary);">Material:</td><td>${element.material || 'PVC'}</td></tr>
+                        <tr><td style="color: var(--text-secondary);">Declividade:</td><td>${((element.slope || element.declividade || 0) * 1000).toFixed(2)} ‰</td></tr>
+                        ${element.velocity ? `<tr><td style="color: var(--text-secondary);">Velocidade:</td><td>${element.velocity.toFixed(2)} m/s</td></tr>` : ''}
+                        ${element.flow ? `<tr><td style="color: var(--text-secondary);">Vazão:</td><td>${element.flow.toFixed(3)} L/s</td></tr>` : ''}
+                        <tr><td style="color: var(--text-secondary); font-weight: bold;">Custo Total:</td><td style="color: var(--accent-green); font-weight: bold;">R$ ${(costs.total || 0).toLocaleString('pt-BR')}</td></tr>
+                    </table>
+                `;
+            }
+        }
+
+        // Map control functions
+        function qgisMapFitBounds() {
+            if (!qgisMap) return;
+            const allLayers = [...qgisMapLayers.nodes.getLayers(), ...qgisMapLayers.links.getLayers()];
+            if (allLayers.length > 0) {
+                const group = L.featureGroup(allLayers);
+                qgisMap.fitBounds(group.getBounds(), { padding: [50, 50] });
+            }
+        }
+
+        function qgisMapToggleNodes() {
+            if (!qgisMap) return;
+            qgisMapShowNodes = !qgisMapShowNodes;
+            if (qgisMapShowNodes) {
+                qgisMap.addLayer(qgisMapLayers.nodes);
+            } else {
+                qgisMap.removeLayer(qgisMapLayers.nodes);
+            }
+        }
+
+        function qgisMapToggleLinks() {
+            if (!qgisMap) return;
+            qgisMapShowLinks = !qgisMapShowLinks;
+            if (qgisMapShowLinks) {
+                qgisMap.addLayer(qgisMapLayers.links);
+            } else {
+                qgisMap.removeLayer(qgisMapLayers.links);
+            }
+        }
+
+        function qgisMapToggleLabels() {
+            if (!qgisMap) return;
+            qgisMapShowLabels = !qgisMapShowLabels;
+            if (qgisMapShowLabels) {
+                qgisMap.addLayer(qgisMapLayers.labels);
+            } else {
+                qgisMap.removeLayer(qgisMapLayers.labels);
+            }
+        }
+
+        function qgisMapChangeBaseLayer() {
+            if (!qgisMap) return;
+            const baseLayerNames = Object.keys(qgisMapBaseLayers);
+            qgisMapCurrentBaseIndex = (qgisMapCurrentBaseIndex + 1) % baseLayerNames.length;
+
+            // Remove all base layers
+            baseLayerNames.forEach(name => {
+                qgisMap.removeLayer(qgisMapBaseLayers[name]);
+            });
+
+            // Add new base layer
+            const newBaseLayer = baseLayerNames[qgisMapCurrentBaseIndex];
+            qgisMapBaseLayers[newBaseLayer].addTo(qgisMap);
+            ToastSystem.info(`Mapa base: ${newBaseLayer}`);
+        }
+
+        function qgisMapChangeStyle(style) {
+            qgisMapCurrentStyle = style;
+            qgisMapRefresh();
+        }
+
+        function qgisMapCenterOnSelection() {
+            if (!qgisMap || !qgisMapSelectedElement) {
+                ToastSystem.warning('Nenhum elemento selecionado');
+                return;
+            }
+            // This would pan to the selected element
+            ToastSystem.info('Centralizando na seleção...');
+        }
+
+        function qgisMapExportImage() {
+            if (!qgisMap) return;
+            // Use leaflet-image or html2canvas for export
+            ToastSystem.info('Recurso de captura em desenvolvimento. Use Print Screen por enquanto.');
+        }
+
+        // Initialize map when QGIS tab is shown
+        const originalShowTab = window.showTab;
+        window.showTab = function(tabName) {
+            if (typeof originalShowTab === 'function') {
+                originalShowTab(tabName);
+            }
+            if (tabName === 'qgis') {
+                setTimeout(() => {
+                    initQgisMap();
+                    if (qgisMap) {
+                        qgisMap.invalidateSize();
+                        // Auto-refresh if there's data
+                        const { nodes } = getActiveNodesAndLinks();
+                        if (nodes.length > 0 && qgisMapLayers.nodes.getLayers().length === 0) {
+                            qgisMapRefresh();
+                        }
+                    }
+                }, 100);
+            }
+        };
 
         // ============================================
         // CANVAS RENDERING FOR MODULES
