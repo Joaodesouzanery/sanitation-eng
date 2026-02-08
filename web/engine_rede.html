@@ -11701,244 +11701,68 @@ Dados exportados:
         function generateQGISPlugin() {
             const zip = new JSZip();
 
-            // Plugin metadata
-            zip.file("hydronetwork_plugin/metadata.txt", `[general]
-name=HydroNetwork Importer
-qgisMinimumVersion=3.0
-description=Importa dados da Plataforma de Saneamento HydroNetwork
-version=1.0.0
-author=Plataforma de Saneamento
-email=contato@exemplo.com
-about=Plugin para importar dados exportados da plataforma HydroNetwork de análise de redes de saneamento.
-tracker=https://github.com/hydronetwork/qgis-plugin/issues
-repository=https://github.com/hydronetwork/qgis-plugin
-tags=saneamento,água,esgoto,drenagem,hidráulica
-category=Vector
-icon=icon.png
-experimental=False
-deprecated=False
-`);
+            // Plugin metadata - usando string normal
+            var metadata = '[general]\n';
+            metadata += 'name=HydroNetwork Importer\n';
+            metadata += 'qgisMinimumVersion=3.0\n';
+            metadata += 'description=Importa dados da Plataforma de Saneamento HydroNetwork\n';
+            metadata += 'version=1.0.0\n';
+            metadata += 'author=Plataforma de Saneamento\n';
+            metadata += 'email=contato@exemplo.com\n';
+            metadata += 'about=Plugin para importar dados exportados da plataforma HydroNetwork.\n';
+            metadata += 'category=Vector\n';
+            metadata += 'icon=icon.png\n';
+            metadata += 'experimental=False\n';
+            metadata += 'deprecated=False\n';
+            zip.file("hydronetwork_plugin/metadata.txt", metadata);
 
-            // Main plugin file
-            zip.file("hydronetwork_plugin/__init__.py", `# -*- coding: utf-8 -*-
-'''
-HydroNetwork QGIS Plugin
-Importa dados da Plataforma de Saneamento
-'''
+            // Main plugin file - usando string normal
+            var initPy = '# -*- coding: utf-8 -*-\n';
+            initPy += '# HydroNetwork QGIS Plugin\n';
+            initPy += '\n';
+            initPy += 'def classFactory(iface):\n';
+            initPy += '    from .plugin import HydroNetworkPlugin\n';
+            initPy += '    return HydroNetworkPlugin(iface)\n';
+            zip.file("hydronetwork_plugin/__init__.py", initPy);
 
-def classFactory(iface):
-    from .hydronetwork_plugin import HydroNetworkPlugin
-    return HydroNetworkPlugin(iface)
-`);
+            // Plugin implementation - versão simplificada
+            var pluginPy = '# -*- coding: utf-8 -*-\n';
+            pluginPy += '# HydroNetwork QGIS Plugin\n';
+            pluginPy += '\n';
+            pluginPy += 'from qgis.PyQt.QtWidgets import QAction, QFileDialog, QMessageBox\n';
+            pluginPy += 'from qgis.PyQt.QtGui import QIcon\n';
+            pluginPy += 'from qgis.core import QgsProject, QgsVectorLayer\n';
+            pluginPy += 'import os\n';
+            pluginPy += '\n';
+            pluginPy += 'class HydroNetworkPlugin:\n';
+            pluginPy += '    def __init__(self, iface):\n';
+            pluginPy += '        self.iface = iface\n';
+            pluginPy += '        self.actions = []\n';
+            pluginPy += '        self.menu = "HydroNetwork"\n';
+            pluginPy += '\n';
+            pluginPy += '    def initGui(self):\n';
+            pluginPy += '        action = QAction("Importar GeoJSON", self.iface.mainWindow())\n';
+            pluginPy += '        action.triggered.connect(self.import_geojson)\n';
+            pluginPy += '        self.iface.addPluginToMenu(self.menu, action)\n';
+            pluginPy += '        self.actions.append(action)\n';
+            pluginPy += '\n';
+            pluginPy += '    def unload(self):\n';
+            pluginPy += '        for action in self.actions:\n';
+            pluginPy += '            self.iface.removePluginMenu(self.menu, action)\n';
+            pluginPy += '\n';
+            pluginPy += '    def import_geojson(self):\n';
+            pluginPy += '        path, _ = QFileDialog.getOpenFileName(None, "GeoJSON", "", "GeoJSON (*.geojson)")\n';
+            pluginPy += '        if path:\n';
+            pluginPy += '            layer = QgsVectorLayer(path, os.path.basename(path), "ogr")\n';
+            pluginPy += '            if layer.isValid():\n';
+            pluginPy += '                QgsProject.instance().addMapLayer(layer)\n';
+            pluginPy += '            else:\n';
+            pluginPy += '                QMessageBox.warning(None, "Erro", "Arquivo invalido")\n';
+            zip.file("hydronetwork_plugin/plugin.py", pluginPy);
 
-            // Plugin implementation
-            zip.file("hydronetwork_plugin/hydronetwork_plugin.py", `# -*- coding: utf-8 -*-
-'''
-HydroNetwork QGIS Plugin - Módulo Principal
-'''
-
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QFileDialog, QMessageBox
-from qgis.core import (
-    QgsProject, QgsVectorLayer, QgsCoordinateReferenceSystem,
-    QgsFeature, QgsGeometry, QgsPointXY, QgsField
-)
-from PyQt5.QtCore import QVariant
-import os
-import json
-
-
-class HydroNetworkPlugin:
-    '''Plugin QGIS para importar dados da plataforma HydroNetwork.'''
-
-    def __init__(self, iface):
-        self.iface = iface
-        self.plugin_dir = os.path.dirname(__file__)
-        self.actions = []
-        self.menu = '&HydroNetwork'
-        self.toolbar = self.iface.addToolBar('HydroNetwork')
-        self.toolbar.setObjectName('HydroNetwork')
-
-    def initGui(self):
-        '''Inicializa a interface do plugin.'''
-        icon_path = os.path.join(self.plugin_dir, 'icon.png')
-
-        # Ação de importar GeoJSON
-        action_import = QAction(
-            QIcon(icon_path),
-            'Importar GeoJSON HydroNetwork',
-            self.iface.mainWindow()
-        )
-        action_import.triggered.connect(self.import_geojson)
-        self.toolbar.addAction(action_import)
-        self.iface.addPluginToMenu(self.menu, action_import)
-        self.actions.append(action_import)
-
-        # Ação de importar EPANET INP
-        action_epanet = QAction(
-            QIcon(icon_path),
-            'Importar EPANET INP',
-            self.iface.mainWindow()
-        )
-        action_epanet.triggered.connect(self.import_epanet)
-        self.iface.addPluginToMenu(self.menu, action_epanet)
-        self.actions.append(action_epanet)
-
-    def unload(self):
-        '''Remove o plugin.'''
-        for action in self.actions:
-            self.iface.removePluginMenu(self.menu, action)
-            self.iface.removeToolBarIcon(action)
-        del self.toolbar
-
-    def import_geojson(self):
-        '''Importa arquivos GeoJSON exportados da plataforma.'''
-        file_path, _ = QFileDialog.getOpenFileName(
-            None,
-            'Selecionar arquivo GeoJSON',
-            '',
-            'GeoJSON (*.geojson *.json)'
-        )
-
-        if not file_path:
-            return
-
-        try:
-            layer = QgsVectorLayer(file_path, os.path.basename(file_path), 'ogr')
-            if layer.isValid():
-                QgsProject.instance().addMapLayer(layer)
-                self.iface.messageBar().pushSuccess(
-                    'HydroNetwork',
-                    f'Camada importada: {layer.featureCount()} feições'
-                )
-            else:
-                raise Exception('Camada inválida')
-        except Exception as e:
-            QMessageBox.critical(
-                None,
-                'Erro',
-                f'Erro ao importar arquivo: {str(e)}'
-            )
-
-    def import_epanet(self):
-        '''Importa arquivo EPANET INP e cria camadas.'''
-        file_path, _ = QFileDialog.getOpenFileName(
-            None,
-            'Selecionar arquivo EPANET INP',
-            '',
-            'EPANET INP (*.inp)'
-        )
-
-        if not file_path:
-            return
-
-        try:
-            nodes, pipes, coords = self.parse_epanet_inp(file_path)
-
-            # Criar camada de nós
-            node_layer = QgsVectorLayer('Point?crs=EPSG:31983', 'EPANET_Nos', 'memory')
-            node_provider = node_layer.dataProvider()
-            node_provider.addAttributes([
-                QgsField('id', QVariant.String),
-                QgsField('elevacao', QVariant.Double),
-                QgsField('demanda', QVariant.Double)
-            ])
-            node_layer.updateFields()
-
-            for node in nodes:
-                feat = QgsFeature()
-                if node['id'] in coords:
-                    feat.setGeometry(QgsGeometry.fromPointXY(
-                        QgsPointXY(coords[node['id']]['x'], coords[node['id']]['y'])
-                    ))
-                feat.setAttributes([node['id'], node['elevation'], node['demand']])
-                node_provider.addFeature(feat)
-
-            # Criar camada de tubos
-            pipe_layer = QgsVectorLayer('LineString?crs=EPSG:31983', 'EPANET_Tubos', 'memory')
-            pipe_provider = pipe_layer.dataProvider()
-            pipe_provider.addAttributes([
-                QgsField('id', QVariant.String),
-                QgsField('no_inicio', QVariant.String),
-                QgsField('no_fim', QVariant.String),
-                QgsField('comprimento', QVariant.Double),
-                QgsField('diametro', QVariant.Double)
-            ])
-            pipe_layer.updateFields()
-
-            for pipe in pipes:
-                feat = QgsFeature()
-                if pipe['from'] in coords and pipe['to'] in coords:
-                    feat.setGeometry(QgsGeometry.fromPolylineXY([
-                        QgsPointXY(coords[pipe['from']]['x'], coords[pipe['from']]['y']),
-                        QgsPointXY(coords[pipe['to']]['x'], coords[pipe['to']]['y'])
-                    ]))
-                feat.setAttributes([
-                    pipe['id'], pipe['from'], pipe['to'],
-                    pipe['length'], pipe['diameter']
-                ])
-                pipe_provider.addFeature(feat)
-
-            QgsProject.instance().addMapLayer(node_layer)
-            QgsProject.instance().addMapLayer(pipe_layer)
-
-            self.iface.messageBar().pushSuccess(
-                'HydroNetwork',
-                f'EPANET importado: {len(nodes)} nós, {len(pipes)} tubos'
-            )
-
-        except Exception as e:
-            QMessageBox.critical(None, 'Erro', f'Erro ao importar: {str(e)}')
-
-    def parse_epanet_inp(self, file_path):
-        '''Parse arquivo EPANET INP.'''
-        nodes = []
-        pipes = []
-        coords = {}
-
-        with open(file_path, 'r') as f:
-            content = f.read()
-
-        section = None
-        for line in content.split('\\n'):
-            line = line.strip()
-            if line.startswith('['):
-                section = line[1:-1].upper() if line.endswith(']') else None
-                continue
-            if not line or line.startswith(';'):
-                continue
-
-            parts = line.split()
-            if section == 'JUNCTIONS' and len(parts) >= 2:
-                nodes.append({
-                    'id': parts[0],
-                    'elevation': float(parts[1]) if len(parts) > 1 else 0,
-                    'demand': float(parts[2]) if len(parts) > 2 else 0
-                })
-            elif section == 'PIPES' and len(parts) >= 5:
-                pipes.append({
-                    'id': parts[0],
-                    'from': parts[1],
-                    'to': parts[2],
-                    'length': float(parts[3]),
-                    'diameter': float(parts[4])
-                })
-            elif section == 'COORDINATES' and len(parts) >= 3:
-                coords[parts[0]] = {
-                    'x': float(parts[1]),
-                    'y': float(parts[2])
-                }
-
-        return nodes, pipes, coords
-`);
-
-            // Icon placeholder (base64 encoded small PNG)
-            zip.file("hydronetwork_plugin/icon.png", "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAABVUlEQVQ4jZ2Tv0oDQRDGv9nbS0JIkRQWFhYWvoCFhYWFhS9gYWHhA1hYWFj4ABYWFhY+gIWFhYWFhYUvYBELExJzd7v/xmIvl8slETLNDDPffLuzs8A/S3jz3EQkRERcRBQ4APBYl5YA7v0Xy+Vy2ev1SqOjo7S5uUl7e3u0tbVF29vbtLOzQ7u7u7S3t0fJZJK+v7+pVqvR9/c3BUEQW1pa4lAoRD09PcRxHBERM9PS0hJ5nkcHBwdUrVaJ4ziqqqqora2NM5kMLSwskGEY5Ps+BUFArusS", { base64: true });
-
-            zip.generateAsync({ type: 'blob' }).then(content => {
-                const url = URL.createObjectURL(content);
-                const a = document.createElement('a');
+            zip.generateAsync({ type: 'blob' }).then(function(content) {
+                var url = URL.createObjectURL(content);
+                var a = document.createElement('a');
                 a.href = url;
                 a.download = 'hydronetwork_qgis_plugin.zip';
                 a.click();
