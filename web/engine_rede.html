@@ -1167,10 +1167,19 @@
 </head>
 <body>
     <div class="container">
-        <header>
+        <header style="position: relative;">
             <h1>HYDRO NETWORK</h1>
             <p>Motor de Cálculo Hidráulico para Redes de Saneamento</p>
             <span class="version-badge">v3.0 - Plataforma Unificada</span>
+            <button onclick="verificarPlataforma()"
+                    title="Verificar status de todos os módulos"
+                    style="position: absolute; top: 15px; right: 15px; padding: 8px 16px;
+                           background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white;
+                           border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+                           display: flex; align-items: center; gap: 6px; transition: all 0.3s;
+                           box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);">
+                🔍 Verificar Plataforma
+            </button>
         </header>
 
         <!-- Tabs -->
@@ -12244,11 +12253,68 @@ DATA;
         };
 
         // Load data from main platform to specific module
+        // ATUALIZADO: Verifica todas as fontes de dados, incluindo dados já importados nos módulos
         function loadDataFromPlatform(moduleName) {
-            const { nodes, links } = getActiveNodesAndLinks();
+            // Tenta obter dados de qualquer fonte disponível
+            let nodes = [];
+            let links = [];
+            let source = '';
 
+            // 1. Primeiro tenta obter da função padrão (topografia e importação)
+            const mainData = getActiveNodesAndLinks();
+            if (mainData.nodes.length > 0) {
+                nodes = mainData.nodes;
+                links = mainData.links;
+                source = mainData.source;
+            }
+
+            // 2. Se não encontrou e o módulo já tem dados próprios, usa esses dados
             if (nodes.length === 0) {
-                ToastSystem.warning('Nenhum dado disponível. Importe dados na aba Topografia primeiro.');
+                switch(moduleName) {
+                    case 'epanet':
+                        if (moduleData.epanet?.nodes?.length > 0) {
+                            nodes = moduleData.epanet.nodes;
+                            links = moduleData.epanet.links || [];
+                            source = 'EPANET (dados importados)';
+                        }
+                        break;
+                    case 'swmm':
+                        if (moduleData.swmm?.nodes?.length > 0) {
+                            nodes = moduleData.swmm.nodes;
+                            links = moduleData.swmm.links || [];
+                            source = 'SWMM (dados importados)';
+                        }
+                        break;
+                    case 'qgis':
+                        if (moduleData.qgis?.nodes?.length > 0) {
+                            nodes = moduleData.qgis.nodes;
+                            links = moduleData.qgis.links || [];
+                            source = 'QGIS (dados importados)';
+                        }
+                        break;
+                }
+            }
+
+            // 3. Se ainda não encontrou, tenta outros módulos
+            if (nodes.length === 0) {
+                if (moduleData.epanet?.nodes?.length > 0) {
+                    nodes = moduleData.epanet.nodes;
+                    links = moduleData.epanet.links || [];
+                    source = 'EPANET';
+                } else if (moduleData.swmm?.nodes?.length > 0) {
+                    nodes = moduleData.swmm.nodes;
+                    links = moduleData.swmm.links || [];
+                    source = 'SWMM';
+                } else if (moduleData.qgis?.nodes?.length > 0) {
+                    nodes = moduleData.qgis.nodes;
+                    links = moduleData.qgis.links || [];
+                    source = 'QGIS';
+                }
+            }
+
+            // Se ainda não encontrou dados, mostra mensagem de ajuda
+            if (nodes.length === 0 && moduleName !== 'openproject') {
+                ToastSystem.warning('Nenhum dado disponível. Importe um arquivo .INP, .SHP, GeoJSON ou use a aba Topografia.');
                 return;
             }
 
@@ -12258,14 +12324,14 @@ DATA;
                     moduleData.epanet.links = [...links];
                     updateEpanetUI();
                     setTimeout(renderEpanetCanvas, 100);
-                    ToastSystem.success(`${nodes.length} nós e ${links.length} trechos carregados no EPANET!`);
+                    ToastSystem.success(`${nodes.length} nós e ${links.length} trechos carregados no EPANET! (Fonte: ${source})`);
                     break;
                 case 'swmm':
                     moduleData.swmm.nodes = [...nodes];
                     moduleData.swmm.links = [...links];
                     updateSwmmUI();
                     setTimeout(renderSwmmCanvas, 100);
-                    ToastSystem.success(`${nodes.length} nós e ${links.length} trechos carregados no SWMM!`);
+                    ToastSystem.success(`${nodes.length} nós e ${links.length} trechos carregados no SWMM! (Fonte: ${source})`);
                     break;
                 case 'openproject':
                     loadOpenProjectModuleData();
@@ -12276,7 +12342,7 @@ DATA;
                     moduleData.qgis.nodes = [...nodes];
                     moduleData.qgis.links = [...links];
                     updateQgisUI();
-                    ToastSystem.success(`${nodes.length} nós e ${links.length} trechos carregados no QGIS!`);
+                    ToastSystem.success(`${nodes.length} nós e ${links.length} trechos carregados no QGIS! (Fonte: ${source})`);
                     break;
             }
         }
@@ -12632,23 +12698,71 @@ DATA;
         }
 
         // Populate OpenProject tasks table
+        // ATUALIZADO: Agora carrega datas corretamente e calcula duração do projeto
         function populateOpenProjectTasks(tasks) {
             const tasksList = document.getElementById('openproject-tasks-list');
             if (!tasksList) return;
 
             tasksList.innerHTML = '';
+            let minDate = null;
+            let maxDate = null;
+
             tasks.forEach((task, idx) => {
                 addOpenProjectTask();
                 const row = tasksList.lastElementChild;
                 if (row) {
                     const inputs = row.querySelectorAll('input');
-                    if (inputs[0]) inputs[0].value = task.name || `Tarefa ${idx + 1}`;
-                    if (inputs[1]) inputs[1].value = task.start || '';
-                    if (inputs[2]) inputs[2].value = task.duration || 5;
+                    if (inputs[0]) inputs[0].value = task.name || task.titulo || `Tarefa ${idx + 1}`;
+
+                    // Processa data de início
+                    let startDate = task.start || task.startDate || task.inicio || task.data_inicio || '';
+                    if (startDate && typeof startDate === 'string') {
+                        // Formata para YYYY-MM-DD se necessário
+                        if (startDate.includes('/')) {
+                            const parts = startDate.split('/');
+                            if (parts.length === 3) {
+                                startDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                            }
+                        }
+                        // Remove parte do tempo se existir
+                        if (startDate.includes('T')) {
+                            startDate = startDate.split('T')[0];
+                        }
+                    }
+                    if (inputs[1]) inputs[1].value = startDate;
+
+                    // Calcula duração
+                    const duration = task.duration || task.duracao || task.dias || 5;
+                    if (inputs[2]) inputs[2].value = duration;
+
+                    // Rastreia datas para calcular período do projeto
+                    if (startDate) {
+                        const taskStart = new Date(startDate);
+                        const taskEnd = new Date(startDate);
+                        taskEnd.setDate(taskEnd.getDate() + parseInt(duration));
+
+                        if (!minDate || taskStart < minDate) minDate = taskStart;
+                        if (!maxDate || taskEnd > maxDate) maxDate = taskEnd;
+                    }
                 }
             });
 
             document.getElementById('openproject-loaded-tasks').textContent = tasks.length;
+
+            // Atualiza campo de data de início do projeto se encontrou datas
+            if (minDate) {
+                const startDateInput = document.getElementById('openproject-start-date');
+                if (startDateInput && !startDateInput.value) {
+                    startDateInput.value = minDate.toISOString().slice(0, 10);
+                }
+            }
+
+            // Calcula e exibe duração total
+            if (minDate && maxDate) {
+                const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24));
+                document.getElementById('openproject-duration').textContent = `${totalDays} dias`;
+            }
+
             renderGanttChart();
         }
 
@@ -15093,56 +15207,169 @@ DATA;
         }
 
         function exportQGISShapefile() {
+            // Coleta dados de TODAS as fontes disponíveis
+            const allData = getAllModuleData();
             const { nodes, links } = getActiveNodesAndLinks();
             const settings = getQGISSettings();
 
-            if (nodes.length === 0) {
-                alert('Importe dados primeiro na aba Topografia.');
+            // Usa dados combinados
+            const exportNodes = allData.nodes.length > 0 ? allData.nodes : nodes;
+            const exportLinks = allData.links.length > 0 ? allData.links : links;
+
+            if (exportNodes.length === 0 && exportLinks.length === 0) {
+                alert('Nenhum dado disponível. Importe dados em qualquer módulo ou aba Topografia.');
                 return;
             }
 
-            // Create a DBF-like structure (simplified - just creates CSV with WKT)
-            // In real implementation, would use shpwrite library
+            // Coleta custos calculados
+            const costs = typeof calculateAllCosts === 'function' ? calculateAllCosts() : null;
 
             const zip = new JSZip();
 
-            // Export nodes as points
-            if (settings.exportNodes) {
-                let nodesCsv = 'WKT,id,x,y,z,tipo,profundidade\n';
-                nodes.forEach(node => {
+            // Export nodes as points with ALL data
+            if (settings.exportNodes && exportNodes.length > 0) {
+                // Cabeçalho completo com todos os campos de custo e dados de módulos
+                let nodesCsv = 'WKT,id,x,y,z,tipo,profundidade,pressao,demanda,carga,custo_esc,custo_conc,custo_tamp,custo_mo,custo_total\n';
+                exportNodes.forEach(node => {
                     const x = node.x || 0;
                     const y = node.y || 0;
                     const z = node.z || node.cota || 0;
-                    nodesCsv += `"POINT(${x} ${y})",${node.id},${x.toFixed(3)},${y.toFixed(3)},${z.toFixed(3)},PV,${(node.depth || 1.5).toFixed(2)}\n`;
+                    const depth = node.depth || node.profundidade || 1.5;
+                    const pressure = node.pressure || node.pressao || 0;
+                    const demand = node.demand || node.demanda || 0;
+                    const head = node.head || node.carga || z;
+
+                    // Busca dados de resultados EPANET se disponível
+                    const epanetNode = moduleData.epanet?.results?.nodes?.[node.id];
+                    const finalPressure = epanetNode?.pressure || pressure;
+                    const finalDemand = epanetNode?.demand || demand;
+
+                    // Calcula custos do PV
+                    const pvCosts = calculatePVCosts ? calculatePVCosts(depth) : { excavation: 0, concrete: 0, cover: 0, labor: 0, total: 0 };
+
+                    nodesCsv += `"POINT(${x} ${y})",${node.id},${x.toFixed(3)},${y.toFixed(3)},${z.toFixed(3)},PV,${depth.toFixed(2)},${finalPressure.toFixed(2)},${finalDemand.toFixed(3)},${head.toFixed(2)},${pvCosts.excavation?.toFixed(2) || 0},${pvCosts.concrete?.toFixed(2) || 0},${pvCosts.cover?.toFixed(2) || 0},${pvCosts.labor?.toFixed(2) || 0},${pvCosts.total?.toFixed(2) || 0}\n`;
                 });
                 zip.file("pontos.csv", nodesCsv);
 
-                // Create PRJ file
+                // Schema CSV para mapeamento de campos
+                let schemaCsv = 'campo_shp,campo_completo,tipo,unidade,descricao\n';
+                schemaCsv += 'id,node_id,TEXT,,ID do nó\n';
+                schemaCsv += 'x,coordenada_x,FLOAT,m,Coordenada X\n';
+                schemaCsv += 'y,coordenada_y,FLOAT,m,Coordenada Y\n';
+                schemaCsv += 'z,cota_terreno,FLOAT,m,Cota do terreno\n';
+                schemaCsv += 'tipo,tipo_estrutura,TEXT,,Tipo da estrutura\n';
+                schemaCsv += 'profundidade,profundidade,FLOAT,m,Profundidade do PV\n';
+                schemaCsv += 'pressao,pressao_mca,FLOAT,mca,Pressão (EPANET)\n';
+                schemaCsv += 'demanda,demanda_lps,FLOAT,L/s,Demanda base\n';
+                schemaCsv += 'carga,carga_hidraulica,FLOAT,m,Carga hidráulica\n';
+                schemaCsv += 'custo_esc,custo_escavacao,FLOAT,R$,Custo escavação\n';
+                schemaCsv += 'custo_conc,custo_concreto,FLOAT,R$,Custo concreto/alvenaria\n';
+                schemaCsv += 'custo_tamp,custo_tampao,FLOAT,R$,Custo tampão\n';
+                schemaCsv += 'custo_mo,custo_mao_obra,FLOAT,R$,Custo mão de obra\n';
+                schemaCsv += 'custo_total,custo_total_pv,FLOAT,R$,Custo total do PV\n';
+                zip.file("pontos_schema.csv", schemaCsv);
+
                 const prj = getCRSWkt(settings.crs);
                 zip.file("pontos.prj", prj);
             }
 
-            // Export links as lines
-            if (settings.exportLinks) {
-                let linksCsv = 'WKT,id,from_node,to_node,length,diameter,material,slope\n';
-                links.forEach((link, idx) => {
-                    const fromNode = nodes.find(n => n.id === link.from) || nodes[idx] || { x: 0, y: 0 };
-                    const toNode = nodes.find(n => n.id === link.to) || nodes[idx + 1] || { x: 100, y: 100 };
+            // Export links as lines with ALL data (including costs)
+            if (settings.exportLinks && exportLinks.length > 0) {
+                // Cabeçalho completo com custos
+                let linksCsv = 'WKT,id,from_node,to_node,length,diameter,material,slope,depth_avg,vazao,velocidade,custo_tubo,custo_esc,custo_reat,custo_escor,custo_mo,custo_eq,custo_total,custo_m\n';
+                exportLinks.forEach((link, idx) => {
+                    const fromNode = exportNodes.find(n => n.id === link.from || n.id === link.fromNode) || exportNodes[idx] || { x: 0, y: 0 };
+                    const toNode = exportNodes.find(n => n.id === link.to || n.id === link.toNode) || exportNodes[idx + 1] || { x: 100, y: 100 };
                     const length = link.length || link.comprimento || 50;
                     const diameter = link.diameter || link.DN || link.dn || 150;
                     const material = link.material || 'PVC';
                     const slope = link.slope || link.declividade || 0.005;
+                    const depthAvg = link.depth_average || link.profundidade || ((fromNode.depth || 1.5) + (toNode.depth || 1.5)) / 2;
 
-                    linksCsv += `"LINESTRING(${fromNode.x || 0} ${fromNode.y || 0},${toNode.x || 0} ${toNode.y || 0})",T${idx + 1},${link.from},${link.to},${length.toFixed(2)},${diameter},${material},${slope.toFixed(4)}\n`;
+                    // Resultados hidráulicos
+                    const flow = link.flow || link.vazao || 0;
+                    const velocity = link.velocity || link.velocidade || 0;
+
+                    // Custos do trecho
+                    const linkCosts = typeof calculateLinkCosts === 'function' ?
+                        calculateLinkCosts(length, diameter, depthAvg, material) :
+                        { pipe: 0, excavation: 0, backfill: 0, shoring: 0, labor: 0, equipment: 0, total: 0, perMeter: 0 };
+
+                    linksCsv += `"LINESTRING(${fromNode.x || 0} ${fromNode.y || 0},${toNode.x || 0} ${toNode.y || 0})",T${idx + 1},${link.from || fromNode.id},${link.to || toNode.id},${length.toFixed(2)},${diameter},${material},${slope.toFixed(4)},${depthAvg.toFixed(2)},${flow.toFixed(3)},${velocity.toFixed(3)},${linkCosts.pipe?.toFixed(2) || 0},${linkCosts.excavation?.toFixed(2) || 0},${linkCosts.backfill?.toFixed(2) || 0},${linkCosts.shoring?.toFixed(2) || 0},${linkCosts.labor?.toFixed(2) || 0},${linkCosts.equipment?.toFixed(2) || 0},${linkCosts.total?.toFixed(2) || 0},${linkCosts.perMeter?.toFixed(2) || 0}\n`;
                 });
                 zip.file("trechos.csv", linksCsv);
+
+                // Schema CSV para trechos
+                let schemaCsv = 'campo_shp,campo_completo,tipo,unidade,descricao\n';
+                schemaCsv += 'id,trecho_id,TEXT,,ID do trecho\n';
+                schemaCsv += 'from_node,no_montante,TEXT,,Nó montante\n';
+                schemaCsv += 'to_node,no_jusante,TEXT,,Nó jusante\n';
+                schemaCsv += 'length,comprimento,FLOAT,m,Comprimento\n';
+                schemaCsv += 'diameter,diametro_mm,FLOAT,mm,Diâmetro\n';
+                schemaCsv += 'material,material,TEXT,,Material\n';
+                schemaCsv += 'slope,declividade,FLOAT,m/m,Declividade\n';
+                schemaCsv += 'depth_avg,profundidade_media,FLOAT,m,Profundidade média\n';
+                schemaCsv += 'vazao,vazao_lps,FLOAT,L/s,Vazão\n';
+                schemaCsv += 'velocidade,velocidade_ms,FLOAT,m/s,Velocidade\n';
+                schemaCsv += 'custo_tubo,custo_tubulacao,FLOAT,R$,Custo tubulação\n';
+                schemaCsv += 'custo_esc,custo_escavacao,FLOAT,R$,Custo escavação\n';
+                schemaCsv += 'custo_reat,custo_reaterro,FLOAT,R$,Custo reaterro\n';
+                schemaCsv += 'custo_escor,custo_escoramento,FLOAT,R$,Custo escoramento\n';
+                schemaCsv += 'custo_mo,custo_mao_obra,FLOAT,R$,Custo mão de obra\n';
+                schemaCsv += 'custo_eq,custo_equipamentos,FLOAT,R$,Custo equipamentos\n';
+                schemaCsv += 'custo_total,custo_total_trecho,FLOAT,R$,Custo total\n';
+                schemaCsv += 'custo_m,custo_por_metro,FLOAT,R$/m,Custo por metro\n';
+                zip.file("trechos_schema.csv", schemaCsv);
 
                 const prj = getCRSWkt(settings.crs);
                 zip.file("trechos.prj", prj);
             }
 
-            zip.file("LEIAME.txt", `Shapefiles de Rede de Saneamento
-=====================================
+            // Export EPANET reservoirs if available
+            if (moduleData.epanet?.reservoirs?.length > 0) {
+                let resCsv = 'WKT,id,head,tipo\n';
+                moduleData.epanet.reservoirs.forEach(res => {
+                    const x = res.x || 0;
+                    const y = res.y || 0;
+                    resCsv += `"POINT(${x} ${y})",${res.id},${res.head || 0},${res.type || 'reservatorio'}\n`;
+                });
+                zip.file("reservatorios.csv", resCsv);
+            }
+
+            // Export SWMM subcatchments if available
+            if (moduleData.swmm?.subcatchments?.length > 0) {
+                let subCsv = 'WKT,id,area,imperv,outlet\n';
+                moduleData.swmm.subcatchments.forEach(sub => {
+                    const x = sub.x || 0;
+                    const y = sub.y || 0;
+                    subCsv += `"POINT(${x} ${y})",${sub.id},${sub.area || 0},${sub.imperv || 50},${sub.outlet || ''}\n`;
+                });
+                zip.file("subcatchments.csv", subCsv);
+            }
+
+            // Export planning tasks if available
+            if (moduleData.openproject?.tasks?.length > 0) {
+                let tasksCsv = 'nome,inicio,duracao_dias,recurso\n';
+                moduleData.openproject.tasks.forEach(task => {
+                    tasksCsv += `"${task.name || task.titulo}",${task.start || task.inicio || ''},${task.duration || task.duracao || 5},"${task.resource || task.recurso || ''}"\n`;
+                });
+                zip.file("cronograma.csv", tasksCsv);
+            }
+
+            // Resumo de custos totais
+            if (costs) {
+                let costsCsv = 'categoria,valor_rs\n';
+                costsCsv += `"Total Tubulação",${costs.totalPipe || 0}\n`;
+                costsCsv += `"Total Escavação",${costs.totalExcavation || 0}\n`;
+                costsCsv += `"Total Reaterro",${costs.totalBackfill || 0}\n`;
+                costsCsv += `"Total Mão de Obra",${costs.totalLabor || 0}\n`;
+                costsCsv += `"Total Equipamentos",${costs.totalEquipment || 0}\n`;
+                costsCsv += `"TOTAL GERAL",${costs.grandTotal || 0}\n`;
+                zip.file("resumo_custos.csv", costsCsv);
+            }
+
+            zip.file("LEIAME.txt", `Shapefiles de Rede de Saneamento - HydroNetwork
+=================================================
 
 IMPORTANTE: Os arquivos .csv contêm geometria em formato WKT.
 Para usar no QGIS:
@@ -15157,22 +15384,29 @@ Para usar no QGIS:
 Alternativamente, use ogr2ogr para converter:
 ogr2ogr -f "ESRI Shapefile" pontos.shp pontos.csv -oo GEOM_POSSIBLE_NAMES=WKT
 
+ARQUIVOS INCLUÍDOS:
+- pontos.csv: Nós da rede (PVs, junções)
+- pontos_schema.csv: Dicionário de campos dos nós
+- trechos.csv: Trechos da rede com custos
+- trechos_schema.csv: Dicionário de campos dos trechos
+${moduleData.epanet?.reservoirs?.length > 0 ? '- reservatorios.csv: Reservatórios EPANET\n' : ''}${moduleData.swmm?.subcatchments?.length > 0 ? '- subcatchments.csv: Sub-bacias SWMM\n' : ''}${moduleData.openproject?.tasks?.length > 0 ? '- cronograma.csv: Tarefas do planejamento\n' : ''}${costs ? '- resumo_custos.csv: Resumo de custos do projeto\n' : ''}
 CRS: ${settings.crs}
-Nós: ${nodes.length}
-Trechos: ${links.length}
+Nós: ${exportNodes.length}
+Trechos: ${exportLinks.length}
 Data: ${new Date().toLocaleString('pt-BR')}
+Gerado por: HydroNetwork Platform
 `);
 
             zip.generateAsync({ type: 'blob' }).then(content => {
                 const url = URL.createObjectURL(content);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'rede_shapefile.zip';
+                a.download = 'rede_shapefile_completo.zip';
                 a.click();
                 URL.revokeObjectURL(url);
             });
 
-            showQGISStatus('Shapefiles exportados! Arquivos CSV com geometria WKT.', nodes.length, links.length);
+            showQGISStatus('Shapefiles exportados! Inclui dados de todos os módulos e custos.', exportNodes.length, exportLinks.length);
         }
 
         function getCRSWkt(epsg) {
