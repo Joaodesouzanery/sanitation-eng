@@ -1349,6 +1349,122 @@
                         <p style="color: var(--text-secondary); font-size: 0.9rem;" id="file-stats"></p>
                     </div>
 
+                    <!-- Seção de Visualização Interativa de CAD -->
+                    <div id="cad-entities-viewer" style="display: none; margin-top: 20px; padding: 20px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border-color);">
+                        <h3 style="color: var(--accent-purple); margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            <span>📐</span> Entidades Encontradas no Arquivo CAD
+                        </h3>
+
+                        <!-- Resumo do arquivo -->
+                        <div id="cad-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 20px;">
+                        </div>
+
+                        <!-- Filtros por Layer e Tipo -->
+                        <div style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
+                            <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                                <label style="font-size: 0.85rem;">Filtrar por Layer</label>
+                                <select id="cad-filter-layer" onchange="filterCADEntities()" style="width: 100%;">
+                                    <option value="">Todos os Layers</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                                <label style="font-size: 0.85rem;">Filtrar por Tipo</label>
+                                <select id="cad-filter-type" onchange="filterCADEntities()" style="width: 100%;">
+                                    <option value="">Todos os Tipos</option>
+                                    <option value="POINT">Pontos</option>
+                                    <option value="CIRCLE">Círculos</option>
+                                    <option value="INSERT">Blocos</option>
+                                    <option value="TEXT">Textos</option>
+                                    <option value="LINE">Linhas</option>
+                                    <option value="LWPOLYLINE">Polilinhas</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Tabela de Entidades -->
+                        <div style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 15px;">
+                            <table id="cad-entities-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 1;">
+                                    <tr>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color);">
+                                            <input type="checkbox" id="cad-select-all" onchange="toggleAllCADEntities(this.checked)" title="Selecionar todos">
+                                        </th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color);">Tipo</th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color);">Layer</th>
+                                        <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--border-color);">X</th>
+                                        <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--border-color);">Y</th>
+                                        <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--border-color);">Z/Cota</th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color);">Texto/Info</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cad-entities-body">
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Configuração de Mapeamento -->
+                        <div style="background: var(--bg-card); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <h4 style="color: var(--accent-blue); margin-bottom: 10px;">Mapeamento de Campos</h4>
+                            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 10px;">
+                                Configure como interpretar os dados selecionados:
+                            </p>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.85rem;">Coordenada X (Este)</label>
+                                    <select id="cad-map-x" style="width: 100%;">
+                                        <option value="x">Usar X da entidade</option>
+                                        <option value="y">Usar Y da entidade</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.85rem;">Coordenada Y (Norte)</label>
+                                    <select id="cad-map-y" style="width: 100%;">
+                                        <option value="y">Usar Y da entidade</option>
+                                        <option value="x">Usar X da entidade</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.85rem;">Cota/Profundidade</label>
+                                    <select id="cad-map-z" style="width: 100%;">
+                                        <option value="z">Usar Z da entidade</option>
+                                        <option value="text">Extrair de texto próximo</option>
+                                        <option value="manual">Definir manualmente</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" id="cad-manual-cota-group" style="margin-bottom: 0; display: none;">
+                                    <label style="font-size: 0.85rem;">Cota padrão (m)</label>
+                                    <input type="number" id="cad-manual-cota" value="0" step="0.01" style="width: 100%;">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-top: 10px; margin-bottom: 0;">
+                                <label style="font-size: 0.85rem;">
+                                    <input type="checkbox" id="cad-use-text-as-id" checked>
+                                    Usar textos próximos como ID dos pontos
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Botões de Ação -->
+                        <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
+                            <span id="cad-selection-count" style="color: var(--text-secondary); font-size: 0.9rem; align-self: center; margin-right: auto;">
+                                0 pontos selecionados
+                            </span>
+                            <button class="btn btn-small" onclick="previewCADSelection()" style="background: var(--accent-blue);">
+                                Visualizar Seleção
+                            </button>
+                            <button class="btn btn-small btn-add" onclick="confirmCADImport()">
+                                Importar Selecionados
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Preview da seleção CAD -->
+                    <div id="cad-preview" style="display: none; margin-top: 15px; padding: 15px; background: var(--bg-card); border-radius: 8px; border: 2px solid var(--accent-green);">
+                        <h4 style="color: var(--accent-green); margin-bottom: 10px;">Preview dos Pontos a Importar</h4>
+                        <div id="cad-preview-content" style="max-height: 200px; overflow-y: auto;">
+                        </div>
+                    </div>
+
                     <div class="form-group" style="margin-top: 20px;">
                         <label>Ou cole os dados diretamente aqui:</label>
                         <textarea id="paste-data" rows="6" placeholder="Cole seus dados aqui. Formatos aceitos:
@@ -6320,6 +6436,15 @@ PV02,359290.456,7352780.123,1.82</pre>
         }
 
         function processFile(file) {
+            const fileName = file.name.toLowerCase();
+            const fileType = document.getElementById('import-file-type').value;
+
+            // Check if it's a CAD file
+            if (fileType === 'cad' || fileName.endsWith('.dxf') || fileName.endsWith('.dwg')) {
+                processCADFileInteractive(file);
+                return;
+            }
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 const content = e.target.result;
@@ -6329,6 +6454,653 @@ PV02,359290.456,7352780.123,1.82</pre>
                 alert('Erro ao ler arquivo. Tente novamente.');
             };
             reader.readAsText(file);
+        }
+
+        // ============================================
+        // INTERACTIVE CAD IMPORT FUNCTIONS
+        // ============================================
+
+        // Store parsed CAD entities for interactive selection
+        let parsedCADEntities = [];
+        let selectedCADEntities = new Set();
+
+        /**
+         * Process CAD file (DXF/DWG) and show interactive entity viewer
+         */
+        function processCADFileInteractive(file) {
+            const fileName = file.name.toLowerCase();
+
+            // Check for DWG files - need conversion
+            if (fileName.endsWith('.dwg')) {
+                document.getElementById('file-info').style.display = 'block';
+                document.getElementById('file-name').textContent = file.name;
+                document.getElementById('file-stats').innerHTML =
+                    `<span style="color: var(--accent-orange);">Arquivo DWG detectado</span><br>` +
+                    `<small style="color: var(--text-secondary);">Arquivos DWG precisam ser convertidos para DXF. ` +
+                    `Use AutoCAD, QCAD (gratuito) ou ODA File Converter para converter.</small>`;
+                document.getElementById('cad-entities-viewer').style.display = 'none';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                parseAndDisplayCADEntities(content, file.name);
+            };
+            reader.onerror = function() {
+                alert('Erro ao ler arquivo CAD. Tente novamente.');
+            };
+            reader.readAsText(file);
+        }
+
+        /**
+         * Parse DXF content and extract all entities with full details
+         */
+        function parseCADEntitiesFull(dxfContent) {
+            const entities = [];
+            const lines = dxfContent.split(/\r?\n/);
+            let inEntities = false;
+            let currentEntity = null;
+            let i = 0;
+
+            // Track all coordinates for polylines
+            let polylineVertices = [];
+            let inPolyline = false;
+
+            while (i < lines.length) {
+                const code = lines[i]?.trim();
+                const value = lines[i + 1]?.trim();
+
+                // Start of ENTITIES section
+                if (code === '0' && value === 'ENTITIES') {
+                    inEntities = true;
+                    i += 2;
+                    continue;
+                }
+
+                // End of ENTITIES section
+                if (code === '0' && value === 'ENDSEC' && inEntities) {
+                    if (currentEntity) {
+                        if (inPolyline && polylineVertices.length > 0) {
+                            currentEntity.vertices = [...polylineVertices];
+                        }
+                        entities.push(currentEntity);
+                    }
+                    break;
+                }
+
+                // New entity
+                if (inEntities && code === '0') {
+                    // Save previous entity
+                    if (currentEntity) {
+                        if (inPolyline && polylineVertices.length > 0) {
+                            currentEntity.vertices = [...polylineVertices];
+                        }
+                        entities.push(currentEntity);
+                    }
+
+                    // Handle VERTEX as part of polyline
+                    if (value === 'VERTEX') {
+                        currentEntity = { type: 'VERTEX', layer: currentEntity?.layer || '0' };
+                    } else if (value === 'SEQEND') {
+                        inPolyline = false;
+                        polylineVertices = [];
+                        currentEntity = null;
+                    } else {
+                        currentEntity = {
+                            type: value,
+                            layer: '0',
+                            x: null,
+                            y: null,
+                            z: null,
+                            text: '',
+                            blockName: '',
+                            radius: null
+                        };
+
+                        if (value === 'POLYLINE' || value === 'LWPOLYLINE') {
+                            inPolyline = true;
+                            polylineVertices = [];
+                        } else {
+                            inPolyline = false;
+                        }
+                    }
+                } else if (currentEntity) {
+                    // Parse entity properties based on DXF group codes
+                    switch (code) {
+                        case '8': // Layer name
+                            currentEntity.layer = value;
+                            break;
+                        case '10': // Primary X coordinate
+                            currentEntity.x = parseFloat(value);
+                            if (inPolyline && currentEntity.type === 'VERTEX') {
+                                // Store vertex
+                                polylineVertices.push({ x: parseFloat(value) });
+                            }
+                            break;
+                        case '20': // Primary Y coordinate
+                            currentEntity.y = parseFloat(value);
+                            if (inPolyline && polylineVertices.length > 0 && currentEntity.type === 'VERTEX') {
+                                polylineVertices[polylineVertices.length - 1].y = parseFloat(value);
+                            }
+                            break;
+                        case '30': // Primary Z coordinate
+                            currentEntity.z = parseFloat(value);
+                            if (inPolyline && polylineVertices.length > 0 && currentEntity.type === 'VERTEX') {
+                                polylineVertices[polylineVertices.length - 1].z = parseFloat(value);
+                            }
+                            break;
+                        case '11': // Secondary X (for lines)
+                            currentEntity.x2 = parseFloat(value);
+                            break;
+                        case '21': // Secondary Y (for lines)
+                            currentEntity.y2 = parseFloat(value);
+                            break;
+                        case '31': // Secondary Z (for lines)
+                            currentEntity.z2 = parseFloat(value);
+                            break;
+                        case '1': // Text content
+                            currentEntity.text = value;
+                            break;
+                        case '2': // Block name (for INSERT)
+                            currentEntity.blockName = value;
+                            break;
+                        case '40': // Radius (for circles/arcs) or text height
+                            currentEntity.radius = parseFloat(value);
+                            break;
+                        case '50': // Rotation angle
+                            currentEntity.rotation = parseFloat(value);
+                            break;
+                        case '41': // X scale factor (for INSERT)
+                            currentEntity.scaleX = parseFloat(value);
+                            break;
+                        case '42': // Y scale factor (for INSERT)
+                            currentEntity.scaleY = parseFloat(value);
+                            break;
+                    }
+                }
+                i += 2;
+            }
+
+            // Filter and clean entities - keep only useful ones
+            return entities.filter(e => {
+                // Skip VERTEX entries (they're part of polylines)
+                if (e.type === 'VERTEX') return false;
+
+                // Keep entities with valid coordinates or useful info
+                return e.type === 'POINT' ||
+                       e.type === 'CIRCLE' ||
+                       e.type === 'INSERT' ||
+                       e.type === 'TEXT' ||
+                       e.type === 'MTEXT' ||
+                       e.type === 'LINE' ||
+                       e.type === 'LWPOLYLINE' ||
+                       e.type === 'POLYLINE' ||
+                       e.type === 'ARC';
+            }).map((e, idx) => ({
+                ...e,
+                id: idx,
+                selected: false
+            }));
+        }
+
+        /**
+         * Parse and display CAD entities in the interactive viewer
+         */
+        function parseAndDisplayCADEntities(content, fileName) {
+            parsedCADEntities = parseCADEntitiesFull(content);
+            selectedCADEntities.clear();
+
+            // Show file info
+            document.getElementById('file-info').style.display = 'block';
+            document.getElementById('file-name').textContent = fileName;
+
+            if (parsedCADEntities.length === 0) {
+                document.getElementById('file-stats').innerHTML =
+                    `<span style="color: var(--accent-red);">Nenhuma entidade encontrada!</span><br>` +
+                    `<small>Verifique se o arquivo DXF contém entidades válidas.</small>`;
+                document.getElementById('cad-entities-viewer').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('file-stats').innerHTML =
+                `<span style="color: var(--accent-blue);">${parsedCADEntities.length} entidades encontradas</span><br>` +
+                `<small style="color: var(--text-secondary);">Selecione os pontos que deseja importar abaixo</small>`;
+
+            // Show the interactive viewer
+            document.getElementById('cad-entities-viewer').style.display = 'block';
+            document.getElementById('cad-preview').style.display = 'none';
+
+            // Build summary
+            buildCADSummary();
+
+            // Populate layer filter
+            populateCADFilters();
+
+            // Display entities in table
+            displayCADEntities();
+
+            // Setup mapping listeners
+            setupMappingListeners();
+        }
+
+        /**
+         * Build summary cards for CAD entities
+         */
+        function buildCADSummary() {
+            const summary = document.getElementById('cad-summary');
+            const layers = [...new Set(parsedCADEntities.map(e => e.layer))];
+            const types = [...new Set(parsedCADEntities.map(e => e.type))];
+
+            // Count entities by type
+            const pointLike = parsedCADEntities.filter(e =>
+                e.type === 'POINT' || e.type === 'CIRCLE' || e.type === 'INSERT'
+            ).length;
+            const textCount = parsedCADEntities.filter(e =>
+                e.type === 'TEXT' || e.type === 'MTEXT'
+            ).length;
+            const lineCount = parsedCADEntities.filter(e =>
+                e.type === 'LINE' || e.type === 'LWPOLYLINE' || e.type === 'POLYLINE'
+            ).length;
+
+            summary.innerHTML = `
+                <div style="padding: 12px; background: var(--bg-card); border-radius: 8px; text-align: center;">
+                    <div style="font-size: 1.5rem; color: var(--accent-purple); font-weight: bold;">${parsedCADEntities.length}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Total</div>
+                </div>
+                <div style="padding: 12px; background: var(--bg-card); border-radius: 8px; text-align: center;">
+                    <div style="font-size: 1.5rem; color: var(--accent-green); font-weight: bold;">${pointLike}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Pontos/Blocos</div>
+                </div>
+                <div style="padding: 12px; background: var(--bg-card); border-radius: 8px; text-align: center;">
+                    <div style="font-size: 1.5rem; color: var(--accent-blue); font-weight: bold;">${textCount}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Textos</div>
+                </div>
+                <div style="padding: 12px; background: var(--bg-card); border-radius: 8px; text-align: center;">
+                    <div style="font-size: 1.5rem; color: var(--accent-orange); font-weight: bold;">${layers.length}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Layers</div>
+                </div>
+            `;
+        }
+
+        /**
+         * Populate filter dropdowns with available layers
+         */
+        function populateCADFilters() {
+            const layerSelect = document.getElementById('cad-filter-layer');
+            const layers = [...new Set(parsedCADEntities.map(e => e.layer))].sort();
+
+            // Clear existing options except first
+            layerSelect.innerHTML = '<option value="">Todos os Layers</option>';
+
+            layers.forEach(layer => {
+                const option = document.createElement('option');
+                option.value = layer;
+                option.textContent = layer;
+                layerSelect.appendChild(option);
+            });
+        }
+
+        /**
+         * Display CAD entities in the table
+         */
+        function displayCADEntities() {
+            const tbody = document.getElementById('cad-entities-body');
+            const layerFilter = document.getElementById('cad-filter-layer').value;
+            const typeFilter = document.getElementById('cad-filter-type').value;
+
+            // Filter entities
+            let filtered = parsedCADEntities;
+            if (layerFilter) {
+                filtered = filtered.filter(e => e.layer === layerFilter);
+            }
+            if (typeFilter) {
+                filtered = filtered.filter(e => e.type === typeFilter);
+            }
+
+            // Build table rows
+            let html = '';
+            filtered.forEach(entity => {
+                const isSelected = selectedCADEntities.has(entity.id);
+                const typeIcon = getEntityTypeIcon(entity.type);
+                const zValue = entity.z !== null && !isNaN(entity.z) ? entity.z.toFixed(3) : '-';
+                const info = entity.text || entity.blockName || (entity.radius ? `r=${entity.radius.toFixed(2)}` : '');
+
+                html += `
+                    <tr data-entity-id="${entity.id}" style="cursor: pointer; ${isSelected ? 'background: rgba(34, 197, 94, 0.15);' : ''}"
+                        onclick="toggleCADEntity(${entity.id})">
+                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color);">
+                            <input type="checkbox" ${isSelected ? 'checked' : ''}
+                                onclick="event.stopPropagation(); toggleCADEntity(${entity.id})">
+                        </td>
+                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color);">
+                            <span title="${entity.type}">${typeIcon} ${entity.type}</span>
+                        </td>
+                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color); color: var(--accent-purple);">
+                            ${entity.layer}
+                        </td>
+                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color); text-align: right; font-family: monospace;">
+                            ${entity.x !== null && !isNaN(entity.x) ? entity.x.toFixed(3) : '-'}
+                        </td>
+                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color); text-align: right; font-family: monospace;">
+                            ${entity.y !== null && !isNaN(entity.y) ? entity.y.toFixed(3) : '-'}
+                        </td>
+                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color); text-align: right; font-family: monospace; color: ${zValue !== '-' ? 'var(--accent-green)' : 'var(--text-secondary)'};">
+                            ${zValue}
+                        </td>
+                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${info}">
+                            ${info || '-'}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html || '<tr><td colspan="7" style="padding: 20px; text-align: center; color: var(--text-secondary);">Nenhuma entidade encontrada com os filtros atuais</td></tr>';
+
+            // Update selection count
+            updateSelectionCount();
+        }
+
+        /**
+         * Get icon for entity type
+         */
+        function getEntityTypeIcon(type) {
+            const icons = {
+                'POINT': '📍',
+                'CIRCLE': '⭕',
+                'INSERT': '📦',
+                'TEXT': '📝',
+                'MTEXT': '📝',
+                'LINE': '📏',
+                'LWPOLYLINE': '📐',
+                'POLYLINE': '📐',
+                'ARC': '🌙'
+            };
+            return icons[type] || '❓';
+        }
+
+        /**
+         * Toggle single entity selection
+         */
+        function toggleCADEntity(entityId) {
+            if (selectedCADEntities.has(entityId)) {
+                selectedCADEntities.delete(entityId);
+            } else {
+                selectedCADEntities.add(entityId);
+            }
+            displayCADEntities();
+        }
+
+        /**
+         * Toggle all visible entities
+         */
+        function toggleAllCADEntities(checked) {
+            const layerFilter = document.getElementById('cad-filter-layer').value;
+            const typeFilter = document.getElementById('cad-filter-type').value;
+
+            // Get filtered entities
+            let filtered = parsedCADEntities;
+            if (layerFilter) {
+                filtered = filtered.filter(e => e.layer === layerFilter);
+            }
+            if (typeFilter) {
+                filtered = filtered.filter(e => e.type === typeFilter);
+            }
+
+            // Toggle selection
+            filtered.forEach(entity => {
+                if (checked) {
+                    selectedCADEntities.add(entity.id);
+                } else {
+                    selectedCADEntities.delete(entity.id);
+                }
+            });
+
+            displayCADEntities();
+        }
+
+        /**
+         * Filter entities and refresh table
+         */
+        function filterCADEntities() {
+            displayCADEntities();
+        }
+
+        /**
+         * Update selection count display
+         */
+        function updateSelectionCount() {
+            const countSpan = document.getElementById('cad-selection-count');
+            const count = selectedCADEntities.size;
+            countSpan.textContent = `${count} ponto${count !== 1 ? 's' : ''} selecionado${count !== 1 ? 's' : ''}`;
+            countSpan.style.color = count > 0 ? 'var(--accent-green)' : 'var(--text-secondary)';
+        }
+
+        /**
+         * Setup listeners for mapping option changes
+         */
+        function setupMappingListeners() {
+            const cotaSelect = document.getElementById('cad-map-z');
+            const manualGroup = document.getElementById('cad-manual-cota-group');
+
+            cotaSelect.onchange = function() {
+                manualGroup.style.display = this.value === 'manual' ? 'block' : 'none';
+            };
+        }
+
+        /**
+         * Preview the selected points before import
+         */
+        function previewCADSelection() {
+            if (selectedCADEntities.size === 0) {
+                alert('Selecione pelo menos um ponto para visualizar.');
+                return;
+            }
+
+            const previewDiv = document.getElementById('cad-preview');
+            const contentDiv = document.getElementById('cad-preview-content');
+
+            // Get selected entities
+            const selected = parsedCADEntities.filter(e => selectedCADEntities.has(e.id));
+
+            // Get mapping configuration
+            const mapX = document.getElementById('cad-map-x').value;
+            const mapY = document.getElementById('cad-map-y').value;
+            const mapZ = document.getElementById('cad-map-z').value;
+            const manualCota = parseFloat(document.getElementById('cad-manual-cota').value) || 0;
+            const useTextAsId = document.getElementById('cad-use-text-as-id').checked;
+
+            // Find nearby texts for ID assignment
+            const texts = parsedCADEntities.filter(e => e.type === 'TEXT' || e.type === 'MTEXT');
+
+            // Build preview points
+            const previewPoints = selected.map((entity, idx) => {
+                let x = mapX === 'x' ? entity.x : entity.y;
+                let y = mapY === 'y' ? entity.y : entity.x;
+                let z;
+
+                if (mapZ === 'z') {
+                    z = entity.z !== null && !isNaN(entity.z) ? entity.z : 0;
+                } else if (mapZ === 'manual') {
+                    z = manualCota;
+                } else {
+                    // Try to find nearby text for cota
+                    const nearbyText = findNearbyText(entity, texts, 10);
+                    z = nearbyText ? parseFloat(nearbyText.replace(',', '.')) : 0;
+                }
+
+                // Determine ID
+                let id;
+                if (useTextAsId) {
+                    const nearbyTextEntity = findNearbyTextEntity(entity, texts, 15);
+                    id = nearbyTextEntity ? nearbyTextEntity.text : `P${String(idx + 1).padStart(2, '0')}`;
+                } else {
+                    id = entity.blockName || entity.text || `P${String(idx + 1).padStart(2, '0')}`;
+                }
+
+                return { id, x, y, z, original: entity };
+            });
+
+            // Build preview table
+            let html = `
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="background: var(--bg-secondary);">
+                            <th style="padding: 8px; text-align: left;">ID</th>
+                            <th style="padding: 8px; text-align: right;">X (Este)</th>
+                            <th style="padding: 8px; text-align: right;">Y (Norte)</th>
+                            <th style="padding: 8px; text-align: right;">Cota</th>
+                            <th style="padding: 8px; text-align: left;">Origem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            previewPoints.forEach(pt => {
+                html += `
+                    <tr>
+                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color); font-weight: bold;">${pt.id}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color); text-align: right; font-family: monospace;">${pt.x?.toFixed(3) || '-'}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color); text-align: right; font-family: monospace;">${pt.y?.toFixed(3) || '-'}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color); text-align: right; font-family: monospace; color: var(--accent-green);">${pt.z?.toFixed(3) || '0'}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color); color: var(--text-secondary);">${pt.original.type} / ${pt.original.layer}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            contentDiv.innerHTML = html;
+            previewDiv.style.display = 'block';
+        }
+
+        /**
+         * Find nearby text content (for cota extraction)
+         */
+        function findNearbyText(entity, texts, maxDistance) {
+            if (!entity.x || !entity.y) return null;
+
+            let closest = null;
+            let closestDist = Infinity;
+
+            texts.forEach(text => {
+                if (!text.x || !text.y || !text.text) return;
+
+                const dist = Math.sqrt(
+                    Math.pow(text.x - entity.x, 2) +
+                    Math.pow(text.y - entity.y, 2)
+                );
+
+                if (dist < maxDistance && dist < closestDist) {
+                    // Check if text looks like a number (could be a cota)
+                    const cleaned = text.text.replace(',', '.').trim();
+                    if (!isNaN(parseFloat(cleaned))) {
+                        closest = text.text;
+                        closestDist = dist;
+                    }
+                }
+            });
+
+            return closest;
+        }
+
+        /**
+         * Find nearby text entity (for ID assignment)
+         */
+        function findNearbyTextEntity(entity, texts, maxDistance) {
+            if (!entity.x || !entity.y) return null;
+
+            let closest = null;
+            let closestDist = Infinity;
+
+            texts.forEach(text => {
+                if (!text.x || !text.y || !text.text) return;
+
+                const dist = Math.sqrt(
+                    Math.pow(text.x - entity.x, 2) +
+                    Math.pow(text.y - entity.y, 2)
+                );
+
+                if (dist < maxDistance && dist < closestDist) {
+                    closest = text;
+                    closestDist = dist;
+                }
+            });
+
+            return closest;
+        }
+
+        /**
+         * Confirm and import selected CAD points as topography
+         */
+        function confirmCADImport() {
+            if (selectedCADEntities.size === 0) {
+                alert('Selecione pelo menos um ponto para importar.');
+                return;
+            }
+
+            // Get selected entities
+            const selected = parsedCADEntities.filter(e => selectedCADEntities.has(e.id));
+
+            // Get mapping configuration
+            const mapX = document.getElementById('cad-map-x').value;
+            const mapY = document.getElementById('cad-map-y').value;
+            const mapZ = document.getElementById('cad-map-z').value;
+            const manualCota = parseFloat(document.getElementById('cad-manual-cota').value) || 0;
+            const useTextAsId = document.getElementById('cad-use-text-as-id').checked;
+
+            // Find nearby texts
+            const texts = parsedCADEntities.filter(e => e.type === 'TEXT' || e.type === 'MTEXT');
+
+            // Convert to importedNodes format
+            importedNodes = [];
+            selected.forEach((entity, idx) => {
+                let x = mapX === 'x' ? entity.x : entity.y;
+                let y = mapY === 'y' ? entity.y : entity.x;
+                let z;
+
+                if (mapZ === 'z') {
+                    z = entity.z !== null && !isNaN(entity.z) ? entity.z : 0;
+                } else if (mapZ === 'manual') {
+                    z = manualCota;
+                } else {
+                    const nearbyText = findNearbyText(entity, texts, 10);
+                    z = nearbyText ? parseFloat(nearbyText.replace(',', '.')) : 0;
+                }
+
+                // Determine ID
+                let id;
+                if (useTextAsId) {
+                    const nearbyTextEntity = findNearbyTextEntity(entity, texts, 15);
+                    id = nearbyTextEntity ? nearbyTextEntity.text : `P${String(idx + 1).padStart(2, '0')}`;
+                } else {
+                    id = entity.blockName || entity.text || `P${String(idx + 1).padStart(2, '0')}`;
+                }
+
+                // Only add if we have valid coordinates
+                if (x !== null && y !== null && !isNaN(x) && !isNaN(y)) {
+                    importedNodes.push({ id, x, y, z: z || 0 });
+                }
+            });
+
+            if (importedNodes.length === 0) {
+                alert('Nenhum ponto válido para importar. Verifique se as entidades selecionadas possuem coordenadas.');
+                return;
+            }
+
+            // Update file stats
+            document.getElementById('file-stats').innerHTML =
+                `<span style="color: var(--accent-green);">${importedNodes.length} pontos importados com sucesso!</span>`;
+
+            // Hide the CAD viewer
+            document.getElementById('cad-entities-viewer').style.display = 'none';
+            document.getElementById('cad-preview').style.display = 'none';
+
+            // Show preview
+            showPreview();
+
+            // Success notification
+            console.log('=== CAD IMPORT SUCCESS ===');
+            console.log('Imported nodes:', importedNodes);
         }
 
         function parseTopographyData(content, fileName) {
@@ -12267,6 +13039,9 @@ DATA;
             const fileInput = document.getElementById('file-input');
             const fileLabel = document.getElementById('import-file-label');
             const formatsInfo = document.getElementById('import-formats-info');
+            const pasteDataGroup = document.querySelector('#paste-data')?.closest('.form-group');
+            const cadViewer = document.getElementById('cad-entities-viewer');
+            const cadPreview = document.getElementById('cad-preview');
 
             // Hide all specific options
             formatGroup.style.display = 'none';
@@ -12274,30 +13049,41 @@ DATA;
             gisOptions.style.display = 'none';
             bimOptions.style.display = 'none';
 
+            // Hide CAD viewer when changing types
+            if (cadViewer) cadViewer.style.display = 'none';
+            if (cadPreview) cadPreview.style.display = 'none';
+
+            // Reset file info
+            document.getElementById('file-info').style.display = 'none';
+
             switch (fileType) {
                 case 'topografia':
                     formatGroup.style.display = 'block';
                     fileInput.accept = '.txt,.csv';
                     fileLabel.textContent = 'Arquivo de Topografia (id, x, y, cota)';
                     formatsInfo.textContent = 'Formatos: .txt, .csv';
+                    if (pasteDataGroup) pasteDataGroup.style.display = 'block';
                     break;
                 case 'cad':
                     cadOptions.style.display = 'block';
                     fileInput.accept = '.dwg,.dxf';
                     fileLabel.textContent = 'Arquivo CAD';
                     formatsInfo.textContent = 'Formatos: .dwg, .dxf';
+                    if (pasteDataGroup) pasteDataGroup.style.display = 'none';
                     break;
                 case 'gis':
                     gisOptions.style.display = 'block';
                     fileInput.accept = '.shp,.geojson,.json,.kml,.kmz';
                     fileLabel.textContent = 'Arquivo GIS/Shapefile';
                     formatsInfo.textContent = 'Formatos: .shp, .geojson, .kml';
+                    if (pasteDataGroup) pasteDataGroup.style.display = 'none';
                     break;
                 case 'bim':
                     bimOptions.style.display = 'block';
                     fileInput.accept = '.ifc';
                     fileLabel.textContent = 'Arquivo BIM/IFC';
                     formatsInfo.textContent = 'Formatos: .ifc';
+                    if (pasteDataGroup) pasteDataGroup.style.display = 'none';
                     break;
             }
         }
