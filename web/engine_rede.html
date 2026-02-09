@@ -18784,6 +18784,1699 @@ Dados exportados:
         }
 
         // ============================================
+        // RDO MODULE - COMPLETE FUNCTIONALITY
+        // ============================================
+
+        // RDO Data Storage
+        const rdoData = {
+            rdos: [],
+            projects: [
+                { id: 'proj1', name: 'Projeto Saneamento Centro' },
+                { id: 'proj2', name: 'Projeto Expansão Norte' },
+                { id: 'proj3', name: 'Projeto Drenagem Sul' }
+            ],
+            obras: [
+                { id: 'obra1', projectId: 'proj1', name: 'Obra 001 - Rede de Esgoto' },
+                { id: 'obra2', projectId: 'proj1', name: 'Obra 002 - Rede de Água' },
+                { id: 'obra3', projectId: 'proj2', name: 'Obra 003 - Expansão' }
+            ],
+            workFronts: [
+                { id: 'wf1', name: 'Frente A - Escavação' },
+                { id: 'wf2', name: 'Frente B - Assentamento' },
+                { id: 'wf3', name: 'Frente C - Reaterro' }
+            ],
+            locations: [
+                { id: 'loc1', name: 'Rua das Flores, 100-200' },
+                { id: 'loc2', name: 'Av. Principal, 500-700' },
+                { id: 'loc3', name: 'Rua do Comércio' }
+            ],
+            serviceCatalog: [
+                { id: 'svc1', name: 'Escavação mecânica', unit: 'm³', category: 'Escavação' },
+                { id: 'svc2', name: 'Escavação manual', unit: 'm³', category: 'Escavação' },
+                { id: 'svc3', name: 'Assentamento de tubulação PVC DN100', unit: 'm', category: 'Assentamento' },
+                { id: 'svc4', name: 'Assentamento de tubulação PVC DN150', unit: 'm', category: 'Assentamento' },
+                { id: 'svc5', name: 'Assentamento de tubulação PVC DN200', unit: 'm', category: 'Assentamento' },
+                { id: 'svc6', name: 'Reaterro compactado', unit: 'm³', category: 'Reaterro' },
+                { id: 'svc7', name: 'Execução de PV', unit: 'un', category: 'Poços de Visita' },
+                { id: 'svc8', name: 'Ligação predial', unit: 'un', category: 'Ligações' },
+                { id: 'svc9', name: 'Pavimentação asfáltica', unit: 'm²', category: 'Pavimentação' },
+                { id: 'svc10', name: 'Teste de estanqueidade', unit: 'un', category: 'Testes' }
+            ],
+            employees: [
+                { id: 'emp1', name: 'João Silva - Encarregado' },
+                { id: 'emp2', name: 'Maria Santos - Técnica' },
+                { id: 'emp3', name: 'Pedro Souza - Operador' }
+            ],
+            segments: [],
+            selectedWorkFronts: [],
+            selectedLocations: [],
+            services: [],
+            segmentProgress: [],
+            currentRDOId: null,
+            rdoMap: null
+        };
+
+        // Initialize RDO module on tab switch
+        function initRDOModule() {
+            populateRDOSelects();
+            renderWorkFrontsList();
+            renderLocationsList();
+            addServiceRow();
+            addSegmentProgressRow();
+            setDefaultDate();
+            updateRDODashboardSummary();
+        }
+
+        function setDefaultDate() {
+            const dateInput = document.getElementById('rdo-date');
+            if (dateInput) {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
+        }
+
+        function populateRDOSelects() {
+            // Populate projects
+            const projectSelect = document.getElementById('rdo-project');
+            if (projectSelect) {
+                projectSelect.innerHTML = '<option value="">Selecione o projeto</option>';
+                rdoData.projects.forEach(p => {
+                    projectSelect.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+                });
+            }
+
+            // Populate obras (filtered by project when selected)
+            const obraSelect = document.getElementById('rdo-obra');
+            if (obraSelect) {
+                obraSelect.innerHTML = '<option value="">Selecione a obra</option>';
+            }
+        }
+
+        function loadProjectData() {
+            const projectId = document.getElementById('rdo-project').value;
+            const obraSelect = document.getElementById('rdo-obra');
+
+            obraSelect.innerHTML = '<option value="">Selecione a obra</option>';
+
+            if (projectId) {
+                const filteredObras = rdoData.obras.filter(o => o.projectId === projectId);
+                filteredObras.forEach(o => {
+                    obraSelect.innerHTML += `<option value="${o.id}">${o.name}</option>`;
+                });
+
+                // Load segments for this project
+                loadProjectSegments(projectId);
+            }
+        }
+
+        function loadProjectSegments(projectId) {
+            // Simulated segments from planning - in real app, this would come from imported data
+            rdoData.segments = [
+                { id: 'seg1', name: 'TRE-001', projectId: 'proj1', system: 'esgoto', planned: 150, executed: 0, startNode: 'PV01', endNode: 'PV02' },
+                { id: 'seg2', name: 'TRE-002', projectId: 'proj1', system: 'esgoto', planned: 200, executed: 50, startNode: 'PV02', endNode: 'PV03' },
+                { id: 'seg3', name: 'TRE-003', projectId: 'proj1', system: 'esgoto', planned: 175, executed: 175, startNode: 'PV03', endNode: 'PV04' },
+                { id: 'seg4', name: 'TRA-001', projectId: 'proj1', system: 'agua', planned: 120, executed: 80, startNode: 'N01', endNode: 'N02' },
+                { id: 'seg5', name: 'TRA-002', projectId: 'proj1', system: 'agua', planned: 180, executed: 0, startNode: 'N02', endNode: 'N03' },
+                { id: 'seg6', name: 'TRD-001', projectId: 'proj1', system: 'drenagem', planned: 250, executed: 100, startNode: 'BL01', endNode: 'BL02' }
+            ];
+        }
+
+        // Work Fronts Management
+        function renderWorkFrontsList() {
+            const container = document.getElementById('rdo-work-fronts-list');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            // Show available fronts as checkboxes
+            rdoData.workFronts.forEach(wf => {
+                const isSelected = rdoData.selectedWorkFronts.includes(wf.id);
+                container.innerHTML += `
+                    <label class="chip ${isSelected ? 'chip-selected' : ''}" style="cursor: pointer; padding: 8px 16px; border-radius: 20px; background: ${isSelected ? 'var(--accent-blue)' : 'var(--bg-hover)'}; color: ${isSelected ? 'white' : 'inherit'}; display: inline-flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleWorkFront('${wf.id}')" style="display: none;">
+                        <span>${wf.name}</span>
+                        ${isSelected ? '<span>✓</span>' : ''}
+                    </label>
+                `;
+            });
+        }
+
+        function toggleWorkFront(wfId) {
+            const idx = rdoData.selectedWorkFronts.indexOf(wfId);
+            if (idx > -1) {
+                rdoData.selectedWorkFronts.splice(idx, 1);
+            } else {
+                rdoData.selectedWorkFronts.push(wfId);
+            }
+            renderWorkFrontsList();
+        }
+
+        function addWorkFront() {
+            const input = document.getElementById('rdo-new-front');
+            const name = input.value.trim();
+
+            if (!name) {
+                alert('Digite o nome da frente de serviço');
+                return;
+            }
+
+            const newId = 'wf' + Date.now();
+            rdoData.workFronts.push({ id: newId, name: name });
+            rdoData.selectedWorkFronts.push(newId);
+            input.value = '';
+            renderWorkFrontsList();
+        }
+
+        // Work Locations Management
+        function renderLocationsList() {
+            const container = document.getElementById('rdo-locations-list');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            rdoData.locations.forEach(loc => {
+                const isSelected = rdoData.selectedLocations.includes(loc.id);
+                container.innerHTML += `
+                    <label class="chip ${isSelected ? 'chip-selected' : ''}" style="cursor: pointer; padding: 8px 16px; border-radius: 20px; background: ${isSelected ? 'var(--accent-green)' : 'var(--bg-hover)'}; color: ${isSelected ? 'white' : 'inherit'}; display: inline-flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleLocation('${loc.id}')" style="display: none;">
+                        <span>${loc.name}</span>
+                        ${isSelected ? '<span>✓</span>' : ''}
+                    </label>
+                `;
+            });
+        }
+
+        function toggleLocation(locId) {
+            const idx = rdoData.selectedLocations.indexOf(locId);
+            if (idx > -1) {
+                rdoData.selectedLocations.splice(idx, 1);
+            } else {
+                rdoData.selectedLocations.push(locId);
+            }
+            renderLocationsList();
+        }
+
+        function addWorkLocation() {
+            const input = document.getElementById('rdo-new-location');
+            const name = input.value.trim();
+
+            if (!name) {
+                alert('Digite o nome do local');
+                return;
+            }
+
+            const newId = 'loc' + Date.now();
+            rdoData.locations.push({ id: newId, name: name });
+            rdoData.selectedLocations.push(newId);
+            input.value = '';
+            renderLocationsList();
+        }
+
+        // Services Management
+        let serviceCounter = 0;
+
+        function addServiceRow() {
+            const container = document.getElementById('rdo-services-container');
+            if (!container) return;
+
+            serviceCounter++;
+            const rowId = `service-row-${serviceCounter}`;
+
+            const serviceOptions = rdoData.serviceCatalog.map(s =>
+                `<option value="${s.id}" data-unit="${s.unit}">${s.name}</option>`
+            ).join('');
+
+            const employeeOptions = rdoData.employees.map(e =>
+                `<option value="${e.id}">${e.name}</option>`
+            ).join('');
+
+            const row = document.createElement('div');
+            row.id = rowId;
+            row.className = 'service-row';
+            row.style.cssText = 'background: var(--bg-card); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border-color);';
+            row.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <strong style="color: var(--accent-blue);">Serviço ${serviceCounter}</strong>
+                    <button type="button" class="btn" style="background: var(--accent-red); color: white; padding: 4px 10px; font-size: 0.8rem;" onclick="removeServiceRow('${rowId}')">✕ Remover</button>
+                </div>
+                <div class="grid" style="gap: 10px;">
+                    <div class="form-group">
+                        <label>Serviço *</label>
+                        <select class="service-select" required onchange="updateServiceUnit(this, '${rowId}')">
+                            <option value="">Selecione o serviço</option>
+                            ${serviceOptions}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Quantidade *</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="number" class="service-qty" step="0.01" min="0" placeholder="0.00" required style="flex: 1;">
+                            <input type="text" class="service-unit" placeholder="un" readonly style="width: 60px; text-align: center;">
+                        </div>
+                    </div>
+                </div>
+                <div class="grid" style="gap: 10px; margin-top: 10px;">
+                    <div class="form-group">
+                        <label>Equipamentos Utilizados (opcional)</label>
+                        <input type="text" class="service-equipment" placeholder="Betoneira, Vibrador, Escavadeira...">
+                    </div>
+                    <div class="form-group">
+                        <label>Funcionário Responsável (opcional)</label>
+                        <select class="service-employee">
+                            <option value="">Selecione o funcionário</option>
+                            ${employeeOptions}
+                        </select>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(row);
+        }
+
+        function updateServiceUnit(select, rowId) {
+            const row = document.getElementById(rowId);
+            const selectedOption = select.options[select.selectedIndex];
+            const unitInput = row.querySelector('.service-unit');
+            unitInput.value = selectedOption.dataset.unit || '';
+        }
+
+        function removeServiceRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row && document.querySelectorAll('.service-row').length > 1) {
+                row.remove();
+            } else {
+                alert('É necessário manter pelo menos um serviço');
+            }
+        }
+
+        // Segment Progress Management (Planning Integration)
+        let segmentCounter = 0;
+
+        function addSegmentProgressRow() {
+            const container = document.getElementById('rdo-segments-container');
+            if (!container) return;
+
+            segmentCounter++;
+            const rowId = `segment-row-${segmentCounter}`;
+
+            const segmentOptions = rdoData.segments.map(s => {
+                const remaining = s.planned - s.executed;
+                return `<option value="${s.id}" data-system="${s.system}" data-planned="${s.planned}" data-executed="${s.executed}">${s.name} - ${s.system.toUpperCase()} (Restante: ${remaining}m)</option>`;
+            }).join('');
+
+            const row = document.createElement('div');
+            row.id = rowId;
+            row.className = 'segment-row';
+            row.style.cssText = 'background: var(--bg-card); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border-color);';
+            row.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <strong style="color: var(--accent-purple);">Trecho ${segmentCounter}</strong>
+                    <button type="button" class="btn" style="background: var(--accent-red); color: white; padding: 4px 10px; font-size: 0.8rem;" onclick="removeSegmentRow('${rowId}')">✕ Remover</button>
+                </div>
+                <div class="grid" style="gap: 10px;">
+                    <div class="form-group">
+                        <label>Trecho Importado *</label>
+                        <select class="segment-select" onchange="updateSegmentInfo(this, '${rowId}')">
+                            <option value="">Selecione o trecho</option>
+                            ${segmentOptions}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Sistema</label>
+                        <select class="segment-system" disabled>
+                            <option value="">-</option>
+                            <option value="agua">💧 Água</option>
+                            <option value="esgoto">🚰 Esgoto</option>
+                            <option value="drenagem">🌧️ Drenagem</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid" style="gap: 10px; margin-top: 10px;">
+                    <div class="form-group">
+                        <label>Metros Executados Hoje *</label>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <input type="number" class="segment-executed" step="0.01" min="0" placeholder="0.00" style="flex: 1;">
+                            <span style="color: var(--text-secondary);">m</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Data de Execução *</label>
+                        <input type="date" class="segment-date" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                </div>
+                <div class="segment-info" style="display: none; margin-top: 10px; padding: 10px; background: var(--bg-primary); border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                        <span>Planejado: <strong class="seg-planned">-</strong></span>
+                        <span>Executado (antes): <strong class="seg-prev-exec">-</strong></span>
+                        <span>Restante: <strong class="seg-remaining">-</strong></span>
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <div class="progress-bar" style="height: 8px;">
+                            <div class="progress-bar-fill seg-progress-bar" style="width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(row);
+        }
+
+        function updateSegmentInfo(select, rowId) {
+            const row = document.getElementById(rowId);
+            const selectedOption = select.options[select.selectedIndex];
+            const infoDiv = row.querySelector('.segment-info');
+            const systemSelect = row.querySelector('.segment-system');
+
+            if (selectedOption.value) {
+                const system = selectedOption.dataset.system;
+                const planned = parseFloat(selectedOption.dataset.planned);
+                const executed = parseFloat(selectedOption.dataset.executed);
+                const remaining = planned - executed;
+                const progress = (executed / planned) * 100;
+
+                systemSelect.value = system;
+                row.querySelector('.seg-planned').textContent = planned.toFixed(2) + 'm';
+                row.querySelector('.seg-prev-exec').textContent = executed.toFixed(2) + 'm';
+                row.querySelector('.seg-remaining').textContent = remaining.toFixed(2) + 'm';
+                row.querySelector('.seg-progress-bar').style.width = progress + '%';
+                row.querySelector('.seg-progress-bar').style.background = getProgressColor(progress);
+
+                infoDiv.style.display = 'block';
+            } else {
+                systemSelect.value = '';
+                infoDiv.style.display = 'none';
+            }
+        }
+
+        function getProgressColor(progress) {
+            if (progress >= 100) return '#28a745';
+            if (progress >= 75) return '#8bc34a';
+            if (progress >= 50) return '#ffc107';
+            if (progress > 0) return '#fd7e14';
+            return '#dc3545';
+        }
+
+        function removeSegmentRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) {
+                row.remove();
+            }
+        }
+
+        // GPS Functions
+        function getRDOGPS() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        document.getElementById('rdo-latitude').value = position.coords.latitude.toFixed(6);
+                        document.getElementById('rdo-longitude').value = position.coords.longitude.toFixed(6);
+                    },
+                    error => {
+                        alert('Erro ao obter localização: ' + error.message);
+                    }
+                );
+            } else {
+                alert('Geolocalização não suportada pelo navegador');
+            }
+        }
+
+        // Service Catalog Modal
+        function openServiceCatalog() {
+            renderCatalogList();
+            document.getElementById('service-catalog-modal').style.display = 'block';
+        }
+
+        function closeServiceCatalog() {
+            document.getElementById('service-catalog-modal').style.display = 'none';
+        }
+
+        function renderCatalogList() {
+            const container = document.getElementById('catalog-list');
+            const searchTerm = document.getElementById('catalog-search')?.value.toLowerCase() || '';
+
+            const filtered = rdoData.serviceCatalog.filter(s =>
+                s.name.toLowerCase().includes(searchTerm) ||
+                s.category.toLowerCase().includes(searchTerm)
+            );
+
+            // Group by category
+            const grouped = {};
+            filtered.forEach(s => {
+                if (!grouped[s.category]) grouped[s.category] = [];
+                grouped[s.category].push(s);
+            });
+
+            container.innerHTML = '';
+            Object.keys(grouped).forEach(cat => {
+                container.innerHTML += `<h4 style="margin: 15px 0 10px; color: var(--accent-blue);">${cat}</h4>`;
+                grouped[cat].forEach(s => {
+                    container.innerHTML += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-primary); border-radius: 8px; margin-bottom: 5px;">
+                            <span>${s.name} <small style="color: var(--text-secondary);">(${s.unit})</small></span>
+                            <button class="btn btn-success" style="padding: 4px 10px; font-size: 0.8rem;" onclick="selectCatalogService('${s.id}')">Selecionar</button>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        function filterCatalog() {
+            renderCatalogList();
+        }
+
+        function selectCatalogService(serviceId) {
+            closeServiceCatalog();
+            // Add to services if not already present
+            const lastRow = document.querySelector('.service-row:last-child .service-select');
+            if (lastRow) {
+                lastRow.value = serviceId;
+                lastRow.dispatchEvent(new Event('change'));
+            }
+        }
+
+        function addToCatalog() {
+            const name = document.getElementById('new-catalog-service').value.trim();
+            const unit = document.getElementById('new-catalog-unit').value;
+
+            if (!name) {
+                alert('Digite o nome do serviço');
+                return;
+            }
+
+            const newService = {
+                id: 'svc' + Date.now(),
+                name: name,
+                unit: unit,
+                category: 'Personalizado'
+            };
+
+            rdoData.serviceCatalog.push(newService);
+            document.getElementById('new-catalog-service').value = '';
+            renderCatalogList();
+            alert('Serviço adicionado ao catálogo!');
+        }
+
+        // RDO Form Actions
+        function openNewRDOModal() {
+            rdoData.currentRDOId = null;
+            rdoData.selectedWorkFronts = [];
+            rdoData.selectedLocations = [];
+            serviceCounter = 0;
+            segmentCounter = 0;
+
+            document.getElementById('rdo-form').reset();
+            document.getElementById('rdo-services-container').innerHTML = '';
+            document.getElementById('rdo-segments-container').innerHTML = '';
+
+            initRDOModule();
+
+            document.getElementById('rdo-form-container').style.display = 'block';
+            document.getElementById('rdo-list-container').style.display = 'none';
+            document.getElementById('rdo-dashboard-container').style.display = 'none';
+            document.getElementById('rdo-map-container').style.display = 'none';
+            document.getElementById('rdo-detail-container').style.display = 'none';
+        }
+
+        function closeRDOForm() {
+            document.getElementById('rdo-form-container').style.display = 'none';
+        }
+
+        function saveRDODraft() {
+            const rdo = collectRDOData();
+            rdo.status = 'rascunho';
+            saveRDOToStorage(rdo);
+            alert('Rascunho salvo com sucesso!');
+        }
+
+        function saveRDO(event) {
+            event.preventDefault();
+
+            if (rdoData.selectedWorkFronts.length === 0) {
+                alert('Selecione pelo menos uma frente de serviço');
+                return;
+            }
+
+            if (rdoData.selectedLocations.length === 0) {
+                alert('Selecione pelo menos um local da obra');
+                return;
+            }
+
+            const rdo = collectRDOData();
+            rdo.status = 'enviado';
+
+            // Update segment progress in main data
+            rdo.segments.forEach(segData => {
+                const segment = rdoData.segments.find(s => s.id === segData.segmentId);
+                if (segment) {
+                    segment.executed += segData.executedToday;
+                }
+            });
+
+            saveRDOToStorage(rdo);
+
+            alert('RDO gerado com sucesso!');
+            closeRDOForm();
+            showRDOList();
+            updateRDODashboardSummary();
+        }
+
+        function collectRDOData() {
+            const rdo = {
+                id: rdoData.currentRDOId || 'rdo' + Date.now(),
+                projectId: document.getElementById('rdo-project').value,
+                projectName: document.getElementById('rdo-project').options[document.getElementById('rdo-project').selectedIndex]?.text || '',
+                obraId: document.getElementById('rdo-obra').value,
+                obraName: document.getElementById('rdo-obra').options[document.getElementById('rdo-obra').selectedIndex]?.text || '',
+                date: document.getElementById('rdo-date').value,
+                terrain: document.getElementById('rdo-terrain').value,
+                latitude: document.getElementById('rdo-latitude').value,
+                longitude: document.getElementById('rdo-longitude').value,
+                workFronts: rdoData.selectedWorkFronts.map(id => {
+                    const wf = rdoData.workFronts.find(w => w.id === id);
+                    return { id, name: wf?.name || '' };
+                }),
+                locations: rdoData.selectedLocations.map(id => {
+                    const loc = rdoData.locations.find(l => l.id === id);
+                    return { id, name: loc?.name || '' };
+                }),
+                services: [],
+                segments: [],
+                visits: document.getElementById('rdo-visits').value,
+                occurrences: document.getElementById('rdo-occurrences').value,
+                notes: document.getElementById('rdo-notes').value,
+                createdAt: new Date().toISOString()
+            };
+
+            // Collect services
+            document.querySelectorAll('.service-row').forEach(row => {
+                const serviceId = row.querySelector('.service-select').value;
+                const qty = parseFloat(row.querySelector('.service-qty').value) || 0;
+                const unit = row.querySelector('.service-unit').value;
+                const equipment = row.querySelector('.service-equipment').value;
+                const employeeId = row.querySelector('.service-employee').value;
+
+                if (serviceId && qty > 0) {
+                    const service = rdoData.serviceCatalog.find(s => s.id === serviceId);
+                    rdo.services.push({
+                        serviceId,
+                        serviceName: service?.name || '',
+                        quantity: qty,
+                        unit: unit || service?.unit || '',
+                        equipment,
+                        employeeId,
+                        employeeName: rdoData.employees.find(e => e.id === employeeId)?.name || ''
+                    });
+                }
+            });
+
+            // Collect segments progress
+            document.querySelectorAll('.segment-row').forEach(row => {
+                const segmentId = row.querySelector('.segment-select').value;
+                const executedToday = parseFloat(row.querySelector('.segment-executed').value) || 0;
+                const execDate = row.querySelector('.segment-date').value;
+                const system = row.querySelector('.segment-system').value;
+
+                if (segmentId && executedToday > 0) {
+                    const segment = rdoData.segments.find(s => s.id === segmentId);
+                    rdo.segments.push({
+                        segmentId,
+                        segmentName: segment?.name || '',
+                        system,
+                        executedToday,
+                        executionDate: execDate,
+                        plannedTotal: segment?.planned || 0,
+                        executedBefore: segment?.executed || 0
+                    });
+                }
+            });
+
+            return rdo;
+        }
+
+        function saveRDOToStorage(rdo) {
+            const existingIdx = rdoData.rdos.findIndex(r => r.id === rdo.id);
+            if (existingIdx > -1) {
+                rdoData.rdos[existingIdx] = rdo;
+            } else {
+                rdoData.rdos.push(rdo);
+            }
+
+            // Save to localStorage
+            try {
+                localStorage.setItem('rdoData', JSON.stringify(rdoData.rdos));
+            } catch (e) {
+                console.warn('Could not save to localStorage', e);
+            }
+        }
+
+        function loadRDOsFromStorage() {
+            try {
+                const stored = localStorage.getItem('rdoData');
+                if (stored) {
+                    rdoData.rdos = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.warn('Could not load from localStorage', e);
+            }
+        }
+
+        // RDO List View
+        function showRDOList() {
+            loadRDOsFromStorage();
+
+            document.getElementById('rdo-form-container').style.display = 'none';
+            document.getElementById('rdo-list-container').style.display = 'block';
+            document.getElementById('rdo-dashboard-container').style.display = 'none';
+            document.getElementById('rdo-map-container').style.display = 'none';
+            document.getElementById('rdo-detail-container').style.display = 'none';
+
+            renderRDOList();
+        }
+
+        function renderRDOList() {
+            const tbody = document.getElementById('rdo-list-tbody');
+            const emptyMsg = document.getElementById('rdo-list-empty');
+            const searchTerm = document.getElementById('rdo-search')?.value.toLowerCase() || '';
+            const statusFilter = document.getElementById('rdo-filter-status')?.value || '';
+
+            let filtered = rdoData.rdos;
+
+            if (searchTerm) {
+                filtered = filtered.filter(r =>
+                    r.projectName.toLowerCase().includes(searchTerm) ||
+                    r.date.includes(searchTerm)
+                );
+            }
+
+            if (statusFilter) {
+                filtered = filtered.filter(r => r.status === statusFilter);
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                emptyMsg.style.display = 'block';
+                return;
+            }
+
+            emptyMsg.style.display = 'none';
+
+            tbody.innerHTML = filtered.map(rdo => {
+                const servicesCount = rdo.services?.length || 0;
+                const segmentsCount = rdo.segments?.length || 0;
+                const totalExecuted = rdo.segments?.reduce((sum, s) => sum + s.executedToday, 0) || 0;
+
+                const statusColors = {
+                    'rascunho': 'var(--accent-orange)',
+                    'enviado': 'var(--accent-blue)',
+                    'aprovado': 'var(--accent-green)',
+                    'rejeitado': 'var(--accent-red)'
+                };
+
+                return `
+                    <tr>
+                        <td>${formatDate(rdo.date)}</td>
+                        <td>${rdo.projectName}</td>
+                        <td>${servicesCount}</td>
+                        <td>${segmentsCount}</td>
+                        <td>${totalExecuted.toFixed(2)}m</td>
+                        <td><span style="padding: 4px 10px; border-radius: 12px; background: ${statusColors[rdo.status]}; color: white; font-size: 0.8rem;">${rdo.status}</span></td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="viewRDODetail('${rdo.id}')">👁️ Ver</button>
+                            <button class="btn" style="padding: 4px 8px; font-size: 0.75rem; background: var(--accent-red); color: white;" onclick="deleteRDO('${rdo.id}')">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterRDOList() {
+            renderRDOList();
+        }
+
+        function deleteRDO(rdoId) {
+            if (confirm('Tem certeza que deseja excluir este RDO?')) {
+                rdoData.rdos = rdoData.rdos.filter(r => r.id !== rdoId);
+                saveRDOToStorage({ id: rdoId }); // Trigger save
+                localStorage.setItem('rdoData', JSON.stringify(rdoData.rdos));
+                renderRDOList();
+                updateRDODashboardSummary();
+            }
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const [year, month, day] = dateStr.split('-');
+            return `${day}/${month}/${year}`;
+        }
+
+        // RDO Detail View
+        function viewRDODetail(rdoId) {
+            const rdo = rdoData.rdos.find(r => r.id === rdoId);
+            if (!rdo) return;
+
+            rdoData.currentRDOId = rdoId;
+
+            document.getElementById('rdo-form-container').style.display = 'none';
+            document.getElementById('rdo-list-container').style.display = 'none';
+            document.getElementById('rdo-dashboard-container').style.display = 'none';
+            document.getElementById('rdo-map-container').style.display = 'none';
+            document.getElementById('rdo-detail-container').style.display = 'block';
+
+            const content = document.getElementById('rdo-detail-content');
+            content.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                    <div style="padding: 15px; background: var(--bg-primary); border-radius: 10px;">
+                        <small style="color: var(--text-secondary);">Projeto</small>
+                        <div style="font-weight: 600; margin-top: 5px;">${rdo.projectName || '-'}</div>
+                    </div>
+                    <div style="padding: 15px; background: var(--bg-primary); border-radius: 10px;">
+                        <small style="color: var(--text-secondary);">Obra</small>
+                        <div style="font-weight: 600; margin-top: 5px;">${rdo.obraName || '-'}</div>
+                    </div>
+                    <div style="padding: 15px; background: var(--bg-primary); border-radius: 10px;">
+                        <small style="color: var(--text-secondary);">Data</small>
+                        <div style="font-weight: 600; margin-top: 5px;">${formatDate(rdo.date)}</div>
+                    </div>
+                    <div style="padding: 15px; background: var(--bg-primary); border-radius: 10px;">
+                        <small style="color: var(--text-secondary);">Status</small>
+                        <div style="font-weight: 600; margin-top: 5px; text-transform: capitalize;">${rdo.status}</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 10px; color: var(--accent-blue);">📍 Frentes de Serviço</h3>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        ${rdo.workFronts?.map(wf => `<span style="padding: 6px 12px; background: var(--accent-blue); color: white; border-radius: 15px; font-size: 0.85rem;">${wf.name}</span>`).join('') || '<span style="color: var(--text-secondary);">Nenhuma frente registrada</span>'}
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 10px; color: var(--accent-green);">📍 Locais</h3>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        ${rdo.locations?.map(loc => `<span style="padding: 6px 12px; background: var(--accent-green); color: white; border-radius: 15px; font-size: 0.85rem;">${loc.name}</span>`).join('') || '<span style="color: var(--text-secondary);">Nenhum local registrado</span>'}
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 10px; color: var(--accent-purple);">🔧 Serviços Executados</h3>
+                    ${rdo.services?.length > 0 ? `
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: var(--bg-primary);">
+                                    <th style="padding: 10px; text-align: left;">Serviço</th>
+                                    <th style="padding: 10px; text-align: right;">Quantidade</th>
+                                    <th style="padding: 10px; text-align: left;">Equipamentos</th>
+                                    <th style="padding: 10px; text-align: left;">Responsável</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rdo.services.map(s => `
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <td style="padding: 10px;">${s.serviceName}</td>
+                                        <td style="padding: 10px; text-align: right;">${s.quantity} ${s.unit}</td>
+                                        <td style="padding: 10px;">${s.equipment || '-'}</td>
+                                        <td style="padding: 10px;">${s.employeeName || '-'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    ` : '<p style="color: var(--text-secondary);">Nenhum serviço registrado</p>'}
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 10px; color: var(--accent-orange);">📏 Avanço por Trecho (Planejado vs Executado)</h3>
+                    ${rdo.segments?.length > 0 ? `
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: var(--bg-primary);">
+                                    <th style="padding: 10px; text-align: left;">Trecho</th>
+                                    <th style="padding: 10px; text-align: center;">Sistema</th>
+                                    <th style="padding: 10px; text-align: right;">Planejado</th>
+                                    <th style="padding: 10px; text-align: right;">Exec. Anterior</th>
+                                    <th style="padding: 10px; text-align: right;">Exec. Hoje</th>
+                                    <th style="padding: 10px; text-align: right;">Total Exec.</th>
+                                    <th style="padding: 10px; text-align: center;">Progresso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rdo.segments.map(s => {
+                                    const totalExec = s.executedBefore + s.executedToday;
+                                    const progress = (totalExec / s.plannedTotal) * 100;
+                                    return `
+                                        <tr style="border-bottom: 1px solid var(--border-color);">
+                                            <td style="padding: 10px; font-weight: 600;">${s.segmentName}</td>
+                                            <td style="padding: 10px; text-align: center;">${s.system === 'agua' ? '💧' : s.system === 'esgoto' ? '🚰' : '🌧️'} ${s.system}</td>
+                                            <td style="padding: 10px; text-align: right;">${s.plannedTotal}m</td>
+                                            <td style="padding: 10px; text-align: right;">${s.executedBefore}m</td>
+                                            <td style="padding: 10px; text-align: right; color: var(--accent-green); font-weight: 600;">+${s.executedToday}m</td>
+                                            <td style="padding: 10px; text-align: right; font-weight: 600;">${totalExec}m</td>
+                                            <td style="padding: 10px; width: 120px;">
+                                                <div style="background: var(--bg-hover); border-radius: 10px; height: 10px; overflow: hidden;">
+                                                    <div style="background: ${getProgressColor(progress)}; height: 100%; width: ${Math.min(progress, 100)}%;"></div>
+                                                </div>
+                                                <small style="color: var(--text-secondary);">${progress.toFixed(1)}%</small>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    ` : '<p style="color: var(--text-secondary);">Nenhum trecho registrado</p>'}
+                </div>
+
+                ${rdo.visits ? `
+                    <div style="margin-bottom: 20px; padding: 15px; background: var(--bg-primary); border-radius: 10px;">
+                        <h4 style="margin-bottom: 10px; color: var(--accent-orange);">👥 Visitas Recebidas</h4>
+                        <p>${rdo.visits}</p>
+                    </div>
+                ` : ''}
+
+                ${rdo.occurrences ? `
+                    <div style="margin-bottom: 20px; padding: 15px; background: var(--bg-primary); border-radius: 10px; border-left: 4px solid var(--accent-red);">
+                        <h4 style="margin-bottom: 10px; color: var(--accent-red);">⚠️ Ocorrências</h4>
+                        <p>${rdo.occurrences}</p>
+                    </div>
+                ` : ''}
+
+                ${rdo.notes ? `
+                    <div style="margin-bottom: 20px; padding: 15px; background: var(--bg-primary); border-radius: 10px;">
+                        <h4 style="margin-bottom: 10px;">📝 Observações Gerais</h4>
+                        <p>${rdo.notes}</p>
+                    </div>
+                ` : ''}
+
+                ${rdo.latitude && rdo.longitude ? `
+                    <div style="margin-bottom: 20px; padding: 15px; background: var(--bg-primary); border-radius: 10px;">
+                        <h4 style="margin-bottom: 10px;">📍 Localização GPS</h4>
+                        <p>Latitude: ${rdo.latitude} | Longitude: ${rdo.longitude}</p>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function closeRDODetail() {
+            document.getElementById('rdo-detail-container').style.display = 'none';
+            showRDOList();
+        }
+
+        // RDO Dashboard
+        function showRDODashboard() {
+            loadRDOsFromStorage();
+            loadProjectSegments('proj1'); // Load default project segments
+
+            document.getElementById('rdo-form-container').style.display = 'none';
+            document.getElementById('rdo-list-container').style.display = 'none';
+            document.getElementById('rdo-dashboard-container').style.display = 'block';
+            document.getElementById('rdo-map-container').style.display = 'none';
+            document.getElementById('rdo-detail-container').style.display = 'none';
+
+            updateRDODashboardFull();
+        }
+
+        function updateRDODashboardSummary() {
+            loadRDOsFromStorage();
+
+            const totalRDOs = rdoData.rdos.length;
+            const today = new Date().toISOString().split('T')[0];
+            const todayRDOs = rdoData.rdos.filter(r => r.date === today).length;
+
+            let totalExecuted = 0;
+            rdoData.rdos.forEach(r => {
+                r.segments?.forEach(s => {
+                    totalExecuted += s.executedToday || 0;
+                });
+            });
+
+            const totalPlanned = rdoData.segments.reduce((sum, s) => sum + s.planned, 0);
+            const progress = totalPlanned > 0 ? (totalExecuted / totalPlanned) * 100 : 0;
+
+            document.getElementById('rdo-total-count').textContent = totalRDOs;
+            document.getElementById('rdo-today-count').textContent = todayRDOs;
+            document.getElementById('rdo-executed-meters').textContent = totalExecuted.toFixed(0) + 'm';
+            document.getElementById('rdo-progress-pct').textContent = progress.toFixed(1) + '%';
+        }
+
+        function updateRDODashboardFull() {
+            // Calculate totals
+            let totalPlanned = 0;
+            let totalExecuted = 0;
+
+            let aguaPlanned = 0, aguaExecuted = 0;
+            let esgotoPlanned = 0, esgotoExecuted = 0;
+            let drenagemPlanned = 0, drenagemExecuted = 0;
+
+            rdoData.segments.forEach(seg => {
+                totalPlanned += seg.planned;
+                totalExecuted += seg.executed;
+
+                if (seg.system === 'agua') {
+                    aguaPlanned += seg.planned;
+                    aguaExecuted += seg.executed;
+                } else if (seg.system === 'esgoto') {
+                    esgotoPlanned += seg.planned;
+                    esgotoExecuted += seg.executed;
+                } else if (seg.system === 'drenagem') {
+                    drenagemPlanned += seg.planned;
+                    drenagemExecuted += seg.executed;
+                }
+            });
+
+            const remaining = totalPlanned - totalExecuted;
+            const progressPct = totalPlanned > 0 ? (totalExecuted / totalPlanned) * 100 : 0;
+
+            // Update main cards
+            document.getElementById('dash-total-planned').textContent = totalPlanned.toFixed(0) + ' m';
+            document.getElementById('dash-total-executed').textContent = totalExecuted.toFixed(0) + ' m';
+            document.getElementById('dash-remaining').textContent = remaining.toFixed(0) + ' m';
+            document.getElementById('dash-progress-pct').textContent = progressPct.toFixed(1) + '%';
+            document.getElementById('dash-progress-bar').style.width = progressPct + '%';
+
+            // Update system progress
+            const aguaPct = aguaPlanned > 0 ? (aguaExecuted / aguaPlanned) * 100 : 0;
+            const esgotoPct = esgotoPlanned > 0 ? (esgotoExecuted / esgotoPlanned) * 100 : 0;
+            const drenagemPct = drenagemPlanned > 0 ? (drenagemExecuted / drenagemPlanned) * 100 : 0;
+
+            document.getElementById('dash-agua-pct').textContent = aguaPct.toFixed(1) + '%';
+            document.getElementById('dash-agua-bar').style.width = aguaPct + '%';
+            document.getElementById('dash-agua-exec').textContent = aguaExecuted.toFixed(0);
+            document.getElementById('dash-agua-plan').textContent = aguaPlanned.toFixed(0);
+
+            document.getElementById('dash-esgoto-pct').textContent = esgotoPct.toFixed(1) + '%';
+            document.getElementById('dash-esgoto-bar').style.width = esgotoPct + '%';
+            document.getElementById('dash-esgoto-exec').textContent = esgotoExecuted.toFixed(0);
+            document.getElementById('dash-esgoto-plan').textContent = esgotoPlanned.toFixed(0);
+
+            document.getElementById('dash-drenagem-pct').textContent = drenagemPct.toFixed(1) + '%';
+            document.getElementById('dash-drenagem-bar').style.width = drenagemPct + '%';
+            document.getElementById('dash-drenagem-exec').textContent = drenagemExecuted.toFixed(0);
+            document.getElementById('dash-drenagem-plan').textContent = drenagemPlanned.toFixed(0);
+
+            // Render segments table
+            renderDashboardSegmentsTable();
+
+            // Render charts
+            renderRDOCharts();
+
+            // Update summary cards
+            updateRDODashboardSummary();
+        }
+
+        function renderDashboardSegmentsTable() {
+            const tbody = document.getElementById('dash-segments-tbody');
+            if (!tbody) return;
+
+            tbody.innerHTML = rdoData.segments.map(seg => {
+                const progress = seg.planned > 0 ? (seg.executed / seg.planned) * 100 : 0;
+                let status = 'Não Iniciado';
+                let statusColor = 'var(--accent-red)';
+
+                if (progress >= 100) {
+                    status = 'Concluído';
+                    statusColor = 'var(--accent-green)';
+                } else if (progress > 0) {
+                    status = 'Em Execução';
+                    statusColor = 'var(--accent-orange)';
+                }
+
+                const systemIcon = seg.system === 'agua' ? '💧' : seg.system === 'esgoto' ? '🚰' : '🌧️';
+
+                return `
+                    <tr>
+                        <td style="font-weight: 600;">${seg.name}</td>
+                        <td>${systemIcon} ${seg.system}</td>
+                        <td>${seg.planned.toFixed(2)}</td>
+                        <td>${seg.executed.toFixed(2)}</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="flex: 1; background: var(--bg-hover); border-radius: 10px; height: 8px; overflow: hidden;">
+                                    <div style="background: ${getProgressColor(progress)}; height: 100%; width: ${Math.min(progress, 100)}%;"></div>
+                                </div>
+                                <span style="font-size: 0.85rem; min-width: 45px;">${progress.toFixed(1)}%</span>
+                            </div>
+                        </td>
+                        <td><span style="padding: 4px 10px; border-radius: 12px; background: ${statusColor}; color: white; font-size: 0.75rem;">${status}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderRDOCharts() {
+            // Timeline Chart
+            const timelineCtx = document.getElementById('rdo-chart-timeline');
+            if (timelineCtx && typeof Chart !== 'undefined') {
+                if (window.rdoTimelineChart) window.rdoTimelineChart.destroy();
+
+                // Generate sample timeline data
+                const labels = [];
+                const plannedData = [];
+                const executedData = [];
+                const totalPlanned = rdoData.segments.reduce((sum, s) => sum + s.planned, 0);
+
+                for (let i = 6; i >= 0; i--) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - i);
+                    labels.push(date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+                    plannedData.push(totalPlanned);
+                    executedData.push(Math.min(totalPlanned * (1 - i * 0.12), totalPlanned));
+                }
+
+                window.rdoTimelineChart = new Chart(timelineCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Planejado',
+                                data: plannedData,
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                borderDash: [5, 5],
+                                fill: false,
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Executado',
+                                data: executedData,
+                                borderColor: '#22c55e',
+                                backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                                fill: true,
+                                tension: 0.3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Metros (m)' } }
+                        }
+                    }
+                });
+            }
+
+            // Status Pie Chart
+            const statusCtx = document.getElementById('rdo-chart-status');
+            if (statusCtx && typeof Chart !== 'undefined') {
+                if (window.rdoStatusChart) window.rdoStatusChart.destroy();
+
+                let completed = 0, inProgress = 0, notStarted = 0;
+                rdoData.segments.forEach(seg => {
+                    const progress = seg.planned > 0 ? (seg.executed / seg.planned) * 100 : 0;
+                    if (progress >= 100) completed++;
+                    else if (progress > 0) inProgress++;
+                    else notStarted++;
+                });
+
+                window.rdoStatusChart = new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Concluído', 'Em Execução', 'Não Iniciado'],
+                        datasets: [{
+                            data: [completed, inProgress, notStarted],
+                            backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'right' }
+                        }
+                    }
+                });
+            }
+
+            // Services Bar Chart
+            const servicesCtx = document.getElementById('rdo-chart-services');
+            if (servicesCtx && typeof Chart !== 'undefined') {
+                if (window.rdoServicesChart) window.rdoServicesChart.destroy();
+
+                // Aggregate services from all RDOs
+                const serviceAgg = {};
+                rdoData.rdos.forEach(rdo => {
+                    rdo.services?.forEach(s => {
+                        if (!serviceAgg[s.serviceName]) {
+                            serviceAgg[s.serviceName] = { qty: 0, unit: s.unit };
+                        }
+                        serviceAgg[s.serviceName].qty += s.quantity;
+                    });
+                });
+
+                const sortedServices = Object.entries(serviceAgg)
+                    .sort((a, b) => b[1].qty - a[1].qty)
+                    .slice(0, 5);
+
+                window.rdoServicesChart = new Chart(servicesCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedServices.map(s => s[0].substring(0, 25) + (s[0].length > 25 ? '...' : '')),
+                        datasets: [{
+                            label: 'Quantidade',
+                            data: sortedServices.map(s => s[1].qty),
+                            backgroundColor: ['#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+        }
+
+        // RDO Map View
+        function showRDOMap() {
+            document.getElementById('rdo-form-container').style.display = 'none';
+            document.getElementById('rdo-list-container').style.display = 'none';
+            document.getElementById('rdo-dashboard-container').style.display = 'none';
+            document.getElementById('rdo-map-container').style.display = 'block';
+            document.getElementById('rdo-detail-container').style.display = 'none';
+
+            setTimeout(() => {
+                initRDOMap();
+            }, 100);
+        }
+
+        function initRDOMap() {
+            const mapContainer = document.getElementById('rdo-map');
+            if (!mapContainer) return;
+
+            // Initialize map if not already done
+            if (!rdoData.rdoMap) {
+                rdoData.rdoMap = L.map('rdo-map').setView([-23.5505, -46.6333], 14);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(rdoData.rdoMap);
+            }
+
+            updateRDOMap();
+        }
+
+        function updateRDOMap() {
+            if (!rdoData.rdoMap) return;
+
+            // Clear existing layers (except base tile layer)
+            rdoData.rdoMap.eachLayer(layer => {
+                if (layer instanceof L.Polyline || layer instanceof L.Marker) {
+                    rdoData.rdoMap.removeLayer(layer);
+                }
+            });
+
+            const systemFilter = document.getElementById('rdo-map-filter-system')?.value || '';
+            const statusFilter = document.getElementById('rdo-map-filter-status')?.value || '';
+
+            // Sample segment coordinates (in real app, these would come from imported data)
+            const segmentCoords = {
+                'seg1': [[-23.5500, -46.6340], [-23.5510, -46.6320]],
+                'seg2': [[-23.5510, -46.6320], [-23.5525, -46.6300]],
+                'seg3': [[-23.5525, -46.6300], [-23.5540, -46.6280]],
+                'seg4': [[-23.5495, -46.6350], [-23.5505, -46.6330]],
+                'seg5': [[-23.5505, -46.6330], [-23.5520, -46.6310]],
+                'seg6': [[-23.5530, -46.6350], [-23.5545, -46.6320]]
+            };
+
+            const bounds = [];
+
+            rdoData.segments.forEach(seg => {
+                // Apply filters
+                if (systemFilter && seg.system !== systemFilter) return;
+
+                const progress = seg.planned > 0 ? (seg.executed / seg.planned) * 100 : 0;
+                let status = 'nao_iniciado';
+                if (progress >= 100) status = 'concluido';
+                else if (progress > 0) status = 'em_execucao';
+
+                if (statusFilter && status !== statusFilter) return;
+
+                const coords = segmentCoords[seg.id];
+                if (!coords) return;
+
+                bounds.push(...coords);
+
+                const color = getProgressColor(progress);
+                const weight = progress >= 100 ? 6 : 4;
+
+                const polyline = L.polyline(coords, {
+                    color: color,
+                    weight: weight,
+                    opacity: 0.8
+                }).addTo(rdoData.rdoMap);
+
+                const systemIcon = seg.system === 'agua' ? '💧' : seg.system === 'esgoto' ? '🚰' : '🌧️';
+
+                polyline.bindPopup(`
+                    <div style="min-width: 200px;">
+                        <h4 style="margin: 0 0 8px; color: #333;">${seg.name}</h4>
+                        <p style="margin: 4px 0;"><strong>Sistema:</strong> ${systemIcon} ${seg.system}</p>
+                        <p style="margin: 4px 0;"><strong>Planejado:</strong> ${seg.planned}m</p>
+                        <p style="margin: 4px 0;"><strong>Executado:</strong> ${seg.executed}m</p>
+                        <p style="margin: 4px 0;"><strong>Progresso:</strong> ${progress.toFixed(1)}%</p>
+                        <div style="background: #eee; border-radius: 10px; height: 10px; margin-top: 8px;">
+                            <div style="background: ${color}; height: 100%; width: ${progress}%; border-radius: 10px;"></div>
+                        </div>
+                    </div>
+                `);
+
+                // Add start/end markers
+                L.circleMarker(coords[0], {
+                    radius: 6,
+                    fillColor: color,
+                    fillOpacity: 1,
+                    color: 'white',
+                    weight: 2
+                }).addTo(rdoData.rdoMap).bindTooltip(seg.startNode);
+
+                L.circleMarker(coords[1], {
+                    radius: 6,
+                    fillColor: color,
+                    fillOpacity: 1,
+                    color: 'white',
+                    weight: 2
+                }).addTo(rdoData.rdoMap).bindTooltip(seg.endNode);
+            });
+
+            // Fit bounds if we have segments
+            if (bounds.length > 0) {
+                rdoData.rdoMap.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        function rdoMapFitBounds() {
+            if (rdoData.rdoMap) {
+                rdoData.rdoMap.setView([-23.5505, -46.6333], 14);
+            }
+        }
+
+        function rdoMapRefresh() {
+            updateRDOMap();
+        }
+
+        function exportRDOMapImage() {
+            alert('Funcionalidade de exportar imagem do mapa será implementada com biblioteca html2canvas');
+        }
+
+        // Import Planning Segments
+        function importPlannedSegments() {
+            // In real app, this would open a file picker or connect to planning module
+            alert('Funcionalidade de importar planejamento: \n\nConecte-se aos módulos de planejamento (OpenProject) ou importe arquivo CSV/JSON com os trechos planejados.\n\nFormato esperado:\n- ID do trecho\n- Nome\n- Sistema (água/esgoto/drenagem)\n- Comprimento planejado (m)\n- Coordenadas (lat/lng)');
+        }
+
+        // RDO Export Functions
+        function exportRDOToPDF() {
+            const rdo = rdoData.rdos.find(r => r.id === rdoData.currentRDOId);
+            if (!rdo) {
+                alert('Selecione um RDO para exportar');
+                return;
+            }
+
+            // Generate PDF content
+            const pdfContent = generateRDOPDFContent(rdo);
+
+            // In real app, use jsPDF library
+            if (typeof jspdf !== 'undefined' || typeof jsPDF !== 'undefined') {
+                const { jsPDF } = window.jspdf || window;
+                const doc = new jsPDF();
+
+                doc.setFontSize(18);
+                doc.text('RELATÓRIO DIÁRIO DE OBRA', 105, 20, { align: 'center' });
+
+                doc.setFontSize(12);
+                doc.text(`Projeto: ${rdo.projectName}`, 20, 40);
+                doc.text(`Data: ${formatDate(rdo.date)}`, 20, 50);
+                doc.text(`Status: ${rdo.status}`, 20, 60);
+
+                let y = 80;
+                doc.setFontSize(14);
+                doc.text('Serviços Executados:', 20, y);
+                y += 10;
+
+                doc.setFontSize(10);
+                rdo.services?.forEach(s => {
+                    doc.text(`• ${s.serviceName}: ${s.quantity} ${s.unit}`, 25, y);
+                    y += 7;
+                });
+
+                y += 10;
+                doc.setFontSize(14);
+                doc.text('Avanço por Trecho:', 20, y);
+                y += 10;
+
+                doc.setFontSize(10);
+                rdo.segments?.forEach(s => {
+                    const total = s.executedBefore + s.executedToday;
+                    const progress = (total / s.plannedTotal * 100).toFixed(1);
+                    doc.text(`• ${s.segmentName} (${s.system}): ${total}m / ${s.plannedTotal}m (${progress}%)`, 25, y);
+                    y += 7;
+                });
+
+                doc.save(`RDO_${rdo.date}_${rdo.id}.pdf`);
+            } else {
+                // Fallback: create printable HTML
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(pdfContent);
+                printWindow.document.close();
+                printWindow.print();
+            }
+        }
+
+        function generateRDOPDFContent(rdo) {
+            return `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>RDO - ${formatDate(rdo.date)}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        h1 { text-align: center; color: #333; }
+                        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+                        .section h2 { color: #2563eb; margin-top: 0; }
+                        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        th { background: #f5f5f5; }
+                        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+                        .info-item { padding: 10px; background: #f9f9f9; border-radius: 4px; }
+                        .info-label { font-size: 0.85rem; color: #666; }
+                        .info-value { font-weight: bold; margin-top: 4px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>RELATÓRIO DIÁRIO DE OBRA</h1>
+
+                    <div class="section">
+                        <h2>Informações Gerais</h2>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label">Projeto</div>
+                                <div class="info-value">${rdo.projectName}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Obra</div>
+                                <div class="info-value">${rdo.obraName || '-'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Data</div>
+                                <div class="info-value">${formatDate(rdo.date)}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Status</div>
+                                <div class="info-value">${rdo.status}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2>Frentes de Serviço</h2>
+                        <p>${rdo.workFronts?.map(wf => wf.name).join(', ') || '-'}</p>
+                    </div>
+
+                    <div class="section">
+                        <h2>Locais da Obra</h2>
+                        <p>${rdo.locations?.map(l => l.name).join(', ') || '-'}</p>
+                    </div>
+
+                    <div class="section">
+                        <h2>Serviços Executados</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Serviço</th>
+                                    <th>Quantidade</th>
+                                    <th>Equipamentos</th>
+                                    <th>Responsável</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rdo.services?.map(s => `
+                                    <tr>
+                                        <td>${s.serviceName}</td>
+                                        <td>${s.quantity} ${s.unit}</td>
+                                        <td>${s.equipment || '-'}</td>
+                                        <td>${s.employeeName || '-'}</td>
+                                    </tr>
+                                `).join('') || '<tr><td colspan="4">Nenhum serviço registrado</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="section">
+                        <h2>Avanço por Trecho</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Trecho</th>
+                                    <th>Sistema</th>
+                                    <th>Planejado</th>
+                                    <th>Executado Hoje</th>
+                                    <th>Total Executado</th>
+                                    <th>Progresso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rdo.segments?.map(s => {
+                                    const total = s.executedBefore + s.executedToday;
+                                    const progress = (total / s.plannedTotal * 100).toFixed(1);
+                                    return `
+                                        <tr>
+                                            <td>${s.segmentName}</td>
+                                            <td>${s.system}</td>
+                                            <td>${s.plannedTotal}m</td>
+                                            <td>${s.executedToday}m</td>
+                                            <td>${total}m</td>
+                                            <td>${progress}%</td>
+                                        </tr>
+                                    `;
+                                }).join('') || '<tr><td colspan="6">Nenhum trecho registrado</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    ${rdo.visits ? `
+                        <div class="section">
+                            <h2>Visitas Recebidas</h2>
+                            <p>${rdo.visits}</p>
+                        </div>
+                    ` : ''}
+
+                    ${rdo.occurrences ? `
+                        <div class="section">
+                            <h2>Ocorrências</h2>
+                            <p>${rdo.occurrences}</p>
+                        </div>
+                    ` : ''}
+
+                    ${rdo.notes ? `
+                        <div class="section">
+                            <h2>Observações Gerais</h2>
+                            <p>${rdo.notes}</p>
+                        </div>
+                    ` : ''}
+
+                    <div style="margin-top: 40px; text-align: center; color: #666; font-size: 0.85rem;">
+                        Gerado em: ${new Date().toLocaleString('pt-BR')}
+                    </div>
+                </body>
+                </html>
+            `;
+        }
+
+        function exportRDOToExcel() {
+            const rdo = rdoData.rdos.find(r => r.id === rdoData.currentRDOId);
+            if (!rdo) {
+                alert('Selecione um RDO para exportar');
+                return;
+            }
+
+            // Create CSV content
+            let csv = 'RELATÓRIO DIÁRIO DE OBRA\n\n';
+            csv += `Projeto,${rdo.projectName}\n`;
+            csv += `Obra,${rdo.obraName || ''}\n`;
+            csv += `Data,${formatDate(rdo.date)}\n`;
+            csv += `Status,${rdo.status}\n\n`;
+
+            csv += 'FRENTES DE SERVIÇO\n';
+            rdo.workFronts?.forEach(wf => {
+                csv += `${wf.name}\n`;
+            });
+
+            csv += '\nLOCAIS DA OBRA\n';
+            rdo.locations?.forEach(l => {
+                csv += `${l.name}\n`;
+            });
+
+            csv += '\nSERVIÇOS EXECUTADOS\n';
+            csv += 'Serviço,Quantidade,Unidade,Equipamentos,Responsável\n';
+            rdo.services?.forEach(s => {
+                csv += `"${s.serviceName}",${s.quantity},${s.unit},"${s.equipment || ''}","${s.employeeName || ''}"\n`;
+            });
+
+            csv += '\nAVANÇO POR TRECHO\n';
+            csv += 'Trecho,Sistema,Planejado (m),Executado Anterior (m),Executado Hoje (m),Total Executado (m),Progresso (%)\n';
+            rdo.segments?.forEach(s => {
+                const total = s.executedBefore + s.executedToday;
+                const progress = (total / s.plannedTotal * 100).toFixed(1);
+                csv += `"${s.segmentName}",${s.system},${s.plannedTotal},${s.executedBefore},${s.executedToday},${total},${progress}\n`;
+            });
+
+            // Download
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `RDO_${rdo.date}_${rdo.id}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportRDOToJSON() {
+            const rdo = rdoData.rdos.find(r => r.id === rdoData.currentRDOId);
+            if (!rdo) {
+                alert('Selecione um RDO para exportar');
+                return;
+            }
+
+            const jsonContent = JSON.stringify(rdo, null, 2);
+            const blob = new Blob([jsonContent], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `RDO_${rdo.date}_${rdo.id}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportRDOToSHP() {
+            const rdo = rdoData.rdos.find(r => r.id === rdoData.currentRDOId);
+            if (!rdo) {
+                alert('Selecione um RDO para exportar');
+                return;
+            }
+
+            // Check if shpwrite is available
+            if (typeof shpwrite !== 'undefined') {
+                const features = [];
+
+                // Add segment progress as features
+                rdo.segments?.forEach(s => {
+                    const segment = rdoData.segments.find(seg => seg.id === s.segmentId);
+                    if (segment) {
+                        // Sample coordinates - in real app, these would come from imported data
+                        const coords = {
+                            'seg1': [[-46.6340, -23.5500], [-46.6320, -23.5510]],
+                            'seg2': [[-46.6320, -23.5510], [-46.6300, -23.5525]],
+                            'seg3': [[-46.6300, -23.5525], [-46.6280, -23.5540]],
+                            'seg4': [[-46.6350, -23.5495], [-46.6330, -23.5505]],
+                            'seg5': [[-46.6330, -23.5505], [-46.6310, -23.5520]],
+                            'seg6': [[-46.6350, -23.5530], [-46.6320, -23.5545]]
+                        };
+
+                        const segCoords = coords[s.segmentId];
+                        if (segCoords) {
+                            const totalExec = s.executedBefore + s.executedToday;
+                            const progress = (totalExec / s.plannedTotal * 100);
+
+                            features.push({
+                                type: 'Feature',
+                                geometry: {
+                                    type: 'LineString',
+                                    coordinates: segCoords
+                                },
+                                properties: {
+                                    TRECHO: s.segmentName,
+                                    SISTEMA: s.system,
+                                    PLANEJADO: s.plannedTotal,
+                                    EXEC_ANTES: s.executedBefore,
+                                    EXEC_HOJE: s.executedToday,
+                                    EXEC_TOTAL: totalExec,
+                                    PROGRESSO: progress.toFixed(1),
+                                    DATA_EXEC: s.executionDate,
+                                    RDO_ID: rdo.id,
+                                    RDO_DATA: rdo.date
+                                }
+                            });
+                        }
+                    }
+                });
+
+                const geojson = {
+                    type: 'FeatureCollection',
+                    features: features
+                };
+
+                shpwrite.download(geojson, {
+                    folder: `RDO_${rdo.date}`,
+                    types: {
+                        line: `rdo_trechos_${rdo.date}`
+                    }
+                });
+            } else {
+                // Fallback: export as GeoJSON
+                alert('Biblioteca shpwrite não disponível. Exportando como GeoJSON...');
+
+                const features = [];
+                rdo.segments?.forEach(s => {
+                    features.push({
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [parseFloat(rdo.longitude) || -46.6333, parseFloat(rdo.latitude) || -23.5505]
+                        },
+                        properties: {
+                            trecho: s.segmentName,
+                            sistema: s.system,
+                            planejado: s.plannedTotal,
+                            executado_antes: s.executedBefore,
+                            executado_hoje: s.executedToday,
+                            progresso: ((s.executedBefore + s.executedToday) / s.plannedTotal * 100).toFixed(1)
+                        }
+                    });
+                });
+
+                const geojson = { type: 'FeatureCollection', features };
+                const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `RDO_${rdo.date}_${rdo.id}.geojson`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        // Initialize RDO on tab switch
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+
+            // Remove active from all tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            const selectedTab = document.getElementById(tabName + '-tab');
+            if (selectedTab) {
+                selectedTab.style.display = 'block';
+            }
+
+            // Mark button as active
+            event?.target?.classList.add('active');
+
+            // Initialize RDO module when tab is shown
+            if (tabName === 'rdo') {
+                loadRDOsFromStorage();
+                loadProjectSegments('proj1');
+                updateRDODashboardSummary();
+            }
+        }
+
+        // ============================================
         // INITIALIZATION
         // ============================================
         document.addEventListener('DOMContentLoaded', () => {
