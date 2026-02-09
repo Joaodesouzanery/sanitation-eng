@@ -77,6 +77,11 @@ from .models import (
     RDOSummary,
     DashboardMetrics,
     SegmentGeoJSON,
+    # Classes financeiras
+    FinancialEntry,
+    PlannedFinancial,
+    ExecutedFinancial,
+    PhysicalFinancialProgress,
 )
 
 # Engine
@@ -98,6 +103,13 @@ from .exporters import (
     PDFExporter,
     ShapefileExporter,
     BatchExporter,
+)
+
+# Map View
+from .map_view import (
+    RDOMapGenerator,
+    generate_rdo_map,
+    get_supported_crs,
 )
 
 
@@ -122,6 +134,11 @@ __all__ = [
     "RDOSummary",
     "DashboardMetrics",
     "SegmentGeoJSON",
+    # Financial Models
+    "FinancialEntry",
+    "PlannedFinancial",
+    "ExecutedFinancial",
+    "PhysicalFinancialProgress",
     # Engine
     "RDOEngine",
     "get_rdo_engine",
@@ -134,6 +151,10 @@ __all__ = [
     "PDFExporter",
     "ShapefileExporter",
     "BatchExporter",
+    # Map
+    "RDOMapGenerator",
+    "generate_rdo_map",
+    "get_supported_crs",
 ]
 
 __version__ = "1.0.0"

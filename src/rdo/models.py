@@ -217,6 +217,16 @@ class RDO(BaseModel):
     visits: List[Visit] = Field(default_factory=list, description="Visitas recebidas")
     occurrences: List[Occurrence] = Field(default_factory=list, description="Ocorrências")
 
+    # Financeiro
+    financial_entries: List["FinancialEntry"] = Field(
+        default_factory=list,
+        description="Entradas financeiras executadas no dia"
+    )
+    daily_labor_cost: float = Field(0.0, ge=0, description="Custo mao de obra do dia")
+    daily_material_cost: float = Field(0.0, ge=0, description="Custo materiais do dia")
+    daily_equipment_cost: float = Field(0.0, ge=0, description="Custo equipamentos do dia")
+    daily_total_cost: float = Field(0.0, ge=0, description="Custo total do dia")
+
     # Observações
     general_notes: Optional[str] = Field(None, description="Observações gerais")
 
@@ -306,6 +316,60 @@ class RDO(BaseModel):
             summary[key] = summary.get(key, 0) + service.quantity
         return summary
 
+    def add_financial_entry(self, entry: "FinancialEntry") -> None:
+        """Adiciona uma entrada financeira ao RDO."""
+        self.financial_entries.append(entry)
+        self._recalculate_daily_costs()
+        self.updated_at = datetime.now()
+        self._add_history("financial_entry_added", {"entry_id": entry.id})
+
+    def _recalculate_daily_costs(self) -> None:
+        """Recalcula os custos diarios baseado nas entradas."""
+        self.daily_labor_cost = sum(
+            e.value for e in self.financial_entries if e.category == "mao_obra"
+        )
+        self.daily_material_cost = sum(
+            e.value for e in self.financial_entries if e.category == "material"
+        )
+        self.daily_equipment_cost = sum(
+            e.value for e in self.financial_entries if e.category == "equipamento"
+        )
+        self.daily_total_cost = (
+            self.daily_labor_cost +
+            self.daily_material_cost +
+            self.daily_equipment_cost +
+            sum(e.value for e in self.financial_entries if e.category == "outros")
+        )
+
+    def get_financial_summary(self) -> Dict[str, Any]:
+        """Retorna resumo financeiro do RDO."""
+        by_category = {}
+        for entry in self.financial_entries:
+            if entry.category not in by_category:
+                by_category[entry.category] = {
+                    "count": 0,
+                    "total": 0.0,
+                    "items": []
+                }
+            by_category[entry.category]["count"] += 1
+            by_category[entry.category]["total"] += entry.value
+            by_category[entry.category]["items"].append({
+                "description": entry.description,
+                "value": entry.value,
+                "quantity": entry.quantity,
+                "unit": entry.unit
+            })
+
+        return {
+            "date": self.date.isoformat(),
+            "daily_labor_cost": self.daily_labor_cost,
+            "daily_material_cost": self.daily_material_cost,
+            "daily_equipment_cost": self.daily_equipment_cost,
+            "daily_total_cost": self.daily_total_cost,
+            "entries_count": len(self.financial_entries),
+            "by_category": by_category
+        }
+
 
 class RDOSummary(BaseModel):
     """Resumo do RDO para listagem."""
@@ -336,6 +400,126 @@ class RDOSummary(BaseModel):
         )
 
 
+class FinancialEntry(BaseModel):
+    """Entrada financeira (planejado ou executado)."""
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    description: str = Field(..., min_length=1, description="Descricao do item")
+    category: str = Field(..., description="Categoria: mao_obra, material, equipamento, outros")
+    value: float = Field(..., ge=0, description="Valor em reais")
+    quantity: Optional[float] = Field(None, description="Quantidade")
+    unit: Optional[str] = Field(None, description="Unidade")
+    unit_value: Optional[float] = Field(None, description="Valor unitario")
+    trecho_id: Optional[str] = Field(None, description="ID do trecho associado")
+    notes: Optional[str] = None
+
+
+class PlannedFinancial(BaseModel):
+    """Planejado financeiro do projeto/RDO."""
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    project_id: str = Field(..., description="ID do projeto")
+    reference_date: date = Field(..., description="Data de referencia")
+
+    # Orcamento por categoria
+    budget_labor: float = Field(0.0, ge=0, description="Orcamento mao de obra")
+    budget_materials: float = Field(0.0, ge=0, description="Orcamento materiais")
+    budget_equipment: float = Field(0.0, ge=0, description="Orcamento equipamentos")
+    budget_indirect: float = Field(0.0, ge=0, description="Orcamento custos indiretos")
+    budget_contingency: float = Field(0.0, ge=0, description="Orcamento contingencia")
+    budget_total: float = Field(0.0, ge=0, description="Orcamento total")
+
+    # Itens detalhados
+    entries: List[FinancialEntry] = Field(default_factory=list)
+
+    # Curva S financeira planejada
+    planned_curve: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Curva S planejada [{date, cumulative_value, percentage}]"
+    )
+
+    # Metadados
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    created_by: Optional[str] = None
+    version: int = 1
+    notes: Optional[str] = None
+
+    def get_total_budget(self) -> float:
+        """Calcula o orcamento total."""
+        return (
+            self.budget_labor +
+            self.budget_materials +
+            self.budget_equipment +
+            self.budget_indirect +
+            self.budget_contingency
+        )
+
+
+class ExecutedFinancial(BaseModel):
+    """Executado financeiro do RDO."""
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    rdo_id: str = Field(..., description="ID do RDO associado")
+    execution_date: date = Field(..., description="Data de execucao")
+
+    # Valores executados por categoria
+    executed_labor: float = Field(0.0, ge=0, description="Mao de obra executada")
+    executed_materials: float = Field(0.0, ge=0, description="Materiais executados")
+    executed_equipment: float = Field(0.0, ge=0, description="Equipamentos executados")
+    executed_indirect: float = Field(0.0, ge=0, description="Custos indiretos")
+    executed_total: float = Field(0.0, ge=0, description="Total executado")
+
+    # Itens detalhados
+    entries: List[FinancialEntry] = Field(default_factory=list)
+
+    # Metadados
+    created_at: datetime = Field(default_factory=datetime.now)
+    notes: Optional[str] = None
+
+    def get_total_executed(self) -> float:
+        """Calcula o total executado."""
+        return (
+            self.executed_labor +
+            self.executed_materials +
+            self.executed_equipment +
+            self.executed_indirect
+        )
+
+
+class PhysicalFinancialProgress(BaseModel):
+    """Progresso fisico-financeiro consolidado."""
+    project_id: str
+    report_date: date = Field(default_factory=date.today)
+
+    # Progresso fisico
+    planned_physical: float = Field(0.0, description="Metros planejados")
+    executed_physical: float = Field(0.0, description="Metros executados")
+    physical_percentage: float = Field(0.0, description="Percentual fisico")
+
+    # Progresso financeiro
+    planned_financial: float = Field(0.0, description="Valor planejado acumulado")
+    executed_financial: float = Field(0.0, description="Valor executado acumulado")
+    financial_percentage: float = Field(0.0, description="Percentual financeiro")
+
+    # Indicadores
+    cpi: float = Field(0.0, description="Cost Performance Index (EV/AC)")
+    spi: float = Field(0.0, description="Schedule Performance Index (EV/PV)")
+    variance_cost: float = Field(0.0, description="Variacao de custo")
+    variance_schedule: float = Field(0.0, description="Variacao de cronograma")
+
+    # Detalhamento por categoria
+    by_category: Dict[str, Dict[str, float]] = Field(
+        default_factory=dict,
+        description="Detalhamento por categoria {categoria: {planejado, executado, variacao}}"
+    )
+
+    # Curva S comparativa
+    planned_curve: List[Dict[str, Any]] = Field(default_factory=list)
+    executed_curve: List[Dict[str, Any]] = Field(default_factory=list)
+
+    # Projecoes
+    estimated_at_completion: float = Field(0.0, description="Estimativa no termino (EAC)")
+    variance_at_completion: float = Field(0.0, description="Variacao no termino (VAC)")
+
+
 class DashboardMetrics(BaseModel):
     """Métricas do dashboard de RDOs."""
     total_rdos: int = 0
@@ -346,10 +530,20 @@ class DashboardMetrics(BaseModel):
     # Por status
     rdos_by_status: Dict[str, int] = Field(default_factory=dict)
 
-    # Progresso geral
+    # Progresso geral (fisico)
     total_planned_length: float = 0.0
     total_executed_length: float = 0.0
     overall_progress_percentage: float = 0.0
+
+    # Progresso financeiro
+    total_planned_financial: float = 0.0
+    total_executed_financial: float = 0.0
+    financial_progress_percentage: float = 0.0
+    financial_variance: float = 0.0
+
+    # Indicadores de performance
+    cpi: float = 0.0  # Cost Performance Index
+    spi: float = 0.0  # Schedule Performance Index
 
     # Por tipo de sistema
     progress_by_system: Dict[str, Dict[str, float]] = Field(default_factory=dict)
@@ -362,6 +556,9 @@ class DashboardMetrics(BaseModel):
 
     # Timeline de execução
     execution_timeline: List[Dict[str, Any]] = Field(default_factory=list)
+
+    # Timeline financeiro
+    financial_timeline: List[Dict[str, Any]] = Field(default_factory=list)
 
     # Ocorrências
     total_occurrences: int = 0

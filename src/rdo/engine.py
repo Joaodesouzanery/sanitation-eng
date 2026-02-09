@@ -29,6 +29,10 @@ from .models import (
     DashboardMetrics,
     SegmentGeoJSON,
     Location,
+    FinancialEntry,
+    PlannedFinancial,
+    ExecutedFinancial,
+    PhysicalFinancialProgress,
 )
 
 
@@ -54,6 +58,10 @@ class RDOEngine:
 
         # Dados de planejamento importados
         self._planned_segments: Dict[str, Dict[str, Any]] = {}
+
+        # Dados financeiros
+        self._planned_financials: Dict[str, PlannedFinancial] = {}
+        self._executed_financials: Dict[str, ExecutedFinancial] = {}
 
         # Inicializa catálogo padrão
         self._initialize_default_catalog()
@@ -629,6 +637,293 @@ class RDOEngine:
     def list_workers(self) -> List[Worker]:
         """Lista funcionários ativos."""
         return [w for w in self._workers.values() if w.active]
+
+    # ==================== Controle Financeiro ====================
+
+    def set_planned_financial(
+        self,
+        project_id: str,
+        budget_labor: float = 0,
+        budget_materials: float = 0,
+        budget_equipment: float = 0,
+        budget_indirect: float = 0,
+        budget_contingency: float = 0,
+        planned_curve: Optional[List[Dict]] = None,
+        created_by: Optional[str] = None
+    ) -> PlannedFinancial:
+        """
+        Define o planejado financeiro de um projeto.
+
+        Args:
+            project_id: ID do projeto
+            budget_labor: Orcamento de mao de obra
+            budget_materials: Orcamento de materiais
+            budget_equipment: Orcamento de equipamentos
+            budget_indirect: Orcamento de custos indiretos
+            budget_contingency: Orcamento de contingencia
+            planned_curve: Curva S planejada
+            created_by: Usuario que criou
+
+        Returns:
+            PlannedFinancial criado
+        """
+        planned = PlannedFinancial(
+            project_id=project_id,
+            reference_date=date.today(),
+            budget_labor=budget_labor,
+            budget_materials=budget_materials,
+            budget_equipment=budget_equipment,
+            budget_indirect=budget_indirect,
+            budget_contingency=budget_contingency,
+            budget_total=budget_labor + budget_materials + budget_equipment + budget_indirect + budget_contingency,
+            planned_curve=planned_curve or [],
+            created_by=created_by
+        )
+
+        self._planned_financials[project_id] = planned
+        return planned
+
+    def add_financial_entry_to_rdo(
+        self,
+        rdo_id: str,
+        description: str,
+        category: str,
+        value: float,
+        quantity: Optional[float] = None,
+        unit: Optional[str] = None,
+        unit_value: Optional[float] = None,
+        trecho_id: Optional[str] = None,
+        notes: Optional[str] = None
+    ) -> FinancialEntry:
+        """
+        Adiciona uma entrada financeira a um RDO.
+
+        Args:
+            rdo_id: ID do RDO
+            description: Descricao do item
+            category: Categoria (mao_obra, material, equipamento, outros)
+            value: Valor total
+            quantity: Quantidade (opcional)
+            unit: Unidade (opcional)
+            unit_value: Valor unitario (opcional)
+            trecho_id: ID do trecho (opcional)
+            notes: Observacoes (opcional)
+
+        Returns:
+            FinancialEntry criada
+        """
+        rdo = self.get_rdo(rdo_id)
+        if not rdo:
+            raise ValueError(f"RDO nao encontrado: {rdo_id}")
+
+        entry = FinancialEntry(
+            description=description,
+            category=category,
+            value=value,
+            quantity=quantity,
+            unit=unit,
+            unit_value=unit_value,
+            trecho_id=trecho_id,
+            notes=notes
+        )
+
+        rdo.add_financial_entry(entry)
+        self.update_rdo(rdo)
+
+        return entry
+
+    def get_physical_financial_progress(
+        self,
+        project_id: str,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None
+    ) -> PhysicalFinancialProgress:
+        """
+        Calcula o progresso fisico-financeiro de um projeto.
+
+        Args:
+            project_id: ID do projeto
+            start_date: Data inicial (opcional)
+            end_date: Data final (opcional)
+
+        Returns:
+            PhysicalFinancialProgress com indicadores
+        """
+        # Obtem planejado financeiro
+        planned = self._planned_financials.get(project_id)
+        planned_budget = planned.budget_total if planned else 0
+
+        # Obtem planejado vs executado fisico
+        physical_data = self.get_planned_vs_executed(project_id, start_date=start_date, end_date=end_date)
+
+        # Calcula executado financeiro acumulado
+        rdos = [r for r in self._rdos.values() if r.project_id == project_id]
+        if start_date:
+            rdos = [r for r in rdos if r.date >= start_date]
+        if end_date:
+            rdos = [r for r in rdos if r.date <= end_date]
+
+        executed_financial = sum(r.daily_total_cost for r in rdos)
+        executed_labor = sum(r.daily_labor_cost for r in rdos)
+        executed_materials = sum(r.daily_material_cost for r in rdos)
+        executed_equipment = sum(r.daily_equipment_cost for r in rdos)
+
+        # Calcula percentuais
+        physical_pct = physical_data.get("overall_progress_percentage", 0)
+        financial_pct = (executed_financial / planned_budget * 100) if planned_budget > 0 else 0
+
+        # Calcula indicadores de valor agregado (EVM)
+        # PV = Planned Value (valor planejado para o progresso fisico atual)
+        # EV = Earned Value (valor do trabalho realizado)
+        # AC = Actual Cost (custo real)
+
+        pv = planned_budget * (physical_pct / 100) if planned_budget > 0 else 0
+        ev = planned_budget * (physical_pct / 100) if planned_budget > 0 else 0
+        ac = executed_financial
+
+        cpi = ev / ac if ac > 0 else 0  # Cost Performance Index
+        spi = ev / pv if pv > 0 else 0  # Schedule Performance Index
+
+        variance_cost = ev - ac
+        variance_schedule = ev - pv
+
+        # Projecoes
+        eac = planned_budget / cpi if cpi > 0 else planned_budget  # Estimate at Completion
+        vac = planned_budget - eac  # Variance at Completion
+
+        # Detalhamento por categoria
+        by_category = {
+            "mao_obra": {
+                "planejado": planned.budget_labor if planned else 0,
+                "executado": executed_labor,
+                "variacao": (planned.budget_labor if planned else 0) - executed_labor
+            },
+            "material": {
+                "planejado": planned.budget_materials if planned else 0,
+                "executado": executed_materials,
+                "variacao": (planned.budget_materials if planned else 0) - executed_materials
+            },
+            "equipamento": {
+                "planejado": planned.budget_equipment if planned else 0,
+                "executado": executed_equipment,
+                "variacao": (planned.budget_equipment if planned else 0) - executed_equipment
+            }
+        }
+
+        # Monta curvas
+        planned_curve = planned.planned_curve if planned else []
+        executed_curve = self._build_executed_curve(rdos)
+
+        return PhysicalFinancialProgress(
+            project_id=project_id,
+            report_date=date.today(),
+            planned_physical=physical_data.get("total_planned", 0),
+            executed_physical=physical_data.get("total_executed", 0),
+            physical_percentage=physical_pct,
+            planned_financial=planned_budget,
+            executed_financial=executed_financial,
+            financial_percentage=round(financial_pct, 2),
+            cpi=round(cpi, 3),
+            spi=round(spi, 3),
+            variance_cost=round(variance_cost, 2),
+            variance_schedule=round(variance_schedule, 2),
+            by_category=by_category,
+            planned_curve=planned_curve,
+            executed_curve=executed_curve,
+            estimated_at_completion=round(eac, 2),
+            variance_at_completion=round(vac, 2)
+        )
+
+    def _build_executed_curve(self, rdos: List[RDO]) -> List[Dict]:
+        """Constroi curva S executada a partir dos RDOs."""
+        if not rdos:
+            return []
+
+        # Ordena por data
+        rdos_sorted = sorted(rdos, key=lambda r: r.date)
+
+        curve = []
+        cumulative = 0
+
+        for rdo in rdos_sorted:
+            cumulative += rdo.daily_total_cost
+            curve.append({
+                "date": rdo.date.isoformat(),
+                "daily_value": rdo.daily_total_cost,
+                "cumulative_value": round(cumulative, 2)
+            })
+
+        return curve
+
+    def get_financial_report(
+        self,
+        project_id: str,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None
+    ) -> Dict[str, Any]:
+        """
+        Gera relatorio financeiro detalhado.
+
+        Args:
+            project_id: ID do projeto
+            start_date: Data inicial
+            end_date: Data final
+
+        Returns:
+            Relatorio financeiro completo
+        """
+        progress = self.get_physical_financial_progress(project_id, start_date, end_date)
+
+        # Obtem todos os RDOs do periodo
+        rdos = [r for r in self._rdos.values() if r.project_id == project_id]
+        if start_date:
+            rdos = [r for r in rdos if r.date >= start_date]
+        if end_date:
+            rdos = [r for r in rdos if r.date <= end_date]
+
+        # Detalhamento diario
+        daily_detail = []
+        for rdo in sorted(rdos, key=lambda r: r.date):
+            daily_detail.append({
+                "date": rdo.date.isoformat(),
+                "rdo_id": rdo.id,
+                "labor": rdo.daily_labor_cost,
+                "material": rdo.daily_material_cost,
+                "equipment": rdo.daily_equipment_cost,
+                "total": rdo.daily_total_cost,
+                "entries_count": len(rdo.financial_entries)
+            })
+
+        return {
+            "project_id": project_id,
+            "report_date": date.today().isoformat(),
+            "period": {
+                "start": start_date.isoformat() if start_date else None,
+                "end": end_date.isoformat() if end_date else None
+            },
+            "summary": {
+                "planned_financial": progress.planned_financial,
+                "executed_financial": progress.executed_financial,
+                "variance": progress.planned_financial - progress.executed_financial,
+                "financial_percentage": progress.financial_percentage,
+                "physical_percentage": progress.physical_percentage
+            },
+            "indicators": {
+                "cpi": progress.cpi,
+                "spi": progress.spi,
+                "variance_cost": progress.variance_cost,
+                "variance_schedule": progress.variance_schedule,
+                "eac": progress.estimated_at_completion,
+                "vac": progress.variance_at_completion
+            },
+            "by_category": progress.by_category,
+            "curves": {
+                "planned": progress.planned_curve,
+                "executed": progress.executed_curve
+            },
+            "daily_detail": daily_detail,
+            "total_rdos": len(rdos)
+        }
 
     # ==================== Métodos auxiliares ====================
 

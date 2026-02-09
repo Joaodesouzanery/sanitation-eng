@@ -27,6 +27,19 @@ from .resources import (
     DEFAULT_EQUIPMENT_CATALOG
 )
 
+from .materials import (
+    MaterialsScheduler,
+    Material,
+    MaterialCategory,
+    MaterialRequirement,
+    PurchaseOrder,
+    PurchaseStatus,
+    WarehouseMovement,
+    generate_materials_schedule,
+    get_material_categories,
+    get_purchase_statuses,
+)
+
 __all__ = [
     # Schedule
     "SameDayScheduler",
@@ -43,4 +56,15 @@ __all__ = [
     "ResourceAllocation",
     "DEFAULT_LABOR_CATALOG",
     "DEFAULT_EQUIPMENT_CATALOG",
+    # Materials
+    "MaterialsScheduler",
+    "Material",
+    "MaterialCategory",
+    "MaterialRequirement",
+    "PurchaseOrder",
+    "PurchaseStatus",
+    "WarehouseMovement",
+    "generate_materials_schedule",
+    "get_material_categories",
+    "get_purchase_statuses",
 ]

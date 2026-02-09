@@ -29,6 +29,20 @@ from .dxf_dwg import (
     import_cad_with_mapping
 )
 
+from .dxf_advanced import (
+    DXFAdvancedImporter,
+    DXFScanResult,
+    ExtractedEntity,
+    LayerSummary,
+    EntityCategory,
+    GeometryType,
+    scan_dxf_file,
+    get_available_categories,
+    scan_result_to_json,
+    create_utm_to_wgs84_transform,
+    create_local_to_wgs84_transform,
+)
+
 __all__ = [
     # Base classes
     "BaseImporter",
@@ -45,4 +59,16 @@ __all__ = [
     "DXFDWGImporter",
     "scan_cad_file",
     "import_cad_with_mapping",
+    # DXF Advanced
+    "DXFAdvancedImporter",
+    "DXFScanResult",
+    "ExtractedEntity",
+    "LayerSummary",
+    "EntityCategory",
+    "GeometryType",
+    "scan_dxf_file",
+    "get_available_categories",
+    "scan_result_to_json",
+    "create_utm_to_wgs84_transform",
+    "create_local_to_wgs84_transform",
 ]
