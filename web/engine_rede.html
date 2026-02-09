@@ -1267,6 +1267,7 @@
             <div class="tab" onclick="showTab('swmm')">🌧️ SWMM</div>
             <div class="tab" onclick="showTab('openproject')">📋 OpenProject</div>
             <div class="tab" onclick="showTab('qgis')">🗺️ QGIS</div>
+            <div class="tab" onclick="showTab('rdo')">📋 RDO</div>
         </div>
 
         <!-- IMPORT TAB -->
@@ -4145,6 +4146,485 @@ PV02,359290.456,7352780.123,1.82</pre>
                     <button class="btn" style="background: var(--bg-secondary);" onclick="exportAllQML()">
                         <span>📦</span> Todos os Estilos
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RDO MODULE TAB -->
+        <div id="rdo-tab" class="tab-content">
+            <!-- RDO Header -->
+            <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, #e0f2fe, var(--bg-card));">
+                <h2><span class="icon">📋</span> RDO - Relatório Diário de Obra</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Gerencie relatórios diários de obra, acompanhe o avanço por trecho e compare planejado vs executado.
+                </p>
+
+                <!-- Summary Cards -->
+                <div class="summary-cards" style="margin-bottom: 20px;">
+                    <div class="summary-card blue">
+                        <div class="icon">📋</div>
+                        <div class="value" id="rdo-total-count">0</div>
+                        <div class="label">Total de RDOs</div>
+                    </div>
+                    <div class="summary-card green">
+                        <div class="icon">✅</div>
+                        <div class="value" id="rdo-progress-pct">0%</div>
+                        <div class="label">Progresso Geral</div>
+                    </div>
+                    <div class="summary-card orange">
+                        <div class="icon">📏</div>
+                        <div class="value" id="rdo-executed-meters">0</div>
+                        <div class="label">Metros Executados</div>
+                    </div>
+                    <div class="summary-card purple">
+                        <div class="icon">📅</div>
+                        <div class="value" id="rdo-today-count">0</div>
+                        <div class="label">RDOs Hoje</div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="actions" style="justify-content: flex-start; flex-wrap: wrap; gap: 12px;">
+                    <button class="btn btn-primary btn-ripple" onclick="openNewRDOModal()">
+                        <span>➕</span> Novo RDO
+                    </button>
+                    <button class="btn btn-success btn-ripple" onclick="showRDODashboard()">
+                        <span>📊</span> Dashboard
+                    </button>
+                    <button class="btn btn-secondary btn-ripple" onclick="showRDOList()">
+                        <span>📃</span> Lista de RDOs
+                    </button>
+                    <button class="btn btn-ripple" style="background: var(--accent-teal); color: white;" onclick="showRDOMap()">
+                        <span>🗺️</span> Mapa de Avanço
+                    </button>
+                    <button class="btn btn-ripple" style="background: var(--bg-hover);" onclick="importPlannedSegments()">
+                        <span>📥</span> Importar Planejamento
+                    </button>
+                </div>
+            </div>
+
+            <!-- View Containers -->
+            <!-- NEW RDO FORM -->
+            <div id="rdo-form-container" class="card" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2><span class="icon">📝</span> Novo RDO</h2>
+                    <button class="btn" style="background: var(--bg-hover);" onclick="closeRDOForm()">✕ Fechar</button>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Preencha as informações do relatório diário de obra.
+                </p>
+
+                <form id="rdo-form" onsubmit="saveRDO(event)">
+                    <!-- Section 1: Basic Info -->
+                    <div style="background: var(--bg-primary); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px; color: var(--accent-blue);">1. Informações Básicas</h3>
+                        <div class="grid" style="gap: 15px;">
+                            <div class="form-group">
+                                <label>Projeto *</label>
+                                <select id="rdo-project" required onchange="loadProjectData()">
+                                    <option value="">Selecione o projeto</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Obra</label>
+                                <select id="rdo-obra">
+                                    <option value="">Selecione a obra</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Data *</label>
+                                <input type="date" id="rdo-date" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Condição do Terreno</label>
+                                <select id="rdo-terrain">
+                                    <option value="">Selecione a condição</option>
+                                    <option value="seco">Seco</option>
+                                    <option value="umido">Úmido</option>
+                                    <option value="alagado">Alagado</option>
+                                    <option value="rochoso">Rochoso</option>
+                                    <option value="arenoso">Arenoso</option>
+                                    <option value="argiloso">Argiloso</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label>Localização GPS</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="text" id="rdo-latitude" placeholder="Latitude" style="flex: 1;">
+                                <input type="text" id="rdo-longitude" placeholder="Longitude" style="flex: 1;">
+                                <button type="button" class="btn btn-secondary" onclick="getRDOGPS()">
+                                    <span>📍</span> Obter GPS
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Work Fronts -->
+                    <div style="background: var(--bg-primary); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px; color: var(--accent-blue);">2. Frentes de Serviço *</h3>
+                        <div id="rdo-work-fronts-container">
+                            <div id="rdo-work-fronts-list" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;"></div>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="text" id="rdo-new-front" placeholder="Nome da nova frente..." style="flex: 1;">
+                                <button type="button" class="btn btn-success" onclick="addWorkFront()">
+                                    <span>➕</span> Adicionar Frente
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Work Locations -->
+                    <div style="background: var(--bg-primary); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px; color: var(--accent-blue);">3. Locais da Obra *</h3>
+                        <div id="rdo-locations-container">
+                            <div id="rdo-locations-list" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;"></div>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="text" id="rdo-new-location" placeholder="Nome do novo local..." style="flex: 1;">
+                                <button type="button" class="btn btn-success" onclick="addWorkLocation()">
+                                    <span>➕</span> Adicionar Local
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 4: Executed Services -->
+                    <div style="background: var(--bg-primary); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px; color: var(--accent-blue);">4. Serviços Executados *</h3>
+                        <div id="rdo-services-container"></div>
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button type="button" class="btn btn-success" onclick="addServiceRow()">
+                                <span>➕</span> Adicionar Serviço
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="openServiceCatalog()">
+                                <span>📚</span> Catálogo de Serviços
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Section 5: Segment Progress (Integration with Planning) -->
+                    <div style="background: var(--bg-primary); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px; color: var(--accent-blue);">5. Avanço por Trecho (Planejamento)</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 15px;">
+                            Vincule o progresso aos trechos do planejamento para acompanhar o avanço físico.
+                        </p>
+                        <div id="rdo-segments-container"></div>
+                        <button type="button" class="btn btn-success" style="margin-top: 15px;" onclick="addSegmentProgressRow()">
+                            <span>➕</span> Adicionar Trecho
+                        </button>
+                    </div>
+
+                    <!-- Section 6: Visits -->
+                    <div style="background: var(--bg-primary); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px; color: var(--accent-orange);">6. Visitas Recebidas (opcional)</h3>
+                        <textarea id="rdo-visits" rows="3" placeholder="Descreva as visitas recebidas na obra (fiscalizações, fornecedores, clientes, etc.)"></textarea>
+                    </div>
+
+                    <!-- Section 7: Occurrences -->
+                    <div style="background: var(--bg-primary); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px; color: var(--accent-red);">7. Ocorrências (opcional)</h3>
+                        <textarea id="rdo-occurrences" rows="3" placeholder="Registre ocorrências importantes (acidentes, atrasos, problemas, etc.)"></textarea>
+                    </div>
+
+                    <!-- Section 8: General Notes -->
+                    <div style="background: var(--bg-primary); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px; color: var(--text-secondary);">8. Observações Gerais (opcional)</h3>
+                        <textarea id="rdo-notes" rows="4" placeholder="Descreva as atividades realizadas, problemas encontrados, etc."></textarea>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="actions" style="justify-content: flex-end;">
+                        <button type="button" class="btn" style="background: var(--bg-hover);" onclick="closeRDOForm()">
+                            Cancelar
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="saveRDODraft()">
+                            <span>💾</span> Salvar Rascunho
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <span>✅</span> Gerar RDO
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- RDO LIST VIEW -->
+            <div id="rdo-list-container" class="card" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2><span class="icon">📃</span> Lista de RDOs</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="rdo-search" placeholder="Buscar RDO..." style="width: 200px;" oninput="filterRDOList()">
+                        <select id="rdo-filter-status" onchange="filterRDOList()">
+                            <option value="">Todos os Status</option>
+                            <option value="rascunho">Rascunho</option>
+                            <option value="enviado">Enviado</option>
+                            <option value="aprovado">Aprovado</option>
+                            <option value="rejeitado">Rejeitado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Projeto</th>
+                                <th>Serviços</th>
+                                <th>Trechos</th>
+                                <th>Progresso</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rdo-list-tbody"></tbody>
+                    </table>
+                </div>
+
+                <div id="rdo-list-empty" style="display: none; text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <span style="font-size: 3rem;">📋</span>
+                    <p style="margin-top: 15px;">Nenhum RDO encontrado. Clique em "Novo RDO" para começar.</p>
+                </div>
+            </div>
+
+            <!-- RDO DASHBOARD VIEW -->
+            <div id="rdo-dashboard-container" style="display: none;">
+                <!-- Progress Cards -->
+                <div class="grid" style="margin-bottom: 20px;">
+                    <div class="card" style="background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan)); color: white;">
+                        <h3 style="margin-bottom: 10px;">Total Planejado</h3>
+                        <div style="font-size: 2rem; font-weight: 700;" id="dash-total-planned">0 m</div>
+                        <p style="opacity: 0.8; font-size: 0.9rem;">Extensão total da rede</p>
+                    </div>
+                    <div class="card" style="background: linear-gradient(135deg, var(--accent-green), var(--accent-teal)); color: white;">
+                        <h3 style="margin-bottom: 10px;">Total Executado</h3>
+                        <div style="font-size: 2rem; font-weight: 700;" id="dash-total-executed">0 m</div>
+                        <p style="opacity: 0.8; font-size: 0.9rem;">Extensão já executada</p>
+                    </div>
+                    <div class="card" style="background: linear-gradient(135deg, var(--accent-orange), #f59e0b); color: white;">
+                        <h3 style="margin-bottom: 10px;">Restante</h3>
+                        <div style="font-size: 2rem; font-weight: 700;" id="dash-remaining">0 m</div>
+                        <p style="opacity: 0.8; font-size: 0.9rem;">A ser executado</p>
+                    </div>
+                    <div class="card" style="background: linear-gradient(135deg, var(--accent-purple), #8b5cf6); color: white;">
+                        <h3 style="margin-bottom: 10px;">Progresso</h3>
+                        <div style="font-size: 2rem; font-weight: 700;" id="dash-progress-pct">0%</div>
+                        <div style="background: rgba(255,255,255,0.3); border-radius: 10px; height: 10px; margin-top: 10px;">
+                            <div id="dash-progress-bar" style="background: white; height: 100%; border-radius: 10px; width: 0%; transition: width 0.5s;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="grid" style="margin-bottom: 20px;">
+                    <div class="card">
+                        <h3 style="margin-bottom: 15px;"><span class="icon">📈</span> Avanço Diário (Acumulado)</h3>
+                        <canvas id="rdo-chart-timeline" height="250"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3 style="margin-bottom: 15px;"><span class="icon">🥧</span> Status dos Trechos</h3>
+                        <canvas id="rdo-chart-status" height="250"></canvas>
+                    </div>
+                </div>
+
+                <!-- Progress by System -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;"><span class="icon">📊</span> Progresso por Sistema</h3>
+                    <div class="grid">
+                        <div style="padding: 15px; background: var(--bg-primary); border-radius: 10px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <span><span style="color: var(--accent-blue);">💧</span> Água</span>
+                                <span id="dash-agua-pct">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" id="dash-agua-bar" style="width: 0%; background: var(--accent-blue);"></div>
+                            </div>
+                            <small style="color: var(--text-secondary);">
+                                <span id="dash-agua-exec">0</span> / <span id="dash-agua-plan">0</span> m
+                            </small>
+                        </div>
+                        <div style="padding: 15px; background: var(--bg-primary); border-radius: 10px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <span><span style="color: var(--accent-orange);">🚰</span> Esgoto</span>
+                                <span id="dash-esgoto-pct">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" id="dash-esgoto-bar" style="width: 0%; background: var(--accent-orange);"></div>
+                            </div>
+                            <small style="color: var(--text-secondary);">
+                                <span id="dash-esgoto-exec">0</span> / <span id="dash-esgoto-plan">0</span> m
+                            </small>
+                        </div>
+                        <div style="padding: 15px; background: var(--bg-primary); border-radius: 10px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <span><span style="color: var(--accent-cyan);">🌧️</span> Drenagem</span>
+                                <span id="dash-drenagem-pct">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" id="dash-drenagem-bar" style="width: 0%; background: var(--accent-cyan);"></div>
+                            </div>
+                            <small style="color: var(--text-secondary);">
+                                <span id="dash-drenagem-exec">0</span> / <span id="dash-drenagem-plan">0</span> m
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Services -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;"><span class="icon">🏆</span> Serviços Mais Executados</h3>
+                    <canvas id="rdo-chart-services" height="200"></canvas>
+                </div>
+
+                <!-- Segments Table -->
+                <div class="card">
+                    <h3 style="margin-bottom: 15px;"><span class="icon">📏</span> Detalhamento por Trecho</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Trecho</th>
+                                    <th>Sistema</th>
+                                    <th>Planejado (m)</th>
+                                    <th>Executado (m)</th>
+                                    <th>Progresso</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-segments-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RDO MAP VIEW -->
+            <div id="rdo-map-container" class="card" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2><span class="icon">🗺️</span> Mapa de Avanço por Trecho</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <select id="rdo-map-filter-system" onchange="updateRDOMap()">
+                            <option value="">Todos os Sistemas</option>
+                            <option value="agua">Água</option>
+                            <option value="esgoto">Esgoto</option>
+                            <option value="drenagem">Drenagem</option>
+                        </select>
+                        <select id="rdo-map-filter-status" onchange="updateRDOMap()">
+                            <option value="">Todos os Status</option>
+                            <option value="concluido">Concluído</option>
+                            <option value="em_execucao">Em Execução</option>
+                            <option value="nao_iniciado">Não Iniciado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="position: relative;">
+                    <!-- Map Container -->
+                    <div id="rdo-map" style="width: 100%; height: 500px; border-radius: 8px; border: 1px solid var(--border-color); overflow: hidden;"></div>
+
+                    <!-- Map Legend -->
+                    <div class="map-legend" id="rdo-map-legend" style="position: absolute; bottom: 20px; left: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: var(--shadow-md); z-index: 1000;">
+                        <strong style="display: block; margin-bottom: 10px;">Legenda - Progresso</strong>
+                        <div class="map-legend-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                            <span style="width: 20px; height: 4px; background: #28a745; border-radius: 2px;"></span>
+                            <span>Concluído (100%)</span>
+                        </div>
+                        <div class="map-legend-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                            <span style="width: 20px; height: 4px; background: #8bc34a; border-radius: 2px;"></span>
+                            <span>75% - 99%</span>
+                        </div>
+                        <div class="map-legend-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                            <span style="width: 20px; height: 4px; background: #ffc107; border-radius: 2px;"></span>
+                            <span>50% - 74%</span>
+                        </div>
+                        <div class="map-legend-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                            <span style="width: 20px; height: 4px; background: #fd7e14; border-radius: 2px;"></span>
+                            <span>1% - 49%</span>
+                        </div>
+                        <div class="map-legend-item" style="display: flex; align-items: center; gap: 8px;">
+                            <span style="width: 20px; height: 4px; background: #dc3545; border-radius: 2px;"></span>
+                            <span>Não Iniciado (0%)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Map Info Panel -->
+                <div id="rdo-map-info" style="display: none; margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <h4 style="margin: 0 0 10px 0; color: var(--accent-blue);">📍 Trecho Selecionado</h4>
+                    <div id="rdo-map-info-content"></div>
+                </div>
+
+                <!-- Map Actions -->
+                <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="rdoMapFitBounds()">
+                        <span>📍</span> Ajustar Visualização
+                    </button>
+                    <button class="btn btn-secondary" onclick="rdoMapRefresh()">
+                        <span>🔄</span> Atualizar Mapa
+                    </button>
+                    <button class="btn" style="background: var(--accent-green); color: white;" onclick="exportRDOMapImage()">
+                        <span>📷</span> Exportar Imagem
+                    </button>
+                </div>
+            </div>
+
+            <!-- RDO DETAIL VIEW -->
+            <div id="rdo-detail-container" class="card" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2><span class="icon">📋</span> Detalhes do RDO</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn" style="background: var(--bg-hover);" onclick="closeRDODetail()">
+                            <span>←</span> Voltar
+                        </button>
+                    </div>
+                </div>
+                <div id="rdo-detail-content"></div>
+
+                <!-- Export Options -->
+                <div style="margin-top: 20px; padding: 20px; background: var(--bg-primary); border-radius: 12px;">
+                    <h3 style="margin-bottom: 15px;"><span class="icon">📤</span> Exportar RDO</h3>
+                    <div class="actions" style="justify-content: flex-start;">
+                        <button class="btn" style="background: #c0392b; color: white;" onclick="exportRDOToPDF()">
+                            <span>📄</span> Exportar PDF
+                        </button>
+                        <button class="btn" style="background: #27ae60; color: white;" onclick="exportRDOToExcel()">
+                            <span>📊</span> Exportar Excel
+                        </button>
+                        <button class="btn" style="background: #2980b9; color: white;" onclick="exportRDOToJSON()">
+                            <span>📋</span> Exportar JSON
+                        </button>
+                        <button class="btn" style="background: #8e44ad; color: white;" onclick="exportRDOToSHP()">
+                            <span>🗺️</span> Exportar Shapefile
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Catalog Modal -->
+            <div id="service-catalog-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; overflow-y: auto;">
+                <div style="max-width: 600px; margin: 50px auto; background: white; border-radius: 16px; padding: 30px; box-shadow: var(--shadow-xl);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2><span class="icon">📚</span> Catálogo de Serviços</h2>
+                        <button class="btn" style="background: var(--bg-hover);" onclick="closeServiceCatalog()">✕</button>
+                    </div>
+
+                    <input type="text" id="catalog-search" placeholder="Buscar serviço..." style="width: 100%; margin-bottom: 15px;" oninput="filterCatalog()">
+
+                    <div id="catalog-list" style="max-height: 400px; overflow-y: auto;"></div>
+
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                        <h4 style="margin-bottom: 10px;">Adicionar Novo Serviço ao Catálogo</h4>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="new-catalog-service" placeholder="Nome do serviço" style="flex: 2;">
+                            <select id="new-catalog-unit" style="flex: 1;">
+                                <option value="m">m</option>
+                                <option value="m²">m²</option>
+                                <option value="m³">m³</option>
+                                <option value="un">un</option>
+                                <option value="h">h</option>
+                            </select>
+                            <button class="btn btn-success" onclick="addToCatalog()">Adicionar</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
