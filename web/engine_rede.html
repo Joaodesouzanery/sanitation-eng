@@ -1667,6 +1667,235 @@ PV01,359284.525,7352735.514,1.65"
                 </div>
             </div>
 
+            <!-- IMPORTAÇÃO AVANÇADA DE DXF -->
+            <div class="card" id="dxf-advanced-card" style="margin-top: 20px;">
+                <h2><span class="icon">📐</span> Importação Avançada de DXF</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                    Importe arquivos DXF com classificação detalhada de entidades. Selecione exatamente quais elementos representam cada componente da rede.
+                </p>
+
+                <!-- DXF File Upload -->
+                <div class="form-group">
+                    <label>Arquivo DXF</label>
+                    <div style="border: 2px dashed var(--accent-cyan); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer;"
+                         onclick="document.getElementById('dxf-advanced-input').click()">
+                        <p style="font-size: 1.5rem; margin-bottom: 10px;">📐</p>
+                        <p style="color: var(--text-secondary);">Clique para selecionar arquivo DXF</p>
+                        <p style="color: var(--accent-cyan); font-size: 0.85rem; margin-top: 10px;">Suporte completo a DXF R12 até 2024</p>
+                        <input type="file" id="dxf-advanced-input" accept=".dxf" style="display: none;" onchange="handleAdvancedDXFSelect(event)">
+                    </div>
+                </div>
+
+                <!-- DXF Analysis Results -->
+                <div id="dxf-analysis" style="display: none; margin-top: 20px;">
+                    <h3 style="color: var(--accent-cyan); margin-bottom: 15px;">📊 Análise do Arquivo DXF</h3>
+
+                    <div class="summary-cards" style="margin-bottom: 20px;">
+                        <div class="summary-card blue">
+                            <div class="icon">📏</div>
+                            <div class="value" id="dxf-lines-count">0</div>
+                            <div class="label">Linhas/Polylines</div>
+                        </div>
+                        <div class="summary-card green">
+                            <div class="icon">⚫</div>
+                            <div class="value" id="dxf-points-count">0</div>
+                            <div class="label">Pontos/Blocos</div>
+                        </div>
+                        <div class="summary-card orange">
+                            <div class="icon">📝</div>
+                            <div class="value" id="dxf-texts-count">0</div>
+                            <div class="label">Textos/Atributos</div>
+                        </div>
+                        <div class="summary-card purple">
+                            <div class="icon">🗂️</div>
+                            <div class="value" id="dxf-layers-count">0</div>
+                            <div class="label">Camadas</div>
+                        </div>
+                    </div>
+
+                    <!-- Entity Classification -->
+                    <div style="background: var(--bg-secondary); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="color: var(--accent-blue); margin-bottom: 15px;">🏷️ Classificação de Entidades</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 15px;">
+                            Selecione como cada tipo de entidade do DXF deve ser interpretado na rede de saneamento.
+                        </p>
+
+                        <div class="grid" style="gap: 15px;">
+                            <!-- Lines Classification -->
+                            <div style="background: var(--bg-card); padding: 15px; border-radius: 8px;">
+                                <h5 style="color: var(--accent-green); margin-bottom: 10px;">📏 Linhas e Polylines</h5>
+                                <div class="form-group">
+                                    <label style="font-size: 0.85rem;">Interpretar como:</label>
+                                    <select id="dxf-lines-type" style="width: 100%;">
+                                        <option value="tubulacao-esgoto">Tubulação de Esgoto</option>
+                                        <option value="tubulacao-agua">Tubulação de Água</option>
+                                        <option value="galeria-drenagem">Galeria de Drenagem</option>
+                                        <option value="eixo-rua">Eixo de Rua</option>
+                                        <option value="limites">Limites de Lote/Quadra</option>
+                                        <option value="curva-nivel">Curvas de Nível</option>
+                                        <option value="ignorar">Ignorar</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size: 0.85rem;">Filtrar por camadas:</label>
+                                    <select id="dxf-lines-layers" multiple style="width: 100%; height: 80px;"></select>
+                                </div>
+                            </div>
+
+                            <!-- Points Classification -->
+                            <div style="background: var(--bg-card); padding: 15px; border-radius: 8px;">
+                                <h5 style="color: var(--accent-blue); margin-bottom: 10px;">⚫ Pontos e Blocos</h5>
+                                <div class="form-group">
+                                    <label style="font-size: 0.85rem;">Interpretar como:</label>
+                                    <select id="dxf-points-type" style="width: 100%;">
+                                        <option value="pv">Poço de Visita (PV)</option>
+                                        <option value="tl">Terminal de Limpeza (TL)</option>
+                                        <option value="ci">Caixa de Inspeção (CI)</option>
+                                        <option value="reservatorio">Reservatório</option>
+                                        <option value="eee">Estação Elevatória (EEE)</option>
+                                        <option value="hidrante">Hidrante</option>
+                                        <option value="valvula">Válvula</option>
+                                        <option value="boca-lobo">Boca de Lobo</option>
+                                        <option value="poco-visita-drenagem">PV Drenagem</option>
+                                        <option value="levantamento">Ponto de Levantamento</option>
+                                        <option value="marco">Marco Geodésico</option>
+                                        <option value="ignorar">Ignorar</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size: 0.85rem;">Filtrar por camadas:</label>
+                                    <select id="dxf-points-layers" multiple style="width: 100%; height: 80px;"></select>
+                                </div>
+                            </div>
+
+                            <!-- Texts Classification -->
+                            <div style="background: var(--bg-card); padding: 15px; border-radius: 8px;">
+                                <h5 style="color: var(--accent-orange); margin-bottom: 10px;">📝 Textos e Atributos</h5>
+                                <div class="form-group">
+                                    <label style="font-size: 0.85rem;">Usar textos como:</label>
+                                    <select id="dxf-texts-type" style="width: 100%;">
+                                        <option value="cota-terreno">Cota de Terreno</option>
+                                        <option value="cota-tampa">Cota de Tampa</option>
+                                        <option value="cota-fundo">Cota de Fundo</option>
+                                        <option value="diametro">Diâmetro da Tubulação</option>
+                                        <option value="identificacao">Identificação/Nome</option>
+                                        <option value="endereco">Endereço/Logradouro</option>
+                                        <option value="ignorar">Ignorar</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size: 0.85rem;">Tolerância de proximidade (m):</label>
+                                    <input type="number" id="dxf-text-tolerance" value="2.0" min="0.1" max="10" step="0.1">
+                                    <small style="color: var(--text-secondary);">Distância máxima para associar texto a elemento</small>
+                                </div>
+                            </div>
+
+                            <!-- Blocks Classification -->
+                            <div style="background: var(--bg-card); padding: 15px; border-radius: 8px;">
+                                <h5 style="color: var(--accent-purple); margin-bottom: 10px;">🔲 Blocos Específicos</h5>
+                                <div class="form-group">
+                                    <label style="font-size: 0.85rem;">Blocos encontrados:</label>
+                                    <div id="dxf-blocks-list" style="max-height: 120px; overflow-y: auto; background: var(--bg-secondary); padding: 10px; border-radius: 6px; font-size: 0.85rem;">
+                                        <span style="color: var(--text-muted);">Carregue um arquivo DXF para ver os blocos</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size: 0.85rem;">Mapeamento de blocos:</label>
+                                    <div id="dxf-block-mapping" style="display: flex; flex-direction: column; gap: 5px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Options -->
+                    <details style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <summary style="cursor: pointer; color: var(--accent-purple); font-weight: 600;">⚙️ Opções Avançadas</summary>
+                        <div style="margin-top: 15px;">
+                            <div class="grid" style="gap: 15px;">
+                                <div class="form-group">
+                                    <label>Sistema de Coordenadas do DXF</label>
+                                    <select id="dxf-crs-input">
+                                        <option value="auto">Detectar Automaticamente</option>
+                                        <option value="EPSG:31983">SIRGAS 2000 / UTM 23S</option>
+                                        <option value="EPSG:31984">SIRGAS 2000 / UTM 24S</option>
+                                        <option value="EPSG:31982">SIRGAS 2000 / UTM 22S</option>
+                                        <option value="EPSG:31985">SIRGAS 2000 / UTM 25S</option>
+                                        <option value="local">Sistema Local</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Precisão de Coordenadas</label>
+                                    <select id="dxf-coord-precision">
+                                        <option value="3">3 casas decimais (mm)</option>
+                                        <option value="2">2 casas decimais (cm)</option>
+                                        <option value="4">4 casas decimais</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                        <input type="checkbox" id="dxf-merge-vertices" checked style="width: auto;">
+                                        Unir vértices próximos (snap)
+                                    </label>
+                                    <small style="color: var(--text-secondary);">Une pontos com distância menor que 0.01m</small>
+                                </div>
+                                <div class="form-group">
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                        <input type="checkbox" id="dxf-extract-elevation" checked style="width: auto;">
+                                        Extrair elevação Z das entidades
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="processAdvancedDXF()">
+                            <span>✓</span> Processar e Importar
+                        </button>
+                        <button class="btn" style="background: var(--accent-cyan); color: white;" onclick="previewDXFImport()">
+                            <span>👁️</span> Visualizar Preview
+                        </button>
+                        <button class="btn" style="background: var(--accent-orange); color: white;" onclick="exportDXFConfig()">
+                            <span>💾</span> Salvar Configuração
+                        </button>
+                        <button class="btn btn-small" onclick="loadDXFConfig()">
+                            <span>📂</span> Carregar Configuração
+                        </button>
+                    </div>
+                </div>
+
+                <!-- DXF Preview Map -->
+                <div id="dxf-preview-container" style="display: none; margin-top: 20px;">
+                    <h3 style="color: var(--accent-green); margin-bottom: 15px;">🗺️ Preview da Importação</h3>
+                    <div id="dxf-preview-map" style="width: 100%; height: 400px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card);"></div>
+                    <div style="margin-top: 10px; display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span style="width: 20px; height: 3px; background: #22c55e;"></span>
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Tubulações</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span style="width: 12px; height: 12px; background: #3b82f6; border-radius: 50%;"></span>
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Nós/PVs</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span style="width: 12px; height: 12px; background: #f59e0b; border-radius: 3px;"></span>
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Blocos</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span style="font-size: 0.85rem; color: #8b5cf6;">A</span>
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Textos</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Import Results -->
+                <div id="dxf-import-results" style="display: none; margin-top: 20px; padding: 15px; background: var(--accent-green-light); border-radius: 8px; border: 1px solid var(--accent-green);">
+                    <h4 style="color: var(--accent-green-dark); margin-bottom: 10px;">✓ Importação Concluída</h4>
+                    <div id="dxf-import-summary"></div>
+                </div>
+            </div>
+
             <!-- Network Trace Visualization -->
             <div class="card" id="trace-card" style="display: none; margin-top: 20px;">
                 <h2><span class="icon">🗺️</span> Traçado da Rede</h2>
@@ -3787,6 +4016,206 @@ PV02,359290.456,7352780.123,1.82</pre>
                 </div>
             </div>
 
+            <!-- GANTT DE MATERIAIS E COMPRAS -->
+            <div class="card" style="margin-top: 20px; background: linear-gradient(135deg, #fef3c7, var(--bg-card));">
+                <h2><span class="icon">📦</span> Cronograma de Materiais e Compras</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Gerencie a aquisição de materiais sincronizada com o cronograma da obra. Controle prazos de entrega, estoque e datas de compra.
+                </p>
+
+                <!-- Summary Cards -->
+                <div class="summary-cards" style="margin-bottom: 20px;">
+                    <div class="summary-card blue">
+                        <div class="icon">📦</div>
+                        <div class="value" id="materials-total-items">0</div>
+                        <div class="label">Itens de Material</div>
+                    </div>
+                    <div class="summary-card green">
+                        <div class="icon">✓</div>
+                        <div class="value" id="materials-in-stock">0</div>
+                        <div class="label">Em Estoque</div>
+                    </div>
+                    <div class="summary-card orange">
+                        <div class="icon">🛒</div>
+                        <div class="value" id="materials-to-purchase">0</div>
+                        <div class="label">A Comprar</div>
+                    </div>
+                    <div class="summary-card red">
+                        <div class="icon">⚠️</div>
+                        <div class="value" id="materials-urgent">0</div>
+                        <div class="label">Urgentes</div>
+                    </div>
+                </div>
+
+                <!-- Materials Settings -->
+                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="color: var(--accent-orange); margin-bottom: 15px;">⚙️ Configurações de Lead Time</h4>
+                    <div class="grid" style="gap: 15px;">
+                        <div class="form-group">
+                            <label>Lead Time Padrão (dias)</label>
+                            <input type="number" id="materials-default-leadtime" value="7" min="1" max="90">
+                            <small style="color: var(--text-secondary);">Tempo entre pedido e entrega</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Dias de Antecedência para Alerta</label>
+                            <input type="number" id="materials-alert-days" value="3" min="1" max="30">
+                            <small style="color: var(--text-secondary);">Antecedência para alertar compras urgentes</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Agrupar Gantt por:</label>
+                            <select id="materials-gantt-group">
+                                <option value="category">Categoria de Material</option>
+                                <option value="supplier">Fornecedor</option>
+                                <option value="task">Tarefa/Trecho</option>
+                                <option value="week">Semana de Necessidade</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="materials-auto-generate" checked style="width: auto;">
+                                Gerar automaticamente do cronograma
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="generateMaterialsSchedule()">
+                        <span>🔄</span> Gerar Cronograma de Materiais
+                    </button>
+                    <button class="btn btn-success" onclick="addMaterialItem()">
+                        <span>➕</span> Adicionar Material
+                    </button>
+                    <button class="btn" style="background: var(--accent-purple); color: white;" onclick="importMaterialsList()">
+                        <span>📥</span> Importar Lista
+                    </button>
+                    <button class="btn" style="background: var(--bg-secondary);" onclick="exportMaterialsSchedule()">
+                        <span>📤</span> Exportar Excel
+                    </button>
+                </div>
+
+                <!-- Materials Gantt Chart -->
+                <div style="background: var(--bg-primary); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; color: var(--accent-blue);">📊 Gantt de Compras</h4>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-small" onclick="zoomMaterialsGantt('in')">🔍+</button>
+                            <button class="btn btn-small" onclick="zoomMaterialsGantt('out')">🔍-</button>
+                            <select id="materials-gantt-view" onchange="changeMaterialsGanttView()" style="padding: 5px 10px; border-radius: 4px; background: var(--bg-secondary); border: 1px solid var(--border-color);">
+                                <option value="week">Por Semana</option>
+                                <option value="month">Por Mês</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="materials-gantt-container" style="width: 100%; overflow-x: auto;">
+                        <canvas id="materials-gantt-chart" height="300"></canvas>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; gap: 15px; flex-wrap: wrap; font-size: 0.85rem;">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span style="width: 20px; height: 10px; background: #3b82f6; border-radius: 2px;"></span>
+                            <span style="color: var(--text-secondary);">Período de Compra</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span style="width: 20px; height: 10px; background: #f59e0b; border-radius: 2px;"></span>
+                            <span style="color: var(--text-secondary);">Lead Time (entrega)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span style="width: 20px; height: 10px; background: #22c55e; border-radius: 2px;"></span>
+                            <span style="color: var(--text-secondary);">Em Estoque</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span style="width: 20px; height: 10px; background: #ef4444; border-radius: 2px;"></span>
+                            <span style="color: var(--text-secondary);">Urgente</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Materials List Table -->
+                <div style="background: var(--bg-primary); border-radius: 8px; padding: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; color: var(--accent-green);">📋 Lista de Materiais</h4>
+                        <input type="text" id="materials-search" placeholder="Buscar material..." style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); width: 200px;" oninput="filterMaterialsList()">
+                    </div>
+                    <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead style="position: sticky; top: 0; background: var(--bg-card);">
+                                <tr>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color);">Material</th>
+                                    <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border-color);">Qtd. Necessária</th>
+                                    <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border-color);">Em Estoque</th>
+                                    <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border-color);">A Comprar</th>
+                                    <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border-color);">Data Necessidade</th>
+                                    <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border-color);">Data Compra</th>
+                                    <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border-color);">Status</th>
+                                    <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border-color);">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="materials-list-tbody">
+                                <tr>
+                                    <td colspan="8" style="padding: 30px; text-align: center; color: var(--text-muted);">
+                                        Clique em "Gerar Cronograma de Materiais" para criar a lista automaticamente do cronograma.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Warehouse Control -->
+                <details style="margin-top: 20px; background: var(--bg-secondary); padding: 15px; border-radius: 8px;">
+                    <summary style="cursor: pointer; color: var(--accent-purple); font-weight: 600;">📦 Controle de Almoxarifado</summary>
+                    <div style="margin-top: 15px;">
+                        <div class="grid" style="gap: 15px;">
+                            <div style="background: var(--bg-card); padding: 15px; border-radius: 8px;">
+                                <h5 style="color: var(--accent-green); margin-bottom: 10px;">📥 Entrada de Material</h5>
+                                <div class="form-group">
+                                    <label>Material:</label>
+                                    <select id="warehouse-in-material" style="width: 100%;"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Quantidade:</label>
+                                    <input type="number" id="warehouse-in-qty" min="1" value="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Nota Fiscal:</label>
+                                    <input type="text" id="warehouse-in-nf" placeholder="Número da NF">
+                                </div>
+                                <button class="btn btn-success btn-small" onclick="registerMaterialEntry()">
+                                    <span>➕</span> Registrar Entrada
+                                </button>
+                            </div>
+                            <div style="background: var(--bg-card); padding: 15px; border-radius: 8px;">
+                                <h5 style="color: var(--accent-red); margin-bottom: 10px;">📤 Saída de Material</h5>
+                                <div class="form-group">
+                                    <label>Material:</label>
+                                    <select id="warehouse-out-material" style="width: 100%;"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Quantidade:</label>
+                                    <input type="number" id="warehouse-out-qty" min="1" value="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Destino/Frente:</label>
+                                    <input type="text" id="warehouse-out-dest" placeholder="Trecho ou frente de obra">
+                                </div>
+                                <button class="btn btn-small" style="background: var(--accent-red); color: white;" onclick="registerMaterialExit()">
+                                    <span>➖</span> Registrar Saída
+                                </button>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <button class="btn btn-small" style="background: var(--accent-blue); color: white;" onclick="showWarehouseHistory()">
+                                <span>📋</span> Ver Histórico de Movimentações
+                            </button>
+                            <button class="btn btn-small" onclick="exportWarehouseReport()">
+                                <span>📤</span> Exportar Relatório
+                            </button>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
             <!-- Export Actions -->
             <div class="card" style="margin-top: 20px;">
                 <h2><span class="icon">📤</span> Exportar Projeto</h2>
@@ -3866,12 +4295,39 @@ PV02,359290.456,7352780.123,1.82</pre>
                 </div>
             </div>
 
-            <!-- MAPA INTERATIVO -->
+            <!-- MAPA INTERATIVO COM EDIÇÃO -->
             <div class="card" style="margin-bottom: 20px;">
                 <h2><span class="icon">🗺️</span> Mapa Interativo da Rede</h2>
                 <p style="color: var(--text-secondary); margin-bottom: 15px;">
-                    Visualize e interaja com a rede. Clique nos elementos para ver detalhes. Use o scroll para zoom e arraste para mover.
+                    Visualize e edite a rede interativamente. Arraste nós para reposicioná-los, edite vértices de trechos, e exporte as alterações.
                 </p>
+
+                <!-- Edit Mode Toggle -->
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center;">
+                    <div style="display: flex; background: var(--bg-card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color);">
+                        <button id="map-mode-view" class="map-mode-btn active" onclick="setMapMode('view')" style="padding: 10px 15px; border: none; background: var(--accent-blue); color: white; cursor: pointer;">
+                            👁️ Visualizar
+                        </button>
+                        <button id="map-mode-edit" class="map-mode-btn" onclick="setMapMode('edit')" style="padding: 10px 15px; border: none; background: transparent; color: var(--text-primary); cursor: pointer;">
+                            ✏️ Editar Nós
+                        </button>
+                        <button id="map-mode-vertex" class="map-mode-btn" onclick="setMapMode('vertex')" style="padding: 10px 15px; border: none; background: transparent; color: var(--text-primary); cursor: pointer;">
+                            📐 Editar Vértices
+                        </button>
+                        <button id="map-mode-measure" class="map-mode-btn" onclick="setMapMode('measure')" style="padding: 10px 15px; border: none; background: transparent; color: var(--text-primary); cursor: pointer;">
+                            📏 Medir
+                        </button>
+                    </div>
+                    <span id="map-edit-status" style="color: var(--text-secondary); font-size: 0.85rem;"></span>
+                </div>
+
+                <!-- Edit Mode Help -->
+                <div id="map-edit-help" style="display: none; background: var(--accent-orange-light); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--accent-orange);">
+                    <strong style="color: var(--accent-orange);">✏️ Modo de Edição Ativo</strong>
+                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 5px;" id="map-edit-instructions">
+                        Clique e arraste os nós para reposicioná-los. As coordenadas serão atualizadas automaticamente.
+                    </p>
+                </div>
 
                 <div style="position: relative;">
                     <!-- Map Container -->
@@ -3885,6 +4341,15 @@ PV02,359290.456,7352780.123,1.82</pre>
                         <button onclick="qgisMapToggleLabels()" title="Mostrar/Ocultar rótulos">🏷️ Rótulos</button>
                         <button onclick="qgisMapChangeBaseLayer()" title="Alterar mapa base">🗺️ Base</button>
                         <button onclick="qgisMapExportImage()" title="Exportar como imagem">📷 Captura</button>
+                    </div>
+
+                    <!-- Edit Toolbar (hidden by default) -->
+                    <div id="map-edit-toolbar" class="map-toolbar" style="display: none; top: 60px; background: rgba(249, 115, 22, 0.95);">
+                        <button onclick="undoMapEdit()" title="Desfazer última alteração">↩️ Desfazer</button>
+                        <button onclick="redoMapEdit()" title="Refazer alteração">↪️ Refazer</button>
+                        <button onclick="saveMapEdits()" title="Salvar alterações">💾 Salvar</button>
+                        <button onclick="discardMapEdits()" title="Descartar alterações">🗑️ Descartar</button>
+                        <button onclick="exportEditedCoordinates()" title="Exportar coordenadas editadas">📤 Exportar</button>
                     </div>
 
                     <!-- Map Legend -->
@@ -3959,6 +4424,62 @@ PV02,359290.456,7352780.123,1.82</pre>
                 <div id="qgis-map-info-panel" style="display: none; margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);">
                     <h4 style="margin: 0 0 10px 0; color: var(--accent-blue);">📍 Elemento Selecionado</h4>
                     <div id="qgis-map-info-content"></div>
+                </div>
+
+                <!-- Edit History Panel -->
+                <div id="map-edit-history" style="display: none; margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px; border: 1px solid var(--accent-orange);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="margin: 0; color: var(--accent-orange);">📝 Histórico de Edições</h4>
+                        <span id="edit-count-badge" style="background: var(--accent-orange); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">0 alterações</span>
+                    </div>
+                    <div id="edit-history-list" style="max-height: 200px; overflow-y: auto;">
+                        <p style="color: var(--text-muted); font-size: 0.85rem;">Nenhuma edição realizada ainda.</p>
+                    </div>
+                    <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-small" style="background: var(--accent-green); color: white;" onclick="applyAllMapEdits()">
+                            <span>✓</span> Aplicar Todas
+                        </button>
+                        <button class="btn btn-small" style="background: var(--accent-blue); color: white;" onclick="exportMapEditsCSV()">
+                            <span>📥</span> Exportar CSV
+                        </button>
+                        <button class="btn btn-small" style="background: var(--accent-purple); color: white;" onclick="exportMapEditsGeoJSON()">
+                            <span>🌐</span> Exportar GeoJSON
+                        </button>
+                        <button class="btn btn-small" style="background: var(--accent-red); color: white;" onclick="clearAllMapEdits()">
+                            <span>🗑️</span> Limpar Histórico
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Coordinate Editor Panel -->
+                <div id="coordinate-editor-panel" style="display: none; margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px; border: 1px solid var(--accent-cyan);">
+                    <h4 style="margin: 0 0 15px 0; color: var(--accent-cyan);">📐 Editor de Coordenadas</h4>
+                    <div class="grid" style="gap: 10px;">
+                        <div class="form-group">
+                            <label style="font-size: 0.85rem;">Elemento:</label>
+                            <input type="text" id="coord-edit-element" readonly style="background: var(--bg-card);">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 0.85rem;">X / Este (m):</label>
+                            <input type="number" id="coord-edit-x" step="0.001">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 0.85rem;">Y / Norte (m):</label>
+                            <input type="number" id="coord-edit-y" step="0.001">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 0.85rem;">Z / Cota (m):</label>
+                            <input type="number" id="coord-edit-z" step="0.01">
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                        <button class="btn btn-small btn-primary" onclick="applyCoordinateEdit()">
+                            <span>✓</span> Aplicar
+                        </button>
+                        <button class="btn btn-small" style="background: var(--bg-secondary);" onclick="cancelCoordinateEdit()">
+                            Cancelar
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -4494,6 +5015,202 @@ PV02,359290.456,7352780.123,1.82</pre>
                             <tbody id="dash-segments-tbody"></tbody>
                         </table>
                     </div>
+                </div>
+
+                <!-- CONTROLE FINANCEIRO -->
+                <div class="card" style="margin-top: 20px; background: linear-gradient(135deg, #d1fae5, var(--bg-card));">
+                    <h3 style="margin-bottom: 15px;"><span class="icon">💰</span> Controle Financeiro da Obra</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                        Acompanhe o desempenho financeiro com indicadores EVM (Earned Value Management).
+                    </p>
+
+                    <!-- Financial Summary Cards -->
+                    <div class="summary-cards" style="margin-bottom: 20px;">
+                        <div class="summary-card blue">
+                            <div class="icon">📋</div>
+                            <div class="value" id="fin-budget">R$ 0</div>
+                            <div class="label">Orçamento Total (BAC)</div>
+                        </div>
+                        <div class="summary-card green">
+                            <div class="icon">✓</div>
+                            <div class="value" id="fin-earned">R$ 0</div>
+                            <div class="label">Valor Agregado (EV)</div>
+                        </div>
+                        <div class="summary-card orange">
+                            <div class="icon">💸</div>
+                            <div class="value" id="fin-actual">R$ 0</div>
+                            <div class="label">Custo Real (AC)</div>
+                        </div>
+                        <div class="summary-card purple">
+                            <div class="icon">📊</div>
+                            <div class="value" id="fin-planned">R$ 0</div>
+                            <div class="label">Valor Planejado (PV)</div>
+                        </div>
+                    </div>
+
+                    <!-- EVM Indicators -->
+                    <div class="grid" style="gap: 15px; margin-bottom: 20px;">
+                        <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px;">
+                            <h4 style="color: var(--accent-blue); margin-bottom: 15px;">📈 Indicadores de Desempenho</h4>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                                <div style="background: var(--bg-card); padding: 12px; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">CPI (Custo)</div>
+                                    <div id="fin-cpi" style="font-size: 1.5rem; font-weight: 700; color: var(--accent-green);">1.00</div>
+                                    <small style="color: var(--text-muted);">EV / AC</small>
+                                </div>
+                                <div style="background: var(--bg-card); padding: 12px; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">SPI (Prazo)</div>
+                                    <div id="fin-spi" style="font-size: 1.5rem; font-weight: 700; color: var(--accent-green);">1.00</div>
+                                    <small style="color: var(--text-muted);">EV / PV</small>
+                                </div>
+                                <div style="background: var(--bg-card); padding: 12px; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">CV (Variação Custo)</div>
+                                    <div id="fin-cv" style="font-size: 1.5rem; font-weight: 700; color: var(--accent-green);">R$ 0</div>
+                                    <small style="color: var(--text-muted);">EV - AC</small>
+                                </div>
+                                <div style="background: var(--bg-card); padding: 12px; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">SV (Variação Prazo)</div>
+                                    <div id="fin-sv" style="font-size: 1.5rem; font-weight: 700; color: var(--accent-green);">R$ 0</div>
+                                    <small style="color: var(--text-muted);">EV - PV</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px;">
+                            <h4 style="color: var(--accent-orange); margin-bottom: 15px;">🎯 Projeções</h4>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                                <div style="background: var(--bg-card); padding: 12px; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">EAC (Estimativa)</div>
+                                    <div id="fin-eac" style="font-size: 1.5rem; font-weight: 700; color: var(--accent-orange);">R$ 0</div>
+                                    <small style="color: var(--text-muted);">Custo estimado final</small>
+                                </div>
+                                <div style="background: var(--bg-card); padding: 12px; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">ETC (A Completar)</div>
+                                    <div id="fin-etc" style="font-size: 1.5rem; font-weight: 700; color: var(--accent-blue);">R$ 0</div>
+                                    <small style="color: var(--text-muted);">Custo restante</small>
+                                </div>
+                                <div style="background: var(--bg-card); padding: 12px; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">VAC (Variação)</div>
+                                    <div id="fin-vac" style="font-size: 1.5rem; font-weight: 700; color: var(--accent-green);">R$ 0</div>
+                                    <small style="color: var(--text-muted);">BAC - EAC</small>
+                                </div>
+                                <div style="background: var(--bg-card); padding: 12px; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">TCPI</div>
+                                    <div id="fin-tcpi" style="font-size: 1.5rem; font-weight: 700; color: var(--accent-purple);">1.00</div>
+                                    <small style="color: var(--text-muted);">Desempenho necessário</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- S-Curve Chart -->
+                    <div style="background: var(--bg-primary); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0; color: var(--accent-purple);">📈 Curva S - Avanço Físico-Financeiro</h4>
+                            <div style="display: flex; gap: 10px;">
+                                <select id="scurve-view" onchange="updateSCurve()" style="padding: 5px 10px; border-radius: 4px; background: var(--bg-secondary); border: 1px solid var(--border-color);">
+                                    <option value="financial">Financeiro</option>
+                                    <option value="physical">Físico (%)</option>
+                                    <option value="both">Ambos</option>
+                                </select>
+                            </div>
+                        </div>
+                        <canvas id="scurve-chart" height="250"></canvas>
+                        <div style="margin-top: 10px; display: flex; gap: 20px; justify-content: center; font-size: 0.85rem;">
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <span style="width: 20px; height: 3px; background: #3b82f6;"></span>
+                                <span style="color: var(--text-secondary);">Planejado (PV)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <span style="width: 20px; height: 3px; background: #22c55e;"></span>
+                                <span style="color: var(--text-secondary);">Valor Agregado (EV)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <span style="width: 20px; height: 3px; background: #ef4444;"></span>
+                                <span style="color: var(--text-secondary);">Custo Real (AC)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Financial Entries -->
+                    <details style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <summary style="cursor: pointer; color: var(--accent-green); font-weight: 600;">💵 Lançamentos Financeiros</summary>
+                        <div style="margin-top: 15px;">
+                            <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                                <button class="btn btn-small btn-success" onclick="addFinancialEntry()">
+                                    <span>➕</span> Novo Lançamento
+                                </button>
+                                <button class="btn btn-small" style="background: var(--accent-blue); color: white;" onclick="importFinancialData()">
+                                    <span>📥</span> Importar Excel
+                                </button>
+                                <button class="btn btn-small" onclick="exportFinancialReport()">
+                                    <span>📤</span> Exportar Relatório
+                                </button>
+                            </div>
+                            <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+                                <table style="width: 100%; font-size: 0.85rem;">
+                                    <thead style="position: sticky; top: 0; background: var(--bg-card);">
+                                        <tr>
+                                            <th style="padding: 8px;">Data</th>
+                                            <th style="padding: 8px;">Categoria</th>
+                                            <th style="padding: 8px;">Descrição</th>
+                                            <th style="padding: 8px; text-align: right;">Valor</th>
+                                            <th style="padding: 8px;">Tipo</th>
+                                            <th style="padding: 8px;">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="financial-entries-tbody">
+                                        <tr>
+                                            <td colspan="6" style="padding: 20px; text-align: center; color: var(--text-muted);">
+                                                Nenhum lançamento registrado. Clique em "Novo Lançamento" para começar.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Cost by Category -->
+                    <details style="background: var(--bg-secondary); padding: 15px; border-radius: 8px;">
+                        <summary style="cursor: pointer; color: var(--accent-orange); font-weight: 600;">📊 Custos por Categoria</summary>
+                        <div style="margin-top: 15px;">
+                            <div class="grid" style="gap: 15px;">
+                                <div style="background: var(--bg-card); padding: 15px; border-radius: 8px;">
+                                    <canvas id="cost-category-chart" height="200"></canvas>
+                                </div>
+                                <div style="background: var(--bg-card); padding: 15px; border-radius: 8px;">
+                                    <h5 style="margin-bottom: 15px; color: var(--text-secondary);">Resumo por Categoria</h5>
+                                    <div id="cost-category-summary">
+                                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                                            <span>👷 Mão de Obra</span>
+                                            <span id="cost-labor">R$ 0</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                                            <span>📦 Materiais</span>
+                                            <span id="cost-materials">R$ 0</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                                            <span>🚜 Equipamentos</span>
+                                            <span id="cost-equipment">R$ 0</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                                            <span>🚛 Transporte</span>
+                                            <span id="cost-transport">R$ 0</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                                            <span>📋 Administrativo</span>
+                                            <span id="cost-admin">R$ 0</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; padding: 8px 0; font-weight: 700; color: var(--accent-blue);">
+                                            <span>💰 TOTAL</span>
+                                            <span id="cost-total-category">R$ 0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
                 </div>
             </div>
 
