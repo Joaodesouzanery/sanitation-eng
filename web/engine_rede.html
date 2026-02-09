@@ -2316,6 +2316,55 @@ PV02,359290.456,7352780.123,1.82</pre>
                         <small style="color: var(--text-secondary);">Acima disso, usa retroescavadeira obrigatoriamente</small>
                     </div>
                 </div>
+
+                <!-- Parâmetros de Produtividade -->
+                <div class="card">
+                    <h2><span class="icon">⚡</span> Parâmetros de Produtividade</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Configure a produtividade e o modo de visualização do cronograma.
+                    </p>
+
+                    <div class="form-group">
+                        <label>Metros por Dia (Base)</label>
+                        <input type="number" id="planning-metros-dia" value="12" min="5" max="50" step="1">
+                        <small style="color: var(--text-secondary);">
+                            Produtividade base em condições normais (profundidade &lt; 1.5m, DN150).
+                            Aumente para dias mais corridos com mais metros executados.
+                        </small>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Modo de Agrupamento do Gantt</label>
+                        <select id="planning-gantt-mode" style="width: 100%;">
+                            <option value="by-segment">Por Segmento Diário (mais detalhado - uma linha por dia de trabalho)</option>
+                            <option value="by-trecho">Por Trecho Completo (menos linhas - uma linha por trecho)</option>
+                            <option value="by-trecho-activity">Por Trecho + Atividade (ciclo completo por trecho)</option>
+                        </select>
+                        <small style="color: var(--text-secondary);">
+                            Escolha "Por Trecho Completo" para um Gantt mais limpo com menos linhas.
+                        </small>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Agrupar Trechos por Proximidade</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="checkbox" id="planning-group-trechos" style="width: auto;">
+                            <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                                Agrupa trechos próximos para otimizar a execução sequencial
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px; border-left: 4px solid var(--accent-orange);">
+                        <h4 style="color: var(--accent-orange); margin: 0 0 10px 0;">💡 Dica: Dias Mais Corridos</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0;">
+                            Para ter <strong>menos linhas no Gantt</strong> e <strong>dias mais corridos</strong>:<br>
+                            • Aumente os "Metros por Dia" (ex: 15-20 m/dia)<br>
+                            • Selecione "Por Trecho Completo" no modo de agrupamento<br>
+                            • Aumente o número de equipes trabalhando em paralelo
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <!-- Cronograma e Feriados -->
@@ -3727,7 +3776,7 @@ PV02,359290.456,7352780.123,1.82</pre>
                     </div>
                 </div>
 
-                <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                     <button class="btn btn-primary" onclick="qgisMapRefresh()">
                         <span>🔄</span> Atualizar Mapa
                     </button>
@@ -3741,6 +3790,36 @@ PV02,359290.456,7352780.123,1.82</pre>
                         <option value="velocity">Estilo: Por Velocidade</option>
                         <option value="pressure">Estilo: Por Pressão</option>
                     </select>
+                </div>
+
+                <!-- CRS de Entrada dos Dados -->
+                <div style="margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <h4 style="margin: 0 0 10px 0; color: var(--accent-orange);">📐 Base Cartográfica dos Dados</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 10px;">
+                        Informe qual é o sistema de coordenadas dos seus dados de entrada para garantir a correta visualização no mapa.
+                    </p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                        <select id="qgis-input-crs" onchange="updateInputCRS()" style="flex: 1; min-width: 250px; padding: 10px; border-radius: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary);">
+                            <option value="auto">Detectar Automaticamente</option>
+                            <option value="EPSG:31983">SIRGAS 2000 / UTM zone 23S (Santos, SP)</option>
+                            <option value="EPSG:31984">SIRGAS 2000 / UTM zone 24S (Rio, ES)</option>
+                            <option value="EPSG:31982">SIRGAS 2000 / UTM zone 22S (PR, SC, RS)</option>
+                            <option value="EPSG:31985">SIRGAS 2000 / UTM zone 25S (Nordeste)</option>
+                            <option value="EPSG:4674">SIRGAS 2000 Geográfico (Lat/Lon)</option>
+                            <option value="EPSG:4326">WGS 84 Geográfico (GPS)</option>
+                            <option value="EPSG:32723">WGS 84 / UTM zone 23S</option>
+                            <option value="local">Sistema Local (sem georreferência)</option>
+                        </select>
+                        <button class="btn btn-small" style="background: var(--accent-orange); color: white; border: none;" onclick="detectInputCRS()">
+                            🔍 Detectar CRS
+                        </button>
+                    </div>
+                    <div id="input-crs-info" style="margin-top: 10px; padding: 10px; background: var(--bg-secondary); border-radius: 6px; display: none;">
+                        <small style="color: var(--text-secondary);">
+                            <strong>CRS Detectado:</strong> <span id="detected-crs-text">-</span><br>
+                            <strong>Faixa de coordenadas:</strong> <span id="detected-coords-range">-</span>
+                        </small>
+                    </div>
                 </div>
 
                 <!-- Info Panel for Selected Element -->
@@ -11225,7 +11304,11 @@ DATA;
                 hasRetro: document.getElementById('equip-retro')?.checked ?? true,
                 hasCompactor: document.getElementById('equip-compactador')?.checked ?? true,
                 hasTruck: document.getElementById('equip-caminhao')?.checked ?? false,
-                hasPump: document.getElementById('equip-bomba')?.checked ?? false
+                hasPump: document.getElementById('equip-bomba')?.checked ?? false,
+                // Novos parâmetros de produtividade
+                metrosDiaBase: parseInt(document.getElementById('planning-metros-dia')?.value) || 12,
+                ganttMode: document.getElementById('planning-gantt-mode')?.value || 'by-segment',
+                groupTrechos: document.getElementById('planning-group-trechos')?.checked ?? false
             };
         }
 
@@ -11317,12 +11400,13 @@ DATA;
         function generateSchedule(wbs, numTeams, teamConfig) {
             const schedule = [];
             let teamAssignments = Array(numTeams).fill(0); // Day each team is free
+            const ganttMode = teamConfig.ganttMode || 'by-segment';
 
             // Produtividade por metro linear (considerando todas as atividades do ciclo)
             // Baseado em equipe padrão: 1 encarregado, 2 oficiais, 4 ajudantes, 1 operador
             const getMetrosDiarios = (profundidade, diametro, teamConfig) => {
-                // Base: metros/dia que uma equipe consegue completar o ciclo inteiro
-                let baseMetros = 12; // metros/dia em condições normais (prof < 1.5m, DN150)
+                // Base: metros/dia configurado pelo usuário (padrão 12)
+                let baseMetros = teamConfig.metrosDiaBase || 12; // metros/dia configuráveis
 
                 // Ajuste por profundidade (quanto mais fundo, mais lento)
                 if (profundidade > 3.0) baseMetros *= 0.5;      // Muito profundo
@@ -11383,45 +11467,57 @@ DATA;
                 // Encontra próxima equipe disponível
                 const teamIdx = teamAssignments.indexOf(Math.min(...teamAssignments));
                 const startDay = teamAssignments[teamIdx] + 1;
+                const endDay = startDay + diasNecessarios - 1;
 
-                // Cria um registro por dia de trabalho neste trecho
-                for (let dia = 0; dia < diasNecessarios; dia++) {
-                    const metrosHoje = (dia === diasNecessarios - 1)
-                        ? comprimento - (dia * metrosDia) // Último dia: metros restantes
-                        : metrosDia;
+                // Calcula quantidades totais do trecho
+                const larguraVala = Math.max(0.6, diametro / 1000 + 0.4);
+                const volEscTotal = comprimento * larguraVala * profundidade;
+                const volReatTotal = volEscTotal * 0.7;
+                const areaPavTotal = comprimento * (larguraVala + 0.2);
 
-                    const dayNumber = startDay + dia;
-                    const segmentoId = `${trecho.trecho_id}.D${dia + 1}`;
-
-                    // Calcula quantidades proporcionais aos metros do dia
-                    const proporcao = metrosHoje / comprimento;
-                    const larguraVala = Math.max(0.6, diametro / 1000 + 0.4);
-                    const volEscDia = metrosHoje * larguraVala * profundidade;
-                    const volReatDia = volEscDia * 0.7;
-                    const areaPavDia = metrosHoje * (larguraVala + 0.2);
-
-                    // TODAS as atividades acontecem NO MESMO DIA para este segmento
-                    const atividadesDia = [
-                        { nome: 'Escavação', qtd: volEscDia, und: 'm³', ordem: 1 },
-                        { nome: 'Nivelamento fundo', qtd: metrosHoje, und: 'm', ordem: 2 },
-                        { nome: `Assentamento DN${diametro}`, qtd: metrosHoje, und: 'm', ordem: 3 },
-                        { nome: 'Escoramento', qtd: metrosHoje * 2, und: 'm²', ordem: 4 },
-                        { nome: 'Reaterro compactado', qtd: volReatDia, und: 'm³', ordem: 5 },
-                        { nome: 'Base/Berço', qtd: metrosHoje, und: 'm', ordem: 6 }
+                // MODO: Por Trecho Completo (menos linhas)
+                if (ganttMode === 'by-trecho') {
+                    schedule.push({
+                        wbs_id: trecho.trecho_id,
+                        trecho_id: trecho.trecho_id,
+                        segmento_id: trecho.trecho_id,
+                        activity: `Ciclo completo DN${diametro}`,
+                        quantidade: comprimento,
+                        unidade: 'm',
+                        metros_dia: metrosDia,
+                        start_day: startDay,
+                        end_day: endDay,
+                        duration: diasNecessarios,
+                        team: teamIdx + 1,
+                        profundidade: profundidade,
+                        diametro: diametro,
+                        ordem_execucao: 1,
+                        // Dados adicionais para exportação
+                        vol_escavacao: volEscTotal,
+                        vol_reaterro: volReatTotal,
+                        area_pavimento: areaPavTotal
+                    });
+                }
+                // MODO: Por Trecho + Atividade (uma linha por tipo de atividade)
+                else if (ganttMode === 'by-trecho-activity') {
+                    const atividadesTrecho = [
+                        { nome: 'Escavação', qtd: volEscTotal, und: 'm³', ordem: 1 },
+                        { nome: `Assentamento DN${diametro}`, qtd: comprimento, und: 'm', ordem: 2 },
+                        { nome: 'Reaterro compactado', qtd: volReatTotal, und: 'm³', ordem: 3 }
                     ];
 
-                    atividadesDia.forEach(ativ => {
+                    atividadesTrecho.forEach(ativ => {
                         schedule.push({
-                            wbs_id: `${segmentoId}.${ativ.ordem}`,
+                            wbs_id: `${trecho.trecho_id}.${ativ.ordem}`,
                             trecho_id: trecho.trecho_id,
-                            segmento_id: segmentoId,
+                            segmento_id: trecho.trecho_id,
                             activity: ativ.nome,
                             quantidade: ativ.qtd,
                             unidade: ativ.und,
-                            metros_dia: metrosHoje,
-                            start_day: dayNumber,
-                            end_day: dayNumber, // MESMO DIA - regra fundamental
-                            duration: 1,
+                            metros_dia: metrosDia,
+                            start_day: startDay,
+                            end_day: endDay,
+                            duration: diasNecessarios,
                             team: teamIdx + 1,
                             profundidade: profundidade,
                             diametro: diametro,
@@ -11429,9 +11525,53 @@ DATA;
                         });
                     });
                 }
+                // MODO: Por Segmento Diário (detalhado - comportamento original)
+                else {
+                    for (let dia = 0; dia < diasNecessarios; dia++) {
+                        const metrosHoje = (dia === diasNecessarios - 1)
+                            ? comprimento - (dia * metrosDia) // Último dia: metros restantes
+                            : metrosDia;
+
+                        const dayNumber = startDay + dia;
+                        const segmentoId = `${trecho.trecho_id}.D${dia + 1}`;
+
+                        // Calcula quantidades proporcionais aos metros do dia
+                        const volEscDia = metrosHoje * larguraVala * profundidade;
+                        const volReatDia = volEscDia * 0.7;
+
+                        // TODAS as atividades acontecem NO MESMO DIA para este segmento
+                        const atividadesDia = [
+                            { nome: 'Escavação', qtd: volEscDia, und: 'm³', ordem: 1 },
+                            { nome: 'Nivelamento fundo', qtd: metrosHoje, und: 'm', ordem: 2 },
+                            { nome: `Assentamento DN${diametro}`, qtd: metrosHoje, und: 'm', ordem: 3 },
+                            { nome: 'Escoramento', qtd: metrosHoje * 2, und: 'm²', ordem: 4 },
+                            { nome: 'Reaterro compactado', qtd: volReatDia, und: 'm³', ordem: 5 },
+                            { nome: 'Base/Berço', qtd: metrosHoje, und: 'm', ordem: 6 }
+                        ];
+
+                        atividadesDia.forEach(ativ => {
+                            schedule.push({
+                                wbs_id: `${segmentoId}.${ativ.ordem}`,
+                                trecho_id: trecho.trecho_id,
+                                segmento_id: segmentoId,
+                                activity: ativ.nome,
+                                quantidade: ativ.qtd,
+                                unidade: ativ.und,
+                                metros_dia: metrosHoje,
+                                start_day: dayNumber,
+                                end_day: dayNumber, // MESMO DIA - regra fundamental
+                                duration: 1,
+                                team: teamIdx + 1,
+                                profundidade: profundidade,
+                                diametro: diametro,
+                                ordem_execucao: ativ.ordem
+                            });
+                        });
+                    }
+                }
 
                 // Atualiza quando esta equipe estará livre
-                teamAssignments[teamIdx] = startDay + diasNecessarios - 1;
+                teamAssignments[teamIdx] = endDay;
             });
 
             // Adiciona atividades de teste hidrostático (após conclusão de cada trecho)
@@ -13314,16 +13454,7 @@ DATA;
                 nodeLookup[n.id] = n;
             });
 
-            // Check if we have geographic coordinates or need to generate
-            const hasGeoCoords = mapNodes.some(n => {
-                const x = n.x || 0;
-                const y = n.y || 0;
-                // Check if coordinates look like lat/lng (small numbers) or UTM (large numbers)
-                return Math.abs(x) < 180 && Math.abs(y) < 90;
-            });
-
-            // If coordinates are UTM, we need to convert or use a local projection
-            // For simplicity, we'll normalize to a viewable range
+            // Use configured CRS for coordinate conversion
             let bounds = [];
 
             // Add links first (so they appear behind nodes)
@@ -13333,23 +13464,14 @@ DATA;
 
                 if (!fromNode || !toNode) return;
 
-                let lat1, lng1, lat2, lng2;
+                // Convert coordinates using configured CRS
+                const fromCoords = convertToWGS84(fromNode.x || 0, fromNode.y || 0);
+                const toCoords = convertToWGS84(toNode.x || 0, toNode.y || 0);
 
-                if (hasGeoCoords) {
-                    lat1 = fromNode.y || fromNode.lat || 0;
-                    lng1 = fromNode.x || fromNode.lng || 0;
-                    lat2 = toNode.y || toNode.lat || 0;
-                    lng2 = toNode.x || toNode.lng || 0;
-                } else {
-                    // Normalize UTM to viewable coordinates (pseudo-projection)
-                    const centerLat = -23.5;
-                    const centerLng = -46.6;
-                    const scale = 0.00001;
-                    lat1 = centerLat + ((fromNode.y || 0) - 7400000) * scale;
-                    lng1 = centerLng + ((fromNode.x || 0) - 330000) * scale;
-                    lat2 = centerLat + ((toNode.y || 0) - 7400000) * scale;
-                    lng2 = centerLng + ((toNode.x || 0) - 330000) * scale;
-                }
+                const lat1 = fromCoords.lat;
+                const lng1 = fromCoords.lng;
+                const lat2 = toCoords.lat;
+                const lng2 = toCoords.lng;
 
                 // Determine line style based on current style mode
                 const diameter = link.diameter || link.DN || link.dn || 150;
@@ -13401,18 +13523,10 @@ DATA;
 
             // Add nodes
             mapNodes.forEach((node, idx) => {
-                let lat, lng;
-
-                if (hasGeoCoords) {
-                    lat = node.y || node.lat || 0;
-                    lng = node.x || node.lng || 0;
-                } else {
-                    const centerLat = -23.5;
-                    const centerLng = -46.6;
-                    const scale = 0.00001;
-                    lat = centerLat + ((node.y || 0) - 7400000) * scale;
-                    lng = centerLng + ((node.x || 0) - 330000) * scale;
-                }
+                // Convert coordinates using configured CRS
+                const coords = convertToWGS84(node.x || 0, node.y || 0);
+                const lat = coords.lat;
+                const lng = coords.lng;
 
                 // Determine marker style
                 const depth = node.depth || node.profundidade || 1.5;
@@ -13470,14 +13584,10 @@ DATA;
             // Add reservoirs if available
             const reservoirs = moduleData.epanet?.reservoirs || [];
             reservoirs.forEach((res, idx) => {
-                let lat, lng;
-                if (hasGeoCoords) {
-                    lat = res.y || res.lat || -23.5;
-                    lng = res.x || res.lng || -46.6;
-                } else {
-                    lat = -23.5 + idx * 0.01;
-                    lng = -46.6 + idx * 0.01;
-                }
+                // Convert coordinates using configured CRS
+                const coords = convertToWGS84(res.x || 0, res.y || 0);
+                const lat = coords.lat || (-23.5 + idx * 0.01);
+                const lng = coords.lng || (-46.6 + idx * 0.01);
 
                 const marker = L.circleMarker([lat, lng], {
                     radius: 10,
@@ -13625,6 +13735,182 @@ DATA;
             if (!qgisMap) return;
             // Use leaflet-image or html2canvas for export
             ToastSystem.info('Recurso de captura em desenvolvimento. Use Print Screen por enquanto.');
+        }
+
+        // Global variable for input CRS configuration
+        let qgisInputCRS = 'auto';
+
+        // Detect CRS from coordinate ranges
+        function detectInputCRS() {
+            const { nodes, links } = getActiveNodesAndLinks();
+            const allData = getAllModuleData();
+            const mapNodes = allData.nodes.length > 0 ? allData.nodes : nodes;
+
+            if (mapNodes.length === 0) {
+                ToastSystem.warning('Nenhum dado disponível para detecção de CRS');
+                return;
+            }
+
+            // Get coordinate ranges
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+
+            mapNodes.forEach(n => {
+                const x = n.x || 0;
+                const y = n.y || 0;
+                if (x !== 0) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); }
+                if (y !== 0) { minY = Math.min(minY, y); maxY = Math.max(maxY, y); }
+            });
+
+            let detectedCRS = 'local';
+            let crsDescription = '';
+
+            // Detect based on coordinate ranges
+            if (Math.abs(minX) <= 180 && Math.abs(maxX) <= 180 && Math.abs(minY) <= 90 && Math.abs(maxY) <= 90) {
+                // Geographic coordinates (lat/lon)
+                if (minY >= -35 && maxY <= 5 && minX >= -75 && maxX <= -30) {
+                    detectedCRS = 'EPSG:4674'; // SIRGAS 2000 Geographic (Brazil)
+                    crsDescription = 'SIRGAS 2000 Geográfico (coordenadas em graus)';
+                } else {
+                    detectedCRS = 'EPSG:4326'; // WGS 84
+                    crsDescription = 'WGS 84 Geográfico (coordenadas em graus)';
+                }
+            } else if (minX >= 100000 && maxX <= 900000) {
+                // UTM coordinates
+                if (minY >= 7000000 && maxY <= 10000000) {
+                    // Southern hemisphere UTM
+                    if (minX >= 160000 && maxX <= 840000) {
+                        // Determine UTM zone by easting
+                        const avgX = (minX + maxX) / 2;
+                        if (avgX >= 166000 && avgX <= 834000) {
+                            // Could be zone 22, 23, 24, or 25 based on X values
+                            // Using typical Brazilian ranges
+                            if (avgX >= 300000 && avgX <= 500000) {
+                                detectedCRS = 'EPSG:31983';
+                                crsDescription = 'SIRGAS 2000 / UTM zone 23S (São Paulo, Minas Gerais)';
+                            } else if (avgX >= 500000 && avgX <= 700000) {
+                                detectedCRS = 'EPSG:31984';
+                                crsDescription = 'SIRGAS 2000 / UTM zone 24S (Rio de Janeiro, Espírito Santo)';
+                            } else {
+                                detectedCRS = 'EPSG:31982';
+                                crsDescription = 'SIRGAS 2000 / UTM zone 22S (Paraná, Santa Catarina)';
+                            }
+                        }
+                    }
+                } else if (minY >= 0 && maxY <= 10000000) {
+                    detectedCRS = 'EPSG:31983';
+                    crsDescription = 'SIRGAS 2000 / UTM zone 23S (provável)';
+                }
+            } else {
+                detectedCRS = 'local';
+                crsDescription = 'Sistema local ou coordenadas arbitrárias';
+            }
+
+            // Update UI
+            document.getElementById('qgis-input-crs').value = detectedCRS;
+            document.getElementById('input-crs-info').style.display = 'block';
+            document.getElementById('detected-crs-text').textContent = crsDescription;
+            document.getElementById('detected-coords-range').textContent =
+                `X: ${minX.toFixed(2)} a ${maxX.toFixed(2)} | Y: ${minY.toFixed(2)} a ${maxY.toFixed(2)}`;
+
+            qgisInputCRS = detectedCRS;
+            ToastSystem.success(`CRS detectado: ${crsDescription}`);
+
+            // Refresh map with new CRS
+            qgisMapRefresh();
+        }
+
+        // Update input CRS setting
+        function updateInputCRS() {
+            qgisInputCRS = document.getElementById('qgis-input-crs')?.value || 'auto';
+
+            if (qgisInputCRS === 'auto') {
+                detectInputCRS();
+            } else {
+                document.getElementById('input-crs-info').style.display = 'none';
+                qgisMapRefresh();
+                ToastSystem.info(`CRS de entrada configurado: ${qgisInputCRS}`);
+            }
+        }
+
+        // Convert coordinates from input CRS to WGS84 for Leaflet
+        function convertToWGS84(x, y) {
+            const crs = qgisInputCRS === 'auto' ? detectCRSType(x, y) : qgisInputCRS;
+
+            if (crs === 'local') {
+                // Local coordinates - use pseudo-projection centered on São Paulo
+                const centerLat = -23.5;
+                const centerLng = -46.6;
+                const scale = 0.00001;
+                return {
+                    lat: centerLat + (y - 7400000) * scale,
+                    lng: centerLng + (x - 330000) * scale
+                };
+            } else if (crs === 'EPSG:4326' || crs === 'EPSG:4674') {
+                // Already geographic coordinates
+                return { lat: y, lng: x };
+            } else {
+                // UTM coordinates - approximate conversion
+                const utmParams = getUTMParams(crs);
+                return utmToLatLng(x, y, utmParams.zone, utmParams.hemisphere);
+            }
+        }
+
+        // Get UTM parameters from EPSG code
+        function getUTMParams(epsg) {
+            const utmZones = {
+                'EPSG:31982': { zone: 22, hemisphere: 'S', cm: -51 },
+                'EPSG:31983': { zone: 23, hemisphere: 'S', cm: -45 },
+                'EPSG:31984': { zone: 24, hemisphere: 'S', cm: -39 },
+                'EPSG:31985': { zone: 25, hemisphere: 'S', cm: -33 },
+                'EPSG:32722': { zone: 22, hemisphere: 'S', cm: -51 },
+                'EPSG:32723': { zone: 23, hemisphere: 'S', cm: -45 },
+                'EPSG:32724': { zone: 24, hemisphere: 'S', cm: -39 }
+            };
+            return utmZones[epsg] || { zone: 23, hemisphere: 'S', cm: -45 };
+        }
+
+        // Simplified UTM to Lat/Lng conversion
+        function utmToLatLng(easting, northing, zone, hemisphere) {
+            // Simplified conversion - for accurate results use proj4js
+            const k0 = 0.9996;
+            const a = 6378137; // WGS84 semi-major axis
+            const e = 0.0818191908426; // WGS84 eccentricity
+            const e2 = e * e;
+
+            const x = easting - 500000;
+            const y = hemisphere === 'S' ? northing - 10000000 : northing;
+
+            const m = y / k0;
+            const mu = m / (a * (1 - e2 / 4 - 3 * e2 * e2 / 64));
+
+            const e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
+            const phi1 = mu + (3 * e1 / 2 - 27 * e1 * e1 * e1 / 32) * Math.sin(2 * mu);
+
+            const n = a / Math.sqrt(1 - e2 * Math.sin(phi1) * Math.sin(phi1));
+            const t = Math.tan(phi1) * Math.tan(phi1);
+            const c = e2 * Math.cos(phi1) * Math.cos(phi1) / (1 - e2);
+            const r = a * (1 - e2) / Math.pow(1 - e2 * Math.sin(phi1) * Math.sin(phi1), 1.5);
+            const d = x / (n * k0);
+
+            const lat = phi1 - (n * Math.tan(phi1) / r) * (d * d / 2);
+            const lon0 = (zone - 1) * 6 - 180 + 3; // Central meridian
+            const lng = lon0 + (d - (1 + 2 * t + c) * d * d * d / 6) / Math.cos(phi1);
+
+            return {
+                lat: lat * 180 / Math.PI,
+                lng: lng * 180 / Math.PI
+            };
+        }
+
+        // Helper to detect CRS type from coordinates
+        function detectCRSType(x, y) {
+            if (Math.abs(x) <= 180 && Math.abs(y) <= 90) {
+                return 'EPSG:4326';
+            } else if (x >= 100000 && x <= 900000 && y >= 0 && y <= 10000000) {
+                return 'EPSG:31983'; // Default to zone 23S
+            }
+            return 'local';
         }
 
         // Initialize map when QGIS tab is shown
@@ -16349,10 +16635,57 @@ DATA;
                 zip.file("pontos.prj", prj);
             }
 
-            // Export links as lines with ALL data (including costs)
+            // Export links as lines with ALL data (including costs and planning dates)
             if (settings.exportLinks && exportLinks.length > 0) {
-                // Cabeçalho completo com custos
-                let linksCsv = 'WKT,id,from_node,to_node,length,diameter,material,slope,depth_avg,vazao,velocidade,custo_tubo,custo_esc,custo_reat,custo_escor,custo_mo,custo_eq,custo_total,custo_m\n';
+                // Função auxiliar para obter datas do planejamento por trecho
+                const getTrechoPlanningDates = (trechoId) => {
+                    const schedule = planningData?.schedule || [];
+                    const startDate = document.getElementById('planning-start-date')?.value;
+
+                    // Encontra o primeiro e último dia do trecho no cronograma
+                    const trechoSchedule = schedule.filter(s => s.trecho_id === trechoId);
+                    if (trechoSchedule.length === 0) {
+                        return { inicio_prev: '', fim_prev: '', duracao_dias: 0 };
+                    }
+
+                    const minDay = Math.min(...trechoSchedule.map(s => s.start_day));
+                    const maxDay = Math.max(...trechoSchedule.map(s => s.end_day));
+                    const duracao = maxDay - minDay + 1;
+
+                    // Calcula datas reais a partir da data de início
+                    let inicioPrev = '';
+                    let fimPrev = '';
+
+                    if (startDate) {
+                        const start = new Date(startDate);
+                        const workDays = parseInt(document.getElementById('planning-work-days')?.value) || 5;
+
+                        // Função para adicionar dias úteis
+                        const addWorkDays = (date, days) => {
+                            let result = new Date(date);
+                            let added = 0;
+                            while (added < days) {
+                                result.setDate(result.getDate() + 1);
+                                const dayOfWeek = result.getDay();
+                                if (workDays === 7 || (workDays === 6 && dayOfWeek !== 0) || (workDays === 5 && dayOfWeek !== 0 && dayOfWeek !== 6)) {
+                                    added++;
+                                }
+                            }
+                            return result;
+                        };
+
+                        const dataInicio = addWorkDays(start, minDay - 1);
+                        const dataFim = addWorkDays(start, maxDay - 1);
+
+                        inicioPrev = dataInicio.toISOString().split('T')[0];
+                        fimPrev = dataFim.toISOString().split('T')[0];
+                    }
+
+                    return { inicio_prev: inicioPrev, fim_prev: fimPrev, duracao_dias: duracao };
+                };
+
+                // Cabeçalho completo com custos E DATAS DE PLANEJAMENTO
+                let linksCsv = 'WKT,id,from_node,to_node,length,diameter,material,slope,depth_avg,vazao,velocidade,custo_tubo,custo_esc,custo_reat,custo_escor,custo_mo,custo_eq,custo_total,custo_m,dt_ini_prev,dt_fim_prev,duracao_dias,dt_ini_real,dt_fim_real\n';
                 exportLinks.forEach((link, idx) => {
                     const fromNode = exportNodes.find(n => n.id === link.from || n.id === link.fromNode) || exportNodes[idx] || { x: 0, y: 0 };
                     const toNode = exportNodes.find(n => n.id === link.to || n.id === link.toNode) || exportNodes[idx + 1] || { x: 100, y: 100 };
@@ -16371,11 +16704,15 @@ DATA;
                         calculateLinkCosts(length, diameter, depthAvg, material) :
                         { pipe: 0, excavation: 0, backfill: 0, shoring: 0, labor: 0, equipment: 0, total: 0, perMeter: 0 };
 
-                    linksCsv += `"LINESTRING(${fromNode.x || 0} ${fromNode.y || 0},${toNode.x || 0} ${toNode.y || 0})",T${idx + 1},${link.from || fromNode.id},${link.to || toNode.id},${length.toFixed(2)},${diameter},${material},${slope.toFixed(4)},${depthAvg.toFixed(2)},${flow.toFixed(3)},${velocity.toFixed(3)},${linkCosts.pipe?.toFixed(2) || 0},${linkCosts.excavation?.toFixed(2) || 0},${linkCosts.backfill?.toFixed(2) || 0},${linkCosts.shoring?.toFixed(2) || 0},${linkCosts.labor?.toFixed(2) || 0},${linkCosts.equipment?.toFixed(2) || 0},${linkCosts.total?.toFixed(2) || 0},${linkCosts.perMeter?.toFixed(2) || 0}\n`;
+                    // Datas do planejamento
+                    const trechoId = `T${String(idx + 1).padStart(2, '0')}`;
+                    const planDates = getTrechoPlanningDates(trechoId);
+
+                    linksCsv += `"LINESTRING(${fromNode.x || 0} ${fromNode.y || 0},${toNode.x || 0} ${toNode.y || 0})",T${idx + 1},${link.from || fromNode.id},${link.to || toNode.id},${length.toFixed(2)},${diameter},${material},${slope.toFixed(4)},${depthAvg.toFixed(2)},${flow.toFixed(3)},${velocity.toFixed(3)},${linkCosts.pipe?.toFixed(2) || 0},${linkCosts.excavation?.toFixed(2) || 0},${linkCosts.backfill?.toFixed(2) || 0},${linkCosts.shoring?.toFixed(2) || 0},${linkCosts.labor?.toFixed(2) || 0},${linkCosts.equipment?.toFixed(2) || 0},${linkCosts.total?.toFixed(2) || 0},${linkCosts.perMeter?.toFixed(2) || 0},${planDates.inicio_prev},${planDates.fim_prev},${planDates.duracao_dias},,\n`;
                 });
                 zip.file("trechos.csv", linksCsv);
 
-                // Schema CSV para trechos
+                // Schema CSV para trechos - com campos de data
                 let schemaCsv = 'campo_shp,campo_completo,tipo,unidade,descricao\n';
                 schemaCsv += 'id,trecho_id,TEXT,,ID do trecho\n';
                 schemaCsv += 'from_node,no_montante,TEXT,,Nó montante\n';
@@ -16395,6 +16732,11 @@ DATA;
                 schemaCsv += 'custo_eq,custo_equipamentos,FLOAT,R$,Custo equipamentos\n';
                 schemaCsv += 'custo_total,custo_total_trecho,FLOAT,R$,Custo total\n';
                 schemaCsv += 'custo_m,custo_por_metro,FLOAT,R$/m,Custo por metro\n';
+                schemaCsv += 'dt_ini_prev,data_inicio_previsto,DATE,,Data de início previsto\n';
+                schemaCsv += 'dt_fim_prev,data_fim_previsto,DATE,,Data de fim previsto\n';
+                schemaCsv += 'duracao_dias,duracao_dias,INTEGER,dias,Duração em dias\n';
+                schemaCsv += 'dt_ini_real,data_inicio_realizado,DATE,,Data de início realizado (a preencher)\n';
+                schemaCsv += 'dt_fim_real,data_fim_realizado,DATE,,Data de fim realizado (a preencher)\n';
                 zip.file("trechos_schema.csv", schemaCsv);
 
                 const prj = getCRSWkt(settings.crs);
@@ -16536,8 +16878,52 @@ Gerado por: HydroNetwork Platform
                 zip.file('pontos.geojson', JSON.stringify(nodesGeoJSON, null, 2));
             }
 
-            // Export links as GeoJSON
+            // Export links as GeoJSON (com datas de planejamento)
             if (settings.exportLinks) {
+                // Função auxiliar para obter datas do planejamento por trecho
+                const getTrechoPlanningDatesGeoJSON = (trechoId) => {
+                    const schedule = planningData?.schedule || [];
+                    const startDate = document.getElementById('planning-start-date')?.value;
+
+                    const trechoSchedule = schedule.filter(s => s.trecho_id === trechoId);
+                    if (trechoSchedule.length === 0) {
+                        return { data_inicio_previsto: null, data_fim_previsto: null, duracao_dias: 0 };
+                    }
+
+                    const minDay = Math.min(...trechoSchedule.map(s => s.start_day));
+                    const maxDay = Math.max(...trechoSchedule.map(s => s.end_day));
+                    const duracao = maxDay - minDay + 1;
+
+                    let dataInicioPrev = null;
+                    let dataFimPrev = null;
+
+                    if (startDate) {
+                        const start = new Date(startDate);
+                        const workDays = parseInt(document.getElementById('planning-work-days')?.value) || 5;
+
+                        const addWorkDaysGeoJSON = (date, days) => {
+                            let result = new Date(date);
+                            let added = 0;
+                            while (added < days) {
+                                result.setDate(result.getDate() + 1);
+                                const dayOfWeek = result.getDay();
+                                if (workDays === 7 || (workDays === 6 && dayOfWeek !== 0) || (workDays === 5 && dayOfWeek !== 0 && dayOfWeek !== 6)) {
+                                    added++;
+                                }
+                            }
+                            return result;
+                        };
+
+                        const dataInicio = addWorkDaysGeoJSON(start, minDay - 1);
+                        const dataFim = addWorkDaysGeoJSON(start, maxDay - 1);
+
+                        dataInicioPrev = dataInicio.toISOString().split('T')[0];
+                        dataFimPrev = dataFim.toISOString().split('T')[0];
+                    }
+
+                    return { data_inicio_previsto: dataInicioPrev, data_fim_previsto: dataFimPrev, duracao_dias: duracao };
+                };
+
                 const linksGeoJSON = {
                     type: 'FeatureCollection',
                     name: 'trechos',
@@ -16548,6 +16934,10 @@ Gerado por: HydroNetwork Platform
 
                         // Get quantities data if available
                         const qtyData = currentResults?.quantityData?.find(q => q.id === link.id || q.id === `T${idx + 1}`) || {};
+
+                        // Get planning dates
+                        const trechoId = `T${String(idx + 1).padStart(2, '0')}`;
+                        const planDates = getTrechoPlanningDatesGeoJSON(trechoId);
 
                         return {
                             type: 'Feature',
@@ -16569,7 +16959,14 @@ Gerado por: HydroNetwork Platform
                                     vol_reaterro: qtyData.volReat || 0,
                                     vol_bota_fora: qtyData.volBota || 0,
                                     area_pavimento: qtyData.areaPav || 0
-                                } : {})
+                                } : {}),
+                                // Planning dates (datas de previsto)
+                                data_inicio_previsto: planDates.data_inicio_previsto,
+                                data_fim_previsto: planDates.data_fim_previsto,
+                                duracao_dias: planDates.duracao_dias,
+                                // Campos vazios para preenchimento posterior (datas de realizado)
+                                data_inicio_realizado: null,
+                                data_fim_realizado: null
                             },
                             geometry: {
                                 type: 'LineString',
