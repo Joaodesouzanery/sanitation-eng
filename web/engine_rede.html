@@ -1273,12 +1273,22 @@
         <div id="import-tab" class="tab-content active">
             <div class="grid">
                 <div class="card">
-                    <h2><span class="icon">📂</span> Importar Arquivo Topográfico</h2>
+                    <h2><span class="icon">📂</span> Importar Dados Externos</h2>
                     <p style="color: var(--text-secondary); margin-bottom: 20px;">
-                        Carregue um arquivo TXT ou CSV com os dados topográficos da sua rede.
+                        Carregue arquivos de topografia, CAD, GIS ou BIM com os dados da sua rede.
                     </p>
 
                     <div class="form-group">
+                        <label>Tipo de Arquivo</label>
+                        <select id="import-file-type" onchange="updateImportOptions()">
+                            <option value="topografia">Topografia (TXT, CSV)</option>
+                            <option value="cad">CAD (DWG, DXF)</option>
+                            <option value="gis">GIS/Shapefile (SHP, GeoJSON, KML)</option>
+                            <option value="bim">BIM (IFC)</option>
+                        </select>
+                    </div>
+
+                    <div id="import-format-group" class="form-group">
                         <label>Formato do Arquivo</label>
                         <select id="import-format">
                             <option value="csv">CSV (separado por vírgula)</option>
@@ -1288,8 +1298,38 @@
                         </select>
                     </div>
 
+                    <!-- Opções específicas para CAD -->
+                    <div id="import-cad-options" class="form-group" style="display: none;">
+                        <label>Layer a Importar</label>
+                        <input type="text" id="import-cad-layer" placeholder="Ex: PONTOS, TOPOGRAFIA, * para todos">
+                        <small style="color: var(--text-secondary);">Deixe em branco ou * para importar todos os layers</small>
+                    </div>
+
+                    <!-- Opções específicas para GIS -->
+                    <div id="import-gis-options" class="form-group" style="display: none;">
+                        <label>Sistema de Coordenadas</label>
+                        <select id="import-gis-crs">
+                            <option value="EPSG:31983">SIRGAS 2000 / UTM 23S (EPSG:31983)</option>
+                            <option value="EPSG:31984">SIRGAS 2000 / UTM 24S (EPSG:31984)</option>
+                            <option value="EPSG:31982">SIRGAS 2000 / UTM 22S (EPSG:31982)</option>
+                            <option value="EPSG:4326">WGS 84 (EPSG:4326)</option>
+                            <option value="EPSG:32723">WGS 84 / UTM 23S (EPSG:32723)</option>
+                        </select>
+                    </div>
+
+                    <!-- Opções específicas para BIM -->
+                    <div id="import-bim-options" class="form-group" style="display: none;">
+                        <label>Tipo de Elemento IFC</label>
+                        <select id="import-bim-type">
+                            <option value="IfcDistributionElement">Elementos de Distribuição</option>
+                            <option value="IfcPipeSegment">Tubulações</option>
+                            <option value="IfcFlowTerminal">Terminais de Fluxo</option>
+                            <option value="all">Todos os Elementos</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
-                        <label>Arquivo de Topografia (id, x, y, cota)</label>
+                        <label id="import-file-label">Arquivo de Topografia (id, x, y, cota)</label>
                         <div style="border: 2px dashed var(--border-color); border-radius: 8px; padding: 30px; text-align: center; cursor: pointer; transition: all 0.3s;"
                              id="drop-zone"
                              ondragover="handleDragOver(event)"
@@ -1298,7 +1338,7 @@
                              onclick="document.getElementById('file-input').click()">
                             <p style="font-size: 2rem; margin-bottom: 10px;">📁</p>
                             <p style="color: var(--text-secondary);">Arraste o arquivo aqui ou clique para selecionar</p>
-                            <p style="color: var(--accent-blue); font-size: 0.85rem; margin-top: 10px;">Formatos: .txt, .csv</p>
+                            <p id="import-formats-info" style="color: var(--accent-blue); font-size: 0.85rem; margin-top: 10px;">Formatos: .txt, .csv</p>
                             <input type="file" id="file-input" accept=".txt,.csv" style="display: none;" onchange="handleFileSelect(event)">
                         </div>
                     </div>
@@ -2215,7 +2255,8 @@ PV02,359290.456,7352780.123,1.82</pre>
                             <strong>Dados disponíveis:</strong>
                             <span id="planning-nodes-count">0</span> pontos,
                             <span id="planning-links-count">0</span> trechos,
-                            <span id="planning-costs-count">0</span> itens de custo
+                            <span id="planning-costs-count">0</span> itens de custo,
+                            <span id="planning-materials-count">0</span> materiais
                         </small>
                     </div>
 
@@ -2229,18 +2270,27 @@ PV02,359290.456,7352780.123,1.82</pre>
                     <!-- Opção 2: Importar arquivo -->
                     <details style="margin-bottom: 10px;">
                         <summary style="cursor: pointer; color: var(--accent-purple); font-weight: bold; padding: 8px;">
-                            Importar de Arquivo Externo (CSV/XLSX)
+                            Importar de Arquivo Externo
                         </summary>
                         <div style="padding: 10px; margin-top: 10px; background: var(--bg-secondary); border-radius: 6px;">
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label>Tipo de Arquivo</label>
+                                <select id="planning-file-type" style="width: 100%; margin-bottom: 10px;" onchange="updatePlanningFileAccept()">
+                                    <option value="spreadsheet">Planilha (CSV, XLSX, XLS)</option>
+                                    <option value="cad">CAD (DWG, DXF)</option>
+                                    <option value="gis">GIS/Shapefile (SHP, GeoJSON)</option>
+                                    <option value="bim">BIM (IFC)</option>
+                                </select>
+                            </div>
                             <div class="form-group" style="margin-bottom: 10px;">
                                 <label>Arquivo de Entrada</label>
                                 <input type="file" id="planning-file" accept=".csv,.xlsx,.xls"
                                        style="padding: 10px; background: var(--bg-primary); border: 1px dashed var(--accent-blue); border-radius: 6px; width: 100%;">
-                                <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                                <small id="planning-file-formats" style="color: var(--text-secondary); display: block; margin-top: 5px;">
                                     Formatos aceitos: CSV, XLSX, XLS
                                 </small>
                             </div>
-                            <button class="btn btn-small" style="background: var(--accent-purple); color: white; border: none;" onclick="loadPlanningSpreadsheet()">
+                            <button class="btn btn-small" style="background: var(--accent-purple); color: white; border: none;" onclick="loadPlanningExternalFile()">
                                 <span>📥</span> Carregar Arquivo
                             </button>
                         </div>
@@ -2250,6 +2300,88 @@ PV02,359290.456,7352780.123,1.82</pre>
                         <h4 style="color: var(--accent-green); margin-bottom: 10px;">✓ Dados Carregados</h4>
                         <div id="planning-validation-content"></div>
                     </div>
+
+                    <!-- Toolbox para associar dados -->
+                    <details style="margin-top: 15px;">
+                        <summary style="cursor: pointer; color: var(--accent-orange); font-weight: bold; padding: 8px;">
+                            🧰 Toolbox - Associar Dados
+                        </summary>
+                        <div style="padding: 10px; margin-top: 10px; background: var(--bg-secondary); border-radius: 6px;">
+                            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 15px;">
+                                Associe dados de diferentes fontes (topografia, CAD, GIS) com os elementos da rede.
+                            </p>
+
+                            <!-- Dados importados disponíveis -->
+                            <div id="toolbox-data-sources" style="margin-bottom: 15px;">
+                                <h5 style="color: var(--text-primary); margin-bottom: 8px;">Dados Disponíveis:</h5>
+                                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                    <span class="toolbox-badge" id="toolbox-topo-badge" style="display: none; padding: 4px 10px; background: var(--accent-blue); color: white; border-radius: 12px; font-size: 0.8rem;">
+                                        📍 Topografia: <span id="toolbox-topo-count">0</span>
+                                    </span>
+                                    <span class="toolbox-badge" id="toolbox-cad-badge" style="display: none; padding: 4px 10px; background: var(--accent-purple); color: white; border-radius: 12px; font-size: 0.8rem;">
+                                        📐 CAD: <span id="toolbox-cad-count">0</span>
+                                    </span>
+                                    <span class="toolbox-badge" id="toolbox-gis-badge" style="display: none; padding: 4px 10px; background: var(--accent-green); color: white; border-radius: 12px; font-size: 0.8rem;">
+                                        🗺️ GIS: <span id="toolbox-gis-count">0</span>
+                                    </span>
+                                    <span class="toolbox-badge" id="toolbox-bim-badge" style="display: none; padding: 4px 10px; background: var(--accent-orange); color: white; border-radius: 12px; font-size: 0.8rem;">
+                                        🏗️ BIM: <span id="toolbox-bim-count">0</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Tipo de associação -->
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label>Tipo de Elemento a Associar</label>
+                                <select id="toolbox-element-type" style="width: 100%;">
+                                    <option value="pv">PVs (Poços de Visita) - Esgoto</option>
+                                    <option value="pv-drenagem">PVs (Poços de Visita) - Drenagem</option>
+                                    <option value="conexao-agua">Conexões/Nós - Água</option>
+                                    <option value="caixa">Caixas de Inspeção</option>
+                                    <option value="hidrante">Hidrantes</option>
+                                    <option value="registro">Registros/Válvulas</option>
+                                    <option value="reservatorio">Reservatórios</option>
+                                    <option value="eta-ete">ETA/ETE</option>
+                                </select>
+                            </div>
+
+                            <!-- Fonte de dados para associar -->
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label>Fonte de Dados</label>
+                                <select id="toolbox-data-source" style="width: 100%;">
+                                    <option value="topografia">Pontos Topográficos Importados</option>
+                                    <option value="cad">Elementos do CAD/DXF</option>
+                                    <option value="gis">Features do GIS/Shapefile</option>
+                                    <option value="bim">Objetos do IFC/BIM</option>
+                                </select>
+                            </div>
+
+                            <!-- Método de associação -->
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label>Método de Associação</label>
+                                <select id="toolbox-match-method" style="width: 100%;">
+                                    <option value="proximity">Por Proximidade (coordenadas X,Y)</option>
+                                    <option value="id">Por ID/Nome</option>
+                                    <option value="layer">Por Layer/Camada</option>
+                                    <option value="attribute">Por Atributo</option>
+                                </select>
+                            </div>
+
+                            <!-- Tolerância para proximidade -->
+                            <div class="form-group" id="toolbox-tolerance-group" style="margin-bottom: 15px;">
+                                <label>Tolerância de Proximidade (m)</label>
+                                <input type="number" id="toolbox-tolerance" value="2.0" min="0.1" max="50" step="0.1">
+                                <small style="color: var(--text-secondary);">Distância máxima para considerar como mesmo ponto</small>
+                            </div>
+
+                            <button class="btn btn-small" style="background: var(--accent-orange); color: white; border: none; width: 100%;" onclick="runToolboxAssociation()">
+                                <span>🔗</span> Executar Associação
+                            </button>
+
+                            <!-- Resultado da associação -->
+                            <div id="toolbox-result" style="margin-top: 10px; display: none;"></div>
+                        </div>
+                    </details>
                 </div>
 
                 <div class="card">
@@ -10808,6 +10940,28 @@ DATA;
             // Store in planningData
             planningData.input = planningInput;
 
+            // Extract and store materials from calculatedCosts
+            let materialsCount = 0;
+            if (hasCosts) {
+                planningData.materials = [];
+                calculatedCosts.forEach(trecho => {
+                    if (trecho.itens && trecho.itens.length > 0) {
+                        trecho.itens.forEach(item => {
+                            planningData.materials.push({
+                                trecho: trecho.trecho,
+                                item: item.item,
+                                descricao: item.descricao,
+                                unidade: item.unidade,
+                                quantidade: item.quantidade,
+                                custoUnit: item.custoUnit,
+                                custoTotal: item.custoTotal
+                            });
+                        });
+                    }
+                });
+                materialsCount = planningData.materials.length;
+            }
+
             // Calculate summary stats
             const trechos = [...new Set(planningInput.map(p => p.trecho_id))];
             const totalLength = planningInput
@@ -10816,6 +10970,7 @@ DATA;
             const totalExcavation = planningInput
                 .filter(p => p.servico.includes('Escavação'))
                 .reduce((sum, p) => sum + (p.quantidade || 0), 0);
+            const totalCost = hasCosts ? calculatedCosts.reduce((sum, t) => sum + (t.total || 0), 0) : 0;
 
             // Show success and update UI
             const infoDiv = document.getElementById('planning-platform-info');
@@ -10824,7 +10979,11 @@ DATA;
                 document.getElementById('planning-nodes-count').textContent = importedNodes?.length || 0;
                 document.getElementById('planning-links-count').textContent = previewLinks?.length || 0;
                 document.getElementById('planning-costs-count').textContent = calculatedCosts?.length || 0;
+                document.getElementById('planning-materials-count').textContent = materialsCount;
             }
+
+            // Update toolbox badges
+            updateToolboxBadges();
 
             // Show validation success
             const container = document.getElementById('planning-validation');
@@ -10832,7 +10991,7 @@ DATA;
             if (container && content) {
                 container.style.display = 'block';
                 content.innerHTML = `
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px;">
                         <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
                             <div style="font-size: 1.5rem; color: var(--accent-blue); font-weight: bold;">${trechos.length}</div>
                             <div style="font-size: 0.75rem; color: var(--text-secondary);">Trechos</div>
@@ -10849,9 +11008,19 @@ DATA;
                             <div style="font-size: 1.5rem; color: var(--accent-purple); font-weight: bold;">${planningInput.length}</div>
                             <div style="font-size: 0.75rem; color: var(--text-secondary);">Atividades</div>
                         </div>
+                        <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.5rem; color: var(--accent-cyan); font-weight: bold;">${materialsCount}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Materiais</div>
+                        </div>
+                        ${totalCost > 0 ? `
+                        <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.2rem; color: var(--accent-green); font-weight: bold;">R$ ${(totalCost/1000).toFixed(1)}k</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Custo Total</div>
+                        </div>
+                        ` : ''}
                     </div>
                     <p style="margin-top: 10px; color: var(--accent-green); font-size: 0.9rem;">
-                        ✓ Dados carregados com sucesso! Clique em "Gerar Planejamento".
+                        ✓ Dados carregados com sucesso! ${materialsCount > 0 ? 'Materiais e quantitativos incluídos.' : ''} Clique em "Gerar Planejamento".
                     </p>
                 `;
             }
@@ -10860,8 +11029,10 @@ DATA;
                 `Trechos: ${trechos.length}\n` +
                 `Atividades: ${planningInput.length}\n` +
                 `Extensão: ${totalLength.toFixed(1)} m\n` +
-                `Escavação: ${totalExcavation.toFixed(1)} m³\n\n` +
-                `Agora clique em "Gerar Planejamento".`);
+                `Escavação: ${totalExcavation.toFixed(1)} m³\n` +
+                `Materiais: ${materialsCount} itens\n` +
+                (totalCost > 0 ? `Custo Total: R$ ${totalCost.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n` : '') +
+                `\nAgora clique em "Gerar Planejamento".`);
         }
 
         // Update info when switching to planning tab
@@ -10874,8 +11045,670 @@ DATA;
                     document.getElementById('planning-nodes-count').textContent = importedNodes?.length || 0;
                     document.getElementById('planning-links-count').textContent = previewLinks?.length || 0;
                     document.getElementById('planning-costs-count').textContent = calculatedCosts?.length || 0;
+                    document.getElementById('planning-materials-count').textContent = planningData?.materials?.length || 0;
                 }
             }
+            updateToolboxBadges();
+        }
+
+        // ============================================
+        // IMPORT OPTIONS AND TOOLBOX FUNCTIONS
+        // ============================================
+
+        // Global storage for imported data from different sources
+        let importedCADData = [];
+        let importedGISData = [];
+        let importedBIMData = [];
+
+        // Update import options based on file type selection
+        function updateImportOptions() {
+            const fileType = document.getElementById('import-file-type').value;
+            const formatGroup = document.getElementById('import-format-group');
+            const cadOptions = document.getElementById('import-cad-options');
+            const gisOptions = document.getElementById('import-gis-options');
+            const bimOptions = document.getElementById('import-bim-options');
+            const fileInput = document.getElementById('file-input');
+            const fileLabel = document.getElementById('import-file-label');
+            const formatsInfo = document.getElementById('import-formats-info');
+
+            // Hide all specific options
+            formatGroup.style.display = 'none';
+            cadOptions.style.display = 'none';
+            gisOptions.style.display = 'none';
+            bimOptions.style.display = 'none';
+
+            switch (fileType) {
+                case 'topografia':
+                    formatGroup.style.display = 'block';
+                    fileInput.accept = '.txt,.csv';
+                    fileLabel.textContent = 'Arquivo de Topografia (id, x, y, cota)';
+                    formatsInfo.textContent = 'Formatos: .txt, .csv';
+                    break;
+                case 'cad':
+                    cadOptions.style.display = 'block';
+                    fileInput.accept = '.dwg,.dxf';
+                    fileLabel.textContent = 'Arquivo CAD';
+                    formatsInfo.textContent = 'Formatos: .dwg, .dxf';
+                    break;
+                case 'gis':
+                    gisOptions.style.display = 'block';
+                    fileInput.accept = '.shp,.geojson,.json,.kml,.kmz';
+                    fileLabel.textContent = 'Arquivo GIS/Shapefile';
+                    formatsInfo.textContent = 'Formatos: .shp, .geojson, .kml';
+                    break;
+                case 'bim':
+                    bimOptions.style.display = 'block';
+                    fileInput.accept = '.ifc';
+                    fileLabel.textContent = 'Arquivo BIM/IFC';
+                    formatsInfo.textContent = 'Formatos: .ifc';
+                    break;
+            }
+        }
+
+        // Update planning file accept based on type selection
+        function updatePlanningFileAccept() {
+            const fileType = document.getElementById('planning-file-type').value;
+            const fileInput = document.getElementById('planning-file');
+            const formatsInfo = document.getElementById('planning-file-formats');
+
+            switch (fileType) {
+                case 'spreadsheet':
+                    fileInput.accept = '.csv,.xlsx,.xls';
+                    formatsInfo.textContent = 'Formatos aceitos: CSV, XLSX, XLS';
+                    break;
+                case 'cad':
+                    fileInput.accept = '.dwg,.dxf';
+                    formatsInfo.textContent = 'Formatos aceitos: DWG, DXF';
+                    break;
+                case 'gis':
+                    fileInput.accept = '.shp,.geojson,.json,.kml';
+                    formatsInfo.textContent = 'Formatos aceitos: SHP, GeoJSON, KML';
+                    break;
+                case 'bim':
+                    fileInput.accept = '.ifc';
+                    formatsInfo.textContent = 'Formatos aceitos: IFC';
+                    break;
+            }
+        }
+
+        // Load external file for planning (supports multiple formats)
+        async function loadPlanningExternalFile() {
+            const fileInput = document.getElementById('planning-file');
+            const fileType = document.getElementById('planning-file-type').value;
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Selecione um arquivo primeiro.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const fileName = file.name.toLowerCase();
+
+            try {
+                switch (fileType) {
+                    case 'spreadsheet':
+                        await loadPlanningSpreadsheet();
+                        break;
+                    case 'cad':
+                        await loadPlanningCADFile(file, fileName);
+                        break;
+                    case 'gis':
+                        await loadPlanningGISFile(file, fileName);
+                        break;
+                    case 'bim':
+                        await loadPlanningBIMFile(file, fileName);
+                        break;
+                    default:
+                        alert('Tipo de arquivo não reconhecido.');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar arquivo:', error);
+                alert('Erro ao processar arquivo: ' + error.message);
+            }
+        }
+
+        // Parse CAD file (DWG/DXF)
+        async function loadPlanningCADFile(file, fileName) {
+            if (fileName.endsWith('.dxf')) {
+                const text = await file.text();
+                const entities = parseDXFEntities(text);
+
+                if (entities.length === 0) {
+                    alert('Nenhuma entidade encontrada no arquivo DXF.');
+                    return;
+                }
+
+                importedCADData = entities;
+                updateToolboxBadges();
+
+                // Convert to planning input
+                const planningInput = convertCADToPlanning(entities);
+                if (planningInput.length > 0) {
+                    planningData.input = planningInput;
+                    showCADImportSuccess(entities, planningInput);
+                }
+            } else if (fileName.endsWith('.dwg')) {
+                alert('Arquivos DWG requerem conversão prévia para DXF.\n\n' +
+                      'Opções gratuitas para converter:\n' +
+                      '• QCAD (gratuito)\n' +
+                      '• ODA File Converter (gratuito)\n' +
+                      '• AutoCAD (Salvar como DXF)\n\n' +
+                      'Converta o arquivo para DXF e tente novamente.');
+            }
+        }
+
+        // Parse DXF file and extract entities
+        function parseDXFEntities(dxfText) {
+            const entities = [];
+            const lines = dxfText.split(/\r?\n/);
+            let inEntities = false;
+            let currentEntity = null;
+            let i = 0;
+
+            while (i < lines.length) {
+                const code = lines[i]?.trim();
+                const value = lines[i + 1]?.trim();
+
+                if (code === '0' && value === 'ENTITIES') {
+                    inEntities = true;
+                    i += 2;
+                    continue;
+                }
+
+                if (code === '0' && value === 'ENDSEC' && inEntities) {
+                    break;
+                }
+
+                if (inEntities && code === '0') {
+                    if (currentEntity) {
+                        entities.push(currentEntity);
+                    }
+                    currentEntity = { type: value, properties: {} };
+                } else if (currentEntity) {
+                    switch (code) {
+                        case '8': currentEntity.layer = value; break;
+                        case '10': currentEntity.x = parseFloat(value); break;
+                        case '20': currentEntity.y = parseFloat(value); break;
+                        case '30': currentEntity.z = parseFloat(value); break;
+                        case '11': currentEntity.x2 = parseFloat(value); break;
+                        case '21': currentEntity.y2 = parseFloat(value); break;
+                        case '31': currentEntity.z2 = parseFloat(value); break;
+                        case '1': currentEntity.text = value; break;
+                        case '40': currentEntity.radius = parseFloat(value); break;
+                    }
+                }
+                i += 2;
+            }
+
+            if (currentEntity) {
+                entities.push(currentEntity);
+            }
+
+            return entities.filter(e => e.type === 'POINT' || e.type === 'CIRCLE' || e.type === 'LINE' || e.type === 'TEXT' || e.type === 'INSERT');
+        }
+
+        // Convert CAD entities to planning input
+        function convertCADToPlanning(entities) {
+            const points = entities.filter(e => e.type === 'POINT' || e.type === 'CIRCLE' || e.type === 'INSERT');
+            const planningInput = [];
+
+            points.forEach((point, idx) => {
+                planningInput.push({
+                    trecho_id: `CAD-${idx + 1}`,
+                    servico: 'Ponto importado do CAD',
+                    unidade: 'un',
+                    quantidade: 1,
+                    x: point.x,
+                    y: point.y,
+                    cota: point.z || 0,
+                    layer: point.layer || 'default',
+                    source: 'CAD'
+                });
+            });
+
+            return planningInput;
+        }
+
+        function showCADImportSuccess(entities, planningInput) {
+            const container = document.getElementById('planning-validation');
+            const content = document.getElementById('planning-validation-content');
+            if (container && content) {
+                container.style.display = 'block';
+                const layers = [...new Set(entities.map(e => e.layer))];
+                content.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px;">
+                        <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.5rem; color: var(--accent-purple); font-weight: bold;">${entities.length}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Entidades</div>
+                        </div>
+                        <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.5rem; color: var(--accent-blue); font-weight: bold;">${layers.length}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Layers</div>
+                        </div>
+                        <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.5rem; color: var(--accent-green); font-weight: bold;">${planningInput.length}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Pontos</div>
+                        </div>
+                    </div>
+                    <p style="margin-top: 10px; color: var(--accent-green); font-size: 0.9rem;">
+                        ✓ Arquivo CAD importado! Layers: ${layers.slice(0, 5).join(', ')}${layers.length > 5 ? '...' : ''}
+                    </p>
+                `;
+            }
+        }
+
+        // Parse GIS file (SHP/GeoJSON/KML)
+        async function loadPlanningGISFile(file, fileName) {
+            if (fileName.endsWith('.geojson') || fileName.endsWith('.json')) {
+                const text = await file.text();
+                const geojson = JSON.parse(text);
+                const features = geojson.features || [geojson];
+
+                importedGISData = features;
+                updateToolboxBadges();
+
+                const planningInput = convertGeoJSONToPlanning(features);
+                if (planningInput.length > 0) {
+                    planningData.input = planningInput;
+                    showGISImportSuccess(features, planningInput);
+                }
+            } else if (fileName.endsWith('.kml')) {
+                const text = await file.text();
+                const parser = new DOMParser();
+                const kml = parser.parseFromString(text, 'text/xml');
+                const placemarks = kml.getElementsByTagName('Placemark');
+
+                const features = [];
+                for (let pm of placemarks) {
+                    const name = pm.getElementsByTagName('name')[0]?.textContent || '';
+                    const coords = pm.getElementsByTagName('coordinates')[0]?.textContent || '';
+                    const [lng, lat, alt] = coords.trim().split(',').map(parseFloat);
+                    if (!isNaN(lng) && !isNaN(lat)) {
+                        features.push({
+                            type: 'Feature',
+                            properties: { name },
+                            geometry: { type: 'Point', coordinates: [lng, lat, alt || 0] }
+                        });
+                    }
+                }
+
+                importedGISData = features;
+                updateToolboxBadges();
+
+                const planningInput = convertGeoJSONToPlanning(features);
+                if (planningInput.length > 0) {
+                    planningData.input = planningInput;
+                    showGISImportSuccess(features, planningInput);
+                }
+            } else if (fileName.endsWith('.shp')) {
+                alert('Arquivos SHP requerem bibliotecas adicionais.\n\n' +
+                      'Alternativas:\n' +
+                      '• Converta para GeoJSON usando QGIS\n' +
+                      '• Exporte como KML\n' +
+                      '• Use ferramentas online como mapshaper.org\n\n' +
+                      'Converta o arquivo e tente novamente.');
+            }
+        }
+
+        // Convert GeoJSON features to planning input
+        function convertGeoJSONToPlanning(features) {
+            const planningInput = [];
+
+            features.forEach((feature, idx) => {
+                const props = feature.properties || {};
+                const geom = feature.geometry;
+
+                if (geom && geom.type === 'Point') {
+                    const [x, y, z] = geom.coordinates;
+                    planningInput.push({
+                        trecho_id: props.id || props.name || `GIS-${idx + 1}`,
+                        servico: props.descricao || props.description || 'Ponto importado do GIS',
+                        unidade: 'un',
+                        quantidade: 1,
+                        x: x,
+                        y: y,
+                        cota: z || props.elevation || props.cota || 0,
+                        properties: props,
+                        source: 'GIS'
+                    });
+                }
+            });
+
+            return planningInput;
+        }
+
+        function showGISImportSuccess(features, planningInput) {
+            const container = document.getElementById('planning-validation');
+            const content = document.getElementById('planning-validation-content');
+            if (container && content) {
+                container.style.display = 'block';
+                const types = [...new Set(features.map(f => f.geometry?.type))];
+                content.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px;">
+                        <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.5rem; color: var(--accent-green); font-weight: bold;">${features.length}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Features</div>
+                        </div>
+                        <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.5rem; color: var(--accent-blue); font-weight: bold;">${planningInput.length}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Pontos</div>
+                        </div>
+                    </div>
+                    <p style="margin-top: 10px; color: var(--accent-green); font-size: 0.9rem;">
+                        ✓ Arquivo GIS importado! Tipos: ${types.join(', ')}
+                    </p>
+                `;
+            }
+        }
+
+        // Parse BIM/IFC file
+        async function loadPlanningBIMFile(file, fileName) {
+            if (fileName.endsWith('.ifc')) {
+                const text = await file.text();
+                const elements = parseIFCElements(text);
+
+                if (elements.length === 0) {
+                    alert('Nenhum elemento encontrado no arquivo IFC.');
+                    return;
+                }
+
+                importedBIMData = elements;
+                updateToolboxBadges();
+
+                const planningInput = convertIFCToPlanning(elements);
+                if (planningInput.length > 0) {
+                    planningData.input = planningInput;
+                    showBIMImportSuccess(elements, planningInput);
+                }
+            }
+        }
+
+        // Parse IFC file and extract elements
+        function parseIFCElements(ifcText) {
+            const elements = [];
+            const lines = ifcText.split(/\r?\n/);
+
+            const elementTypes = [
+                'IFCDISTRIBUTIONFLOWELMENT',
+                'IFCPIPESEGMENT',
+                'IFCFLOWTERMINAL',
+                'IFCFLOWFITTING',
+                'IFCBUILDINGELEMENTPROXY',
+                'IFCFLOWSEGMENT'
+            ];
+
+            lines.forEach(line => {
+                const match = line.match(/#(\d+)\s*=\s*(\w+)\s*\(([^)]*)\)/);
+                if (match) {
+                    const [, id, type, params] = match;
+                    if (elementTypes.some(t => type.toUpperCase().includes(t))) {
+                        elements.push({
+                            id: parseInt(id),
+                            type: type,
+                            params: params,
+                            raw: line
+                        });
+                    }
+                }
+            });
+
+            return elements;
+        }
+
+        // Convert IFC elements to planning input
+        function convertIFCToPlanning(elements) {
+            return elements.map((el, idx) => ({
+                trecho_id: `IFC-${el.id}`,
+                servico: `Elemento ${el.type}`,
+                unidade: 'un',
+                quantidade: 1,
+                ifcType: el.type,
+                ifcId: el.id,
+                source: 'BIM'
+            }));
+        }
+
+        function showBIMImportSuccess(elements, planningInput) {
+            const container = document.getElementById('planning-validation');
+            const content = document.getElementById('planning-validation-content');
+            if (container && content) {
+                container.style.display = 'block';
+                const types = [...new Set(elements.map(e => e.type))];
+                content.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px;">
+                        <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.5rem; color: var(--accent-orange); font-weight: bold;">${elements.length}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Elementos IFC</div>
+                        </div>
+                        <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                            <div style="font-size: 1.5rem; color: var(--accent-blue); font-weight: bold;">${types.length}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Tipos</div>
+                        </div>
+                    </div>
+                    <p style="margin-top: 10px; color: var(--accent-green); font-size: 0.9rem;">
+                        ✓ Arquivo IFC importado! Tipos: ${types.slice(0, 3).join(', ')}${types.length > 3 ? '...' : ''}
+                    </p>
+                `;
+            }
+        }
+
+        // Update Toolbox badges based on available data
+        function updateToolboxBadges() {
+            // Topografia
+            const topoBadge = document.getElementById('toolbox-topo-badge');
+            const topoCount = document.getElementById('toolbox-topo-count');
+            if (topoBadge && topoCount) {
+                if (importedNodes && importedNodes.length > 0) {
+                    topoBadge.style.display = 'inline-block';
+                    topoCount.textContent = importedNodes.length;
+                } else {
+                    topoBadge.style.display = 'none';
+                }
+            }
+
+            // CAD
+            const cadBadge = document.getElementById('toolbox-cad-badge');
+            const cadCount = document.getElementById('toolbox-cad-count');
+            if (cadBadge && cadCount) {
+                if (importedCADData && importedCADData.length > 0) {
+                    cadBadge.style.display = 'inline-block';
+                    cadCount.textContent = importedCADData.length;
+                } else {
+                    cadBadge.style.display = 'none';
+                }
+            }
+
+            // GIS
+            const gisBadge = document.getElementById('toolbox-gis-badge');
+            const gisCount = document.getElementById('toolbox-gis-count');
+            if (gisBadge && gisCount) {
+                if (importedGISData && importedGISData.length > 0) {
+                    gisBadge.style.display = 'inline-block';
+                    gisCount.textContent = importedGISData.length;
+                } else {
+                    gisBadge.style.display = 'none';
+                }
+            }
+
+            // BIM
+            const bimBadge = document.getElementById('toolbox-bim-badge');
+            const bimCount = document.getElementById('toolbox-bim-count');
+            if (bimBadge && bimCount) {
+                if (importedBIMData && importedBIMData.length > 0) {
+                    bimBadge.style.display = 'inline-block';
+                    bimCount.textContent = importedBIMData.length;
+                } else {
+                    bimBadge.style.display = 'none';
+                }
+            }
+        }
+
+        // Run Toolbox association
+        function runToolboxAssociation() {
+            const elementType = document.getElementById('toolbox-element-type').value;
+            const dataSource = document.getElementById('toolbox-data-source').value;
+            const matchMethod = document.getElementById('toolbox-match-method').value;
+            const tolerance = parseFloat(document.getElementById('toolbox-tolerance').value) || 2.0;
+
+            // Get source data
+            let sourceData = [];
+            switch (dataSource) {
+                case 'topografia':
+                    sourceData = importedNodes || [];
+                    break;
+                case 'cad':
+                    sourceData = importedCADData || [];
+                    break;
+                case 'gis':
+                    sourceData = importedGISData || [];
+                    break;
+                case 'bim':
+                    sourceData = importedBIMData || [];
+                    break;
+            }
+
+            if (sourceData.length === 0) {
+                alert(`Nenhum dado disponível da fonte "${dataSource}".\n\nImporte dados primeiro.`);
+                return;
+            }
+
+            // Get target data (network nodes/links)
+            const targetData = previewLinks || [];
+            if (targetData.length === 0) {
+                alert('Nenhum trecho de rede disponível.\n\nDesenhe ou importe a rede primeiro.');
+                return;
+            }
+
+            // Perform association
+            const associations = performAssociation(sourceData, targetData, matchMethod, tolerance, elementType);
+
+            // Show results
+            showAssociationResults(associations, elementType);
+        }
+
+        // Perform the association between source and target data
+        function performAssociation(sourceData, targetData, method, tolerance, elementType) {
+            const associations = [];
+
+            sourceData.forEach(source => {
+                const sourceX = source.x || source.coordinates?.[0] || 0;
+                const sourceY = source.y || source.coordinates?.[1] || 0;
+                const sourceId = source.id || source.name || '';
+
+                targetData.forEach(target => {
+                    let matched = false;
+                    let distance = null;
+
+                    switch (method) {
+                        case 'proximity':
+                            // Find start and end node coordinates
+                            const startNode = importedNodes?.find(n => n.id === target.from);
+                            const endNode = importedNodes?.find(n => n.id === target.to);
+
+                            if (startNode) {
+                                const d1 = Math.sqrt(Math.pow(sourceX - startNode.x, 2) + Math.pow(sourceY - startNode.y, 2));
+                                if (d1 <= tolerance) {
+                                    matched = true;
+                                    distance = d1;
+                                }
+                            }
+                            if (endNode && !matched) {
+                                const d2 = Math.sqrt(Math.pow(sourceX - endNode.x, 2) + Math.pow(sourceY - endNode.y, 2));
+                                if (d2 <= tolerance) {
+                                    matched = true;
+                                    distance = d2;
+                                }
+                            }
+                            break;
+
+                        case 'id':
+                            matched = sourceId === target.from || sourceId === target.to;
+                            break;
+
+                        case 'layer':
+                            matched = source.layer && (target.from?.includes(source.layer) || target.to?.includes(source.layer));
+                            break;
+
+                        case 'attribute':
+                            // Generic attribute matching
+                            matched = Object.values(source.properties || {}).some(v =>
+                                String(v) === target.from || String(v) === target.to
+                            );
+                            break;
+                    }
+
+                    if (matched) {
+                        associations.push({
+                            source: source,
+                            target: target,
+                            elementType: elementType,
+                            distance: distance,
+                            method: method
+                        });
+                    }
+                });
+            });
+
+            return associations;
+        }
+
+        // Show association results
+        function showAssociationResults(associations, elementType) {
+            const resultDiv = document.getElementById('toolbox-result');
+            if (!resultDiv) return;
+
+            resultDiv.style.display = 'block';
+
+            if (associations.length === 0) {
+                resultDiv.innerHTML = `
+                    <div style="padding: 10px; background: var(--bg-primary); border-radius: 6px; border-left: 4px solid var(--accent-orange);">
+                        <p style="color: var(--accent-orange); margin: 0;">
+                            ⚠️ Nenhuma associação encontrada.
+                        </p>
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 5px 0 0 0;">
+                            Tente aumentar a tolerância ou verificar se os dados estão no mesmo sistema de coordenadas.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Store associations in planning data
+            if (!planningData.associations) planningData.associations = [];
+            planningData.associations = [...planningData.associations, ...associations];
+
+            const elementLabels = {
+                'pv': 'PVs (Esgoto)',
+                'pv-drenagem': 'PVs (Drenagem)',
+                'conexao-agua': 'Conexões de Água',
+                'caixa': 'Caixas de Inspeção',
+                'hidrante': 'Hidrantes',
+                'registro': 'Registros/Válvulas',
+                'reservatorio': 'Reservatórios',
+                'eta-ete': 'ETA/ETE'
+            };
+
+            resultDiv.innerHTML = `
+                <div style="padding: 10px; background: var(--bg-primary); border-radius: 6px; border-left: 4px solid var(--accent-green);">
+                    <p style="color: var(--accent-green); margin: 0; font-weight: bold;">
+                        ✓ ${associations.length} associações encontradas!
+                    </p>
+                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 5px 0 0 0;">
+                        Tipo: ${elementLabels[elementType] || elementType}
+                    </p>
+                    <div style="margin-top: 10px; max-height: 150px; overflow-y: auto;">
+                        ${associations.slice(0, 10).map(a => `
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); padding: 3px 0; border-bottom: 1px solid var(--border-color);">
+                                ${a.source.id || a.source.name || 'Ponto'} → ${a.target.from} - ${a.target.to}
+                                ${a.distance ? `(${a.distance.toFixed(2)}m)` : ''}
+                            </div>
+                        `).join('')}
+                        ${associations.length > 10 ? `<p style="color: var(--text-secondary); font-size: 0.8rem;">... e mais ${associations.length - 10} associações</p>` : ''}
+                    </div>
+                </div>
+            `;
+
+            alert(`Associação concluída!\n\n${associations.length} elementos do tipo "${elementLabels[elementType] || elementType}" foram associados aos trechos da rede.\n\nEstes dados serão incluídos na exportação para QGIS.`);
         }
 
         async function loadPlanningSpreadsheet() {
