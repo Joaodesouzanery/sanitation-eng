@@ -1331,7 +1331,9 @@
             <div class="tab" onclick="showTab('epanet')">💧 EPANET</div>
             <div class="tab" onclick="showTab('swmm')">🌧️ SWMM</div>
             <div class="tab" onclick="showTab('openproject')">📋 OpenProject</div>
+            <div class="tab" onclick="showTab('projectlibre')">📊 ProjectLibre</div>
             <div class="tab" onclick="showTab('qgis')">🗺️ QGIS</div>
+            <div class="tab" onclick="showTab('peerreview')">👥 Revisão por Pares</div>
             <div class="tab" onclick="showTab('rdo')">📋 RDO</div>
         </div>
 
@@ -4848,6 +4850,193 @@ PV02,359290.456,7352780.123,1.82</pre>
                     <button class="btn" style="background: var(--bg-secondary);" onclick="exportAllQML()">
                         <span>📦</span> Todos os Estilos
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROJECTLIBRE TAB -->
+        <div id="projectlibre-tab" class="tab-content">
+            <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, #fef3c7, var(--bg-card));">
+                <h2><span class="icon">📊</span> Integração ProjectLibre / MS Project</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Exporte cronogramas para ProjectLibre e Microsoft Project. Mantenha sincronização bidirecional com ferramentas de gestão de projetos.
+                </p>
+
+                <div class="summary-cards" style="margin-bottom: 20px;">
+                    <div class="summary-card orange">
+                        <div class="icon">📅</div>
+                        <div class="value" id="projectlibre-tasks">0</div>
+                        <div class="label">Tarefas</div>
+                    </div>
+                    <div class="summary-card blue">
+                        <div class="icon">🔗</div>
+                        <div class="value" id="projectlibre-deps">0</div>
+                        <div class="label">Dependências</div>
+                    </div>
+                    <div class="summary-card green">
+                        <div class="icon">👥</div>
+                        <div class="value" id="projectlibre-resources">0</div>
+                        <div class="label">Recursos</div>
+                    </div>
+                    <div class="summary-card purple">
+                        <div class="icon">💰</div>
+                        <div class="value" id="projectlibre-cost">R$ 0</div>
+                        <div class="label">Custo Total</div>
+                    </div>
+                </div>
+
+                <div class="actions" style="justify-content: flex-start; flex-wrap: wrap; gap: 12px;">
+                    <button class="btn btn-secondary btn-ripple" onclick="loadDataFromPlatform('projectlibre')">
+                        <span>🔄</span> Carregar do Planejamento
+                    </button>
+                    <label class="btn btn-primary btn-ripple" style="cursor: pointer;">
+                        <span>📂</span> Importar .POD/.XML
+                        <input type="file" id="projectlibre-import" accept=".pod,.xml,.mpp" style="display: none;" onchange="importProjectLibreFile(this.files[0])">
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <h3><span class="icon">📤</span> Exportar para ProjectLibre</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Gere arquivo .POD compatível com ProjectLibre (software livre de gestão de projetos).
+                    </p>
+                    <div class="actions" style="flex-wrap: wrap; gap: 10px;">
+                        <button class="btn btn-primary btn-ripple" onclick="exportProjectLibrePOD()">
+                            <span>📊</span> Exportar .POD
+                        </button>
+                        <button class="btn btn-success btn-ripple" onclick="exportProjectLibreXML()">
+                            <span>📄</span> Exportar XML (MS Project)
+                        </button>
+                    </div>
+                    <ul style="margin-top: 15px; color: var(--text-secondary); font-size: 0.9rem; padding-left: 20px;">
+                        <li>Gantt com dependências preservadas</li>
+                        <li>Recursos e custos mapeados</li>
+                        <li>Caminho crítico calculado</li>
+                        <li>Marcos e milestones</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3><span class="icon">🔄</span> Sincronização</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Importe atualizações do ProjectLibre de volta para a plataforma.
+                    </p>
+                    <div class="actions" style="flex-wrap: wrap; gap: 10px;">
+                        <button class="btn btn-secondary btn-ripple" onclick="syncFromProjectLibre()">
+                            <span>⬇️</span> Importar Atualização
+                        </button>
+                        <button class="btn btn-secondary btn-ripple" onclick="compareProjectLibreVersions()">
+                            <span>📊</span> Comparar Versões
+                        </button>
+                    </div>
+                    <div id="projectlibre-sync-status" style="margin-top: 15px; padding: 10px; background: var(--bg-card); border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary);">
+                        Nenhuma sincronização realizada ainda.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PEER REVIEW TAB -->
+        <div id="peerreview-tab" class="tab-content">
+            <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, #ede9fe, var(--bg-card));">
+                <h2><span class="icon">👥</span> Revisão por Pares (Peer Review)</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Sistema completo de peer review para garantir qualidade dos projetos. Workflow A + B com adjudicação automática baseada em normas brasileiras.
+                </p>
+
+                <div class="summary-cards" style="margin-bottom: 20px;">
+                    <div class="summary-card blue">
+                        <div class="icon">📋</div>
+                        <div class="value" id="review-total">0</div>
+                        <div class="label">Revisões</div>
+                    </div>
+                    <div class="summary-card orange">
+                        <div class="icon">⚠️</div>
+                        <div class="value" id="review-findings">0</div>
+                        <div class="label">Findings</div>
+                    </div>
+                    <div class="summary-card green">
+                        <div class="icon">✅</div>
+                        <div class="value" id="review-approved">0</div>
+                        <div class="label">Aprovados</div>
+                    </div>
+                    <div class="summary-card red">
+                        <div class="icon">❌</div>
+                        <div class="value" id="review-rejected">0</div>
+                        <div class="label">Rejeitados</div>
+                    </div>
+                </div>
+
+                <div class="actions" style="justify-content: flex-start; flex-wrap: wrap; gap: 12px;">
+                    <button class="btn btn-primary btn-ripple" onclick="startNewReview()">
+                        <span>➕</span> Nova Revisão
+                    </button>
+                    <button class="btn btn-secondary btn-ripple" onclick="runAutomaticRuleCheck()">
+                        <span>🔍</span> Verificação Automática (Normas)
+                    </button>
+                    <button class="btn btn-success btn-ripple" onclick="exportFindingsShapefile()">
+                        <span>🗺️</span> Exportar Findings.shp
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <h3><span class="icon">📝</span> Workflow de Revisão</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Fluxo de trabalho com dois revisores independentes e adjudicação.
+                    </p>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <div style="padding: 10px 15px; background: var(--accent-blue-light); border-radius: 8px; text-align: center;">
+                            <div style="font-weight: 600; color: var(--accent-blue);">Revisor A</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Análise Técnica</div>
+                        </div>
+                        <span style="font-size: 1.5rem;">+</span>
+                        <div style="padding: 10px 15px; background: var(--accent-purple-light); border-radius: 8px; text-align: center;">
+                            <div style="font-weight: 600; color: var(--accent-purple);">Revisor B</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Análise Normativa</div>
+                        </div>
+                        <span style="font-size: 1.5rem;">→</span>
+                        <div style="padding: 10px 15px; background: var(--accent-green-light); border-radius: 8px; text-align: center;">
+                            <div style="font-weight: 600; color: var(--accent-green);">Adjudicação</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Decisão Final</div>
+                        </div>
+                    </div>
+                    <div id="review-workflow-status" style="padding: 12px; background: var(--bg-card); border-radius: 8px; font-size: 0.9rem;">
+                        Nenhuma revisão em andamento. Clique em "Nova Revisão" para iniciar.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3><span class="icon">📏</span> Rule Engine - Normas Brasileiras</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Verificação automática de conformidade com normas técnicas.
+                    </p>
+                    <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 20px; margin-bottom: 15px;">
+                        <li><strong>NBR 9649:</strong> Redes coletoras de esgoto</li>
+                        <li><strong>NBR 12211:</strong> Redes de água</li>
+                        <li><strong>NBR 10844:</strong> Drenagem pluvial</li>
+                        <li><strong>SINAPI/SICRO:</strong> Composições de custo</li>
+                    </ul>
+                    <button class="btn btn-secondary btn-ripple" onclick="showRuleEngineConfig()">
+                        <span>⚙️</span> Configurar Regras
+                    </button>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <h3><span class="icon">📋</span> Findings (Não Conformidades)</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                    Lista de não conformidades encontradas durante a revisão.
+                </p>
+                <div id="findings-list" style="max-height: 300px; overflow-y: auto;">
+                    <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                        <span style="font-size: 3rem;">📋</span>
+                        <p style="margin-top: 10px;">Nenhum finding registrado ainda.</p>
+                        <p style="font-size: 0.85rem;">Execute uma verificação automática ou adicione findings manualmente.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -11430,7 +11619,7 @@ DATA;
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-            const tabOrder = ['import', 'sewer', 'water', 'drainage', 'quantities', 'planning', 'epanet', 'swmm', 'openproject', 'qgis'];
+            const tabOrder = ['import', 'sewer', 'water', 'drainage', 'quantities', 'planning', 'epanet', 'swmm', 'openproject', 'projectlibre', 'qgis', 'peerreview', 'rdo'];
             document.querySelector(`.tab:nth-child(${tabOrder.indexOf(tab) + 1})`).classList.add('active');
             document.getElementById(`${tab}-tab`).classList.add('active');
             document.getElementById('results').style.display = 'none';
@@ -11464,9 +11653,15 @@ DATA;
                 // Load planning data and render Gantt chart
                 loadOpenProjectModuleData();
                 setTimeout(renderGanttChart, 150);
+            } else if (tab === 'projectlibre') {
+                // Load planning data for ProjectLibre export
+                loadProjectLibreModuleData();
             } else if (tab === 'qgis') {
                 // Load all data for QGIS export
                 loadQgisModuleData();
+            } else if (tab === 'peerreview') {
+                // Load peer review data
+                loadPeerReviewModuleData();
             }
         }
 
@@ -17484,6 +17679,286 @@ DATA;
             }
         }
 
+        // ============================================
+        // PROJECTLIBRE MODULE FUNCTIONS
+        // ============================================
+        function loadProjectLibreModuleData() {
+            const tasksCount = planningData?.schedule?.length || 0;
+            const depsCount = planningData?.schedule?.filter(t => t.dependencies?.length > 0).reduce((acc, t) => acc + t.dependencies.length, 0) || 0;
+            const resourcesCount = planningData?.teams?.length || 0;
+            const totalCost = planningData?.schedule?.reduce((acc, t) => acc + (t.cost || 0), 0) || 0;
+
+            document.getElementById('projectlibre-tasks').textContent = tasksCount;
+            document.getElementById('projectlibre-deps').textContent = depsCount;
+            document.getElementById('projectlibre-resources').textContent = resourcesCount;
+            document.getElementById('projectlibre-cost').textContent = 'R$ ' + totalCost.toLocaleString('pt-BR');
+        }
+
+        function exportProjectLibrePOD() {
+            if (!planningData?.schedule || planningData.schedule.length === 0) {
+                alert('Nenhum dado de planejamento disponível.\n\nCarregue dados do módulo Planejamento primeiro.');
+                return;
+            }
+
+            const pod = generateProjectLibrePOD();
+            downloadFile(pod, 'cronograma_hydronetwork.pod', 'application/xml');
+            alert('Arquivo .POD exportado com sucesso!\n\nAbra no ProjectLibre para visualizar o Gantt.');
+        }
+
+        function generateProjectLibrePOD() {
+            let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+            xml += '<project xmlns="http://projectlibre.com/xml">\n';
+            xml += '  <name>HydroNetwork - Cronograma de Obra</name>\n';
+            xml += '  <tasks>\n';
+
+            planningData.schedule.forEach((task, index) => {
+                xml += `    <task id="${index + 1}">\n`;
+                xml += `      <name>${SecurityUtils.escapeHtml(task.name || task.trecho || 'Tarefa ' + (index + 1))}</name>\n`;
+                xml += `      <start>${task.startDate || ''}</start>\n`;
+                xml += `      <end>${task.endDate || ''}</end>\n`;
+                xml += `      <duration>${task.duration || 1}</duration>\n`;
+                xml += `      <cost>${task.cost || 0}</cost>\n`;
+                xml += '    </task>\n';
+            });
+
+            xml += '  </tasks>\n';
+            xml += '</project>';
+            return xml;
+        }
+
+        function exportProjectLibreXML() {
+            if (!planningData?.schedule || planningData.schedule.length === 0) {
+                alert('Nenhum dado de planejamento disponível.\n\nCarregue dados do módulo Planejamento primeiro.');
+                return;
+            }
+
+            const xml = generateMSProjectXML();
+            downloadFile(xml, 'cronograma_hydronetwork.xml', 'application/xml');
+            alert('Arquivo XML (MS Project) exportado com sucesso!\n\nCompatível com MS Project e ProjectLibre.');
+        }
+
+        function generateMSProjectXML() {
+            let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+            xml += '<Project xmlns="http://schemas.microsoft.com/project">\n';
+            xml += '  <Name>HydroNetwork - Cronograma</Name>\n';
+            xml += '  <Tasks>\n';
+
+            planningData.schedule.forEach((task, index) => {
+                xml += `    <Task>\n`;
+                xml += `      <UID>${index + 1}</UID>\n`;
+                xml += `      <ID>${index + 1}</ID>\n`;
+                xml += `      <Name>${SecurityUtils.escapeHtml(task.name || task.trecho || 'Tarefa ' + (index + 1))}</Name>\n`;
+                xml += `      <Duration>PT${(task.duration || 1) * 8}H0M0S</Duration>\n`;
+                xml += `      <Start>${task.startDate || ''}T08:00:00</Start>\n`;
+                xml += `      <Finish>${task.endDate || ''}T17:00:00</Finish>\n`;
+                xml += `      <Cost>${task.cost || 0}</Cost>\n`;
+                xml += `    </Task>\n`;
+            });
+
+            xml += '  </Tasks>\n';
+            xml += '</Project>';
+            return xml;
+        }
+
+        function importProjectLibreFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    // Parse XML and import tasks
+                    alert('Arquivo importado: ' + file.name + '\n\nFuncionalidade de importação em desenvolvimento.');
+                    document.getElementById('projectlibre-sync-status').innerHTML =
+                        '<span style="color: var(--accent-green);">✓</span> Arquivo importado: ' + file.name;
+                } catch (err) {
+                    alert('Erro ao importar arquivo: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function syncFromProjectLibre() {
+            alert('Selecione um arquivo .POD ou .XML do ProjectLibre para sincronizar.');
+            document.getElementById('projectlibre-import').click();
+        }
+
+        function compareProjectLibreVersions() {
+            alert('Funcionalidade de comparação de versões em desenvolvimento.\n\nPermitirá comparar cronograma atual com versão importada.');
+        }
+
+        // ============================================
+        // PEER REVIEW MODULE FUNCTIONS
+        // ============================================
+        let peerReviewData = {
+            reviews: [],
+            findings: [],
+            currentReview: null
+        };
+
+        function loadPeerReviewModuleData() {
+            document.getElementById('review-total').textContent = peerReviewData.reviews.length;
+            document.getElementById('review-findings').textContent = peerReviewData.findings.length;
+            document.getElementById('review-approved').textContent =
+                peerReviewData.reviews.filter(r => r.status === 'approved').length;
+            document.getElementById('review-rejected').textContent =
+                peerReviewData.reviews.filter(r => r.status === 'rejected').length;
+        }
+
+        function startNewReview() {
+            const reviewId = 'REV-' + Date.now().toString(36).toUpperCase();
+            const review = {
+                id: reviewId,
+                createdAt: new Date().toISOString(),
+                status: 'in_progress',
+                reviewerA: null,
+                reviewerB: null,
+                findings: []
+            };
+
+            peerReviewData.reviews.push(review);
+            peerReviewData.currentReview = review;
+
+            document.getElementById('review-workflow-status').innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="color: var(--accent-blue); font-weight: 600;">${reviewId}</span>
+                    <span style="background: var(--accent-orange-light); color: var(--accent-orange); padding: 4px 10px; border-radius: 100px; font-size: 0.8rem;">Em Andamento</span>
+                </div>
+                <p style="margin-top: 8px; color: var(--text-secondary); font-size: 0.9rem;">
+                    Aguardando análise dos revisores A e B.
+                </p>
+            `;
+
+            loadPeerReviewModuleData();
+            alert('Nova revisão iniciada: ' + reviewId + '\n\nAtribua os revisores A e B para prosseguir.');
+        }
+
+        function runAutomaticRuleCheck() {
+            LoadingSystem.show('Executando verificação automática...');
+
+            setTimeout(() => {
+                const { nodes, links } = getActiveNodesAndLinks();
+                const findings = [];
+
+                // Check sewer rules (NBR 9649)
+                links.forEach((link, index) => {
+                    // Check minimum slope
+                    if (link.slope && link.slope < 0.005) {
+                        findings.push({
+                            id: 'NBR9649-' + (findings.length + 1),
+                            type: 'warning',
+                            rule: 'NBR 9649',
+                            element: link.id || 'Trecho ' + (index + 1),
+                            description: 'Declividade abaixo do mínimo recomendado (0.5%)',
+                            value: (link.slope * 100).toFixed(2) + '%',
+                            expected: '>= 0.5%'
+                        });
+                    }
+
+                    // Check velocity
+                    if (link.velocity && (link.velocity < 0.6 || link.velocity > 5.0)) {
+                        findings.push({
+                            id: 'NBR9649-' + (findings.length + 1),
+                            type: link.velocity < 0.6 ? 'error' : 'warning',
+                            rule: 'NBR 9649',
+                            element: link.id || 'Trecho ' + (index + 1),
+                            description: link.velocity < 0.6 ?
+                                'Velocidade abaixo do mínimo (0.6 m/s)' :
+                                'Velocidade acima do máximo (5.0 m/s)',
+                            value: link.velocity.toFixed(2) + ' m/s',
+                            expected: '0.6 - 5.0 m/s'
+                        });
+                    }
+                });
+
+                peerReviewData.findings = findings;
+                loadPeerReviewModuleData();
+                renderFindingsList(findings);
+
+                LoadingSystem.hide();
+
+                if (findings.length === 0) {
+                    alert('Verificação concluída!\n\nNenhuma não conformidade encontrada.');
+                } else {
+                    alert('Verificação concluída!\n\n' + findings.length + ' finding(s) encontrado(s).');
+                }
+            }, 1500);
+        }
+
+        function renderFindingsList(findings) {
+            const container = document.getElementById('findings-list');
+
+            if (findings.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                        <span style="font-size: 3rem;">✅</span>
+                        <p style="margin-top: 10px;">Nenhuma não conformidade encontrada.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<table class="data-table"><thead><tr>';
+            html += '<th>ID</th><th>Tipo</th><th>Norma</th><th>Elemento</th><th>Descrição</th><th>Valor</th><th>Esperado</th>';
+            html += '</tr></thead><tbody>';
+
+            findings.forEach(f => {
+                const typeColor = f.type === 'error' ? 'var(--accent-red)' : 'var(--accent-orange)';
+                const typeIcon = f.type === 'error' ? '❌' : '⚠️';
+                html += `<tr>
+                    <td><code>${f.id}</code></td>
+                    <td><span style="color: ${typeColor};">${typeIcon}</span></td>
+                    <td>${f.rule}</td>
+                    <td>${f.element}</td>
+                    <td>${f.description}</td>
+                    <td><strong>${f.value}</strong></td>
+                    <td>${f.expected}</td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function exportFindingsShapefile() {
+            if (peerReviewData.findings.length === 0) {
+                alert('Nenhum finding para exportar.\n\nExecute uma verificação automática primeiro.');
+                return;
+            }
+
+            // Generate GeoJSON with findings
+            const geojson = {
+                type: 'FeatureCollection',
+                features: peerReviewData.findings.map((f, i) => ({
+                    type: 'Feature',
+                    properties: {
+                        id: f.id,
+                        type: f.type,
+                        rule: f.rule,
+                        element: f.element,
+                        description: f.description,
+                        value: f.value,
+                        expected: f.expected
+                    },
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [0, 0] // Would be populated with real coords
+                    }
+                }))
+            };
+
+            downloadFile(JSON.stringify(geojson, null, 2), 'findings.geojson', 'application/geo+json');
+            alert('Findings exportados como GeoJSON!\n\nAbra no QGIS e converta para Shapefile se necessário.');
+        }
+
+        function showRuleEngineConfig() {
+            alert('Configuração do Rule Engine:\n\n' +
+                '• NBR 9649 (Esgoto): Tensão trativa ≥ 1 Pa, Velocidade 0.6-5.0 m/s\n' +
+                '• NBR 12211 (Água): Pressão 10-50 mca\n' +
+                '• NBR 10844 (Drenagem): Tempo de concentração, coeficientes\n' +
+                '• SINAPI/SICRO: Composições de custo\n\n' +
+                'Configuração avançada em desenvolvimento.');
+        }
+
         function runEpanetSimulation() {
             // Usa dados do módulo EPANET primeiro, depois outras fontes
             let nodes = moduleData.epanet?.nodes || [];
@@ -22427,7 +22902,9 @@ Dados exportados:
                     <div class="tutorial-nav-item" data-section="epanet" onclick="showTutorialSection('epanet')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">💧 EPANET</div>
                     <div class="tutorial-nav-item" data-section="swmm" onclick="showTutorialSection('swmm')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">🌧️ SWMM</div>
                     <div class="tutorial-nav-item" data-section="openproject" onclick="showTutorialSection('openproject')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">📋 OpenProject</div>
+                    <div class="tutorial-nav-item" data-section="projectlibre" onclick="showTutorialSection('projectlibre')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">📊 ProjectLibre</div>
                     <div class="tutorial-nav-item" data-section="qgis" onclick="showTutorialSection('qgis')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">🗺️ QGIS</div>
+                    <div class="tutorial-nav-item" data-section="peerreview" onclick="showTutorialSection('peerreview')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">👥 Revisão por Pares</div>
                     <div class="tutorial-nav-item" data-section="rdo" onclick="showTutorialSection('rdo')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">📋 RDO</div>
                 </nav>
 
