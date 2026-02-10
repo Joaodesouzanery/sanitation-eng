@@ -1,48 +1,97 @@
-# HydroNetwork - Motor de Cálculo Hidráulico
-# Dependências do projeto
+# HydroNetwork - Motor de Calculo Hidraulico
+# Dependencias do projeto - VERSOES FIXAS PARA SEGURANCA
 # Instalar com: pip install -r requirements.txt
+#
+# SECURITY: All dependencies pinned to specific versions to prevent supply chain attacks
+# Last security audit: 2026-02-10
+# Review periodically for security updates
 
-# Core
-pydantic>=2.0.0
-python-dateutil>=2.8.2
+# =============================================================================
+# CORE FRAMEWORK
+# =============================================================================
+pydantic==2.10.4              # Data validation with security features
+python-dateutil==2.9.0.post0  # Date parsing utilities
 
-# GIS
-pyshp>=2.3.1
-pyproj>=3.6.0
-shapely>=2.0.0
-fiona>=1.9.0
-geopandas>=0.14.0
+# =============================================================================
+# GIS LIBRARIES
+# =============================================================================
+pyshp==2.3.1                  # Shapefile support
+pyproj==3.7.0                 # Coordinate transformations
+shapely==2.0.6                # Geometric operations
+fiona==1.10.1                 # OGR bindings for vector data
+geopandas==1.0.1              # GeoPandas for spatial data
 
-# Importadores
-ezdxf>=1.1.0
-ifcopenshell>=0.7.0
+# =============================================================================
+# FILE IMPORTERS
+# =============================================================================
+ezdxf==1.4.0                  # CAD DXF file parsing
+# ifcopenshell - install separately if needed for IFC support
 
-# Hidráulica (wrappers)
-# wntr>=1.0.0  # EPANET wrapper
-# swmm-api>=0.4.0  # SWMM wrapper
+# =============================================================================
+# WEB API & SECURITY
+# =============================================================================
+fastapi==0.115.7              # Modern web framework
+uvicorn==0.34.0               # ASGI server with SSL support
+starlette==0.45.3             # ASGI framework (FastAPI dependency)
+python-multipart==0.0.20      # Form data parsing for file uploads
+itsdangerous==2.2.0           # Secure token signing
+passlib[bcrypt]==1.7.4        # Password hashing (bcrypt backend)
+python-jose[cryptography]==3.3.0  # JWT token handling
+pyjwt==2.10.1                 # JWT encoding/decoding
+cryptography==44.0.0          # Cryptographic primitives
 
-# Mapa interativo
-# maplibre>=0.1.0
-# folium>=0.15.0
+# =============================================================================
+# SECURITY UTILITIES
+# =============================================================================
+bleach==6.2.0                 # HTML sanitization
+defusedxml==0.7.1             # Safe XML parsing (prevents XXE attacks)
+secure==0.3.0                 # Security headers helper
+slowapi==0.1.9                # Rate limiting for FastAPI
+limits==3.14.0                # Rate limit algorithms
 
-# Web API
-fastapi>=0.104.0
-uvicorn>=0.24.0
+# =============================================================================
+# DATA PROCESSING
+# =============================================================================
+numpy==2.2.2                  # Numerical computing
+pandas==2.2.3                 # Data analysis
+openpyxl==3.1.5               # Excel file support
+xlrd==2.0.1                   # Legacy Excel support
 
-# Utilitários
-numpy>=1.24.0
-pandas>=2.0.0
-openpyxl>=3.1.0
-xlrd>=2.0.0
+# =============================================================================
+# LOGGING & MONITORING
+# =============================================================================
+loguru==0.7.3                 # Advanced logging
+structlog==24.4.0             # Structured logging for audit trails
 
-# Testes
-pytest>=7.4.0
-pytest-cov>=4.1.0
+# =============================================================================
+# TESTING & QUALITY
+# =============================================================================
+pytest==8.3.4                 # Test framework
+pytest-cov==6.0.0             # Coverage reporting
+pytest-security==0.1.0        # Security testing helpers
+bandit==1.8.2                 # Security linter
+safety==3.2.11                # Dependency vulnerability scanner
 
-# Logging
-loguru>=0.7.0
+# =============================================================================
+# DEVELOPMENT & CODE QUALITY
+# =============================================================================
+black==24.10.0                # Code formatter
+flake8==7.1.1                 # Linter
+flake8-bandit==4.1.1          # Security checks in flake8
+mypy==1.14.1                  # Type checking
+ruff==0.9.3                   # Fast linter
 
-# Desenvolvimento
-black>=23.0.0
-flake8>=6.1.0
-mypy>=1.5.0
+# =============================================================================
+# OPTIONAL: HTTPS/SSL SUPPORT
+# =============================================================================
+# For production HTTPS, install:
+# certifi==2024.12.14         # CA certificates
+# truststore==0.10.0          # Native system trust store
+
+# =============================================================================
+# SECURITY NOTES:
+# - Run 'safety check' periodically to scan for vulnerabilities
+# - Run 'bandit -r src/' to check code for security issues
+# - Update dependencies monthly or when security advisories are released
+# - Use 'pip-audit' for additional vulnerability scanning
+# =============================================================================

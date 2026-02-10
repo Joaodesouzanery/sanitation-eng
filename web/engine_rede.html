@@ -5,16 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HydroNetwork - Motor de Cálculo Hidráulico</title>
 
-    <!-- Security Headers -->
+    <!-- SECURITY HEADERS - Maximum Protection -->
+    <!-- Content Security Policy - Restricts resource loading -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' https:; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests;">
+
+    <!-- Prevent MIME type sniffing -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+
+    <!-- Prevent clickjacking - DENY for maximum security -->
+    <meta http-equiv="X-Frame-Options" content="DENY">
+
+    <!-- XSS Protection (legacy browsers) -->
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+
+    <!-- Referrer Policy - Limit information leakage -->
     <meta name="referrer" content="strict-origin-when-cross-origin">
 
-    <!-- External Libraries with Version Pinning -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js" crossorigin="anonymous"></script>
+    <!-- Permissions Policy - Disable unnecessary browser features -->
+    <meta http-equiv="Permissions-Policy" content="accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), camera=(), cross-origin-isolated=(), display-capture=(), document-domain=(), encrypted-media=(), execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(self), geolocation=(), gyroscope=(), keyboard-map=(), magnetometer=(), microphone=(), midi=(), navigation-override=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()">
+
+    <!-- Prevent search engine indexing of sensitive pages -->
+    <meta name="robots" content="noindex, nofollow">
+
+    <!-- External Libraries with Version Pinning and SRI (Subresource Integrity) -->
+    <!-- SECURITY: SRI hashes ensure CDN files haven't been tampered with -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+            integrity="sha384-q3hNEaUVJlRLZnLsG/EYGezirnJQUYK+xP3A8DopL+hW/GDzF4fPGKxnGLhc9mBD"
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
+            integrity="sha384-j9raHWZmE4w6S9z5nxQnHZE0/1O/cZ+D/J32Y9KnSrLAJ8S6HBsY/GNgBzNvmPXy"
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"
+            integrity="sha384-+Z5mP4N7eK4xsH6Ui5TDmL0VB5yPN6uWQzn3X7L2VgCwbB7j4C6k3jtGbAfKThVN"
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"
+            integrity="sha384-OJsAaZK5kQxnUBBgNyQZb8/RxA5xrMwQ4oF9z/6zQNAv0KW6fPf1b7iVx3nQnPtV"
+            crossorigin="anonymous"></script>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -7904,21 +7930,22 @@ PV02,359290.456,7352780.123,1.82</pre>
             document.getElementById('layer-mapping').style.display = 'block';
 
             const tbody = document.getElementById('layers-tbody');
+            // SECURITY: All user-provided data must be escaped to prevent XSS
             tbody.innerHTML = layers.map((layer, idx) => `
                 <tr style="border-bottom: 1px solid var(--border-color); ${layer.objectCount === 0 ? 'opacity: 0.5;' : ''}">
                     <td style="padding: 8px;">
-                        <strong>${layer.name}</strong>
+                        <strong>${SecurityUtils.escapeHtml(layer.name)}</strong>
                     </td>
                     <td style="padding: 8px; text-align: center;">
-                        ${layer.objectCount}
+                        ${SecurityUtils.escapeHtml(layer.objectCount)}
                     </td>
                     <td style="padding: 8px; text-align: center;">
                         <span style="background: var(--bg-primary); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
-                            ${layer.geometryTypes}
+                            ${SecurityUtils.escapeHtml(layer.geometryTypes)}
                         </span>
                     </td>
                     <td style="padding: 8px; color: var(--text-secondary); font-size: 0.85rem;">
-                        ${layer.sampleAttributes}
+                        ${SecurityUtils.escapeHtml(layer.sampleAttributes)}
                     </td>
                 </tr>
             `).join('');
@@ -7935,9 +7962,10 @@ PV02,359290.456,7352780.123,1.82</pre>
                 'map-drenagem-tubulacao', 'map-drenagem-estruturas'
             ];
 
+            // SECURITY: Escape layer names to prevent XSS via option values
             const options = layers
                 .filter(l => l.objectCount > 0)
-                .map(l => `<option value="${l.name}">${l.name} (${l.objectCount} obj)</option>`)
+                .map(l => `<option value="${SecurityUtils.escapeAttr(l.name)}">${SecurityUtils.escapeHtml(l.name)} (${SecurityUtils.escapeHtml(l.objectCount)} obj)</option>`)
                 .join('');
 
             selectIds.forEach(id => {
@@ -12806,15 +12834,16 @@ DATA;
                 return;
             }
 
+            // SECURITY: Escape user data to prevent XSS
             tbody.innerHTML = planningData.holidays.map((h, idx) => {
                 const dateObj = new Date(h.date + 'T00:00:00');
                 const formattedDate = dateObj.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
                 return `
                     <tr style="border-bottom: 1px solid var(--border-color);">
-                        <td style="padding: 8px;">${formattedDate}</td>
-                        <td style="padding: 8px;">${h.name}</td>
+                        <td style="padding: 8px;">${escapeHtml(formattedDate)}</td>
+                        <td style="padding: 8px;">${escapeHtml(h.name)}</td>
                         <td style="padding: 8px; text-align: center;">
-                            <button onclick="removeHoliday(${idx})" style="background: none; border: none; color: var(--accent-red); cursor: pointer; font-size: 1rem;">✕</button>
+                            <button onclick="removeHoliday(${parseInt(idx, 10)})" style="background: none; border: none; color: var(--accent-red); cursor: pointer; font-size: 1rem;">✕</button>
                         </td>
                     </tr>
                 `;
@@ -20358,12 +20387,12 @@ Dados exportados:
         }
 
         function populateRDOSelects() {
-            // Populate projects
+            // Populate projects - SECURITY: Escape all user data
             const projectSelect = document.getElementById('rdo-project');
             if (projectSelect) {
                 projectSelect.innerHTML = '<option value="">Selecione o projeto</option>';
                 rdoData.projects.forEach(p => {
-                    projectSelect.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+                    projectSelect.innerHTML += `<option value="${escapeAttr(p.id)}">${escapeHtml(p.name)}</option>`;
                 });
             }
 
@@ -20382,8 +20411,9 @@ Dados exportados:
 
             if (projectId) {
                 const filteredObras = rdoData.obras.filter(o => o.projectId === projectId);
+                // SECURITY: Escape all user data
                 filteredObras.forEach(o => {
-                    obraSelect.innerHTML += `<option value="${o.id}">${o.name}</option>`;
+                    obraSelect.innerHTML += `<option value="${escapeAttr(o.id)}">${escapeHtml(o.name)}</option>`;
                 });
 
                 // Load segments for this project
@@ -20410,13 +20440,13 @@ Dados exportados:
 
             container.innerHTML = '';
 
-            // Show available fronts as checkboxes
+            // Show available fronts as checkboxes - SECURITY: Escape all user data
             rdoData.workFronts.forEach(wf => {
                 const isSelected = rdoData.selectedWorkFronts.includes(wf.id);
                 container.innerHTML += `
                     <label class="chip ${isSelected ? 'chip-selected' : ''}" style="cursor: pointer; padding: 8px 16px; border-radius: 20px; background: ${isSelected ? 'var(--accent-blue)' : 'var(--bg-hover)'}; color: ${isSelected ? 'white' : 'inherit'}; display: inline-flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleWorkFront('${wf.id}')" style="display: none;">
-                        <span>${wf.name}</span>
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleWorkFront('${escapeAttr(wf.id)}')" style="display: none;">
+                        <span>${escapeHtml(wf.name)}</span>
                         ${isSelected ? '<span>✓</span>' : ''}
                     </label>
                 `;
@@ -20456,12 +20486,13 @@ Dados exportados:
 
             container.innerHTML = '';
 
+            // SECURITY: Escape all user data
             rdoData.locations.forEach(loc => {
                 const isSelected = rdoData.selectedLocations.includes(loc.id);
                 container.innerHTML += `
                     <label class="chip ${isSelected ? 'chip-selected' : ''}" style="cursor: pointer; padding: 8px 16px; border-radius: 20px; background: ${isSelected ? 'var(--accent-green)' : 'var(--bg-hover)'}; color: ${isSelected ? 'white' : 'inherit'}; display: inline-flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleLocation('${loc.id}')" style="display: none;">
-                        <span>${loc.name}</span>
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleLocation('${escapeAttr(loc.id)}')" style="display: none;">
+                        <span>${escapeHtml(loc.name)}</span>
                         ${isSelected ? '<span>✓</span>' : ''}
                     </label>
                 `;
@@ -20504,12 +20535,13 @@ Dados exportados:
             serviceCounter++;
             const rowId = `service-row-${serviceCounter}`;
 
+            // SECURITY: Escape all user data in select options
             const serviceOptions = rdoData.serviceCatalog.map(s =>
-                `<option value="${s.id}" data-unit="${s.unit}">${s.name}</option>`
+                `<option value="${escapeAttr(s.id)}" data-unit="${escapeAttr(s.unit)}">${escapeHtml(s.name)}</option>`
             ).join('');
 
             const employeeOptions = rdoData.employees.map(e =>
-                `<option value="${e.id}">${e.name}</option>`
+                `<option value="${escapeAttr(e.id)}">${escapeHtml(e.name)}</option>`
             ).join('');
 
             const row = document.createElement('div');
@@ -20581,9 +20613,10 @@ Dados exportados:
             segmentCounter++;
             const rowId = `segment-row-${segmentCounter}`;
 
+            // SECURITY: Escape all user data in segment options
             const segmentOptions = rdoData.segments.map(s => {
                 const remaining = s.planned - s.executed;
-                return `<option value="${s.id}" data-system="${s.system}" data-planned="${s.planned}" data-executed="${s.executed}">${s.name} - ${s.system.toUpperCase()} (Restante: ${remaining}m)</option>`;
+                return `<option value="${escapeAttr(s.id)}" data-system="${escapeAttr(s.system)}" data-planned="${escapeAttr(String(s.planned))}" data-executed="${escapeAttr(String(s.executed))}">${escapeHtml(s.name)} - ${escapeHtml(s.system.toUpperCase())} (Restante: ${escapeHtml(String(remaining))}m)</option>`;
             }).join('');
 
             const row = document.createElement('div');
@@ -20728,14 +20761,15 @@ Dados exportados:
                 grouped[s.category].push(s);
             });
 
+            // SECURITY: Escape all user data
             container.innerHTML = '';
             Object.keys(grouped).forEach(cat => {
-                container.innerHTML += `<h4 style="margin: 15px 0 10px; color: var(--accent-blue);">${cat}</h4>`;
+                container.innerHTML += `<h4 style="margin: 15px 0 10px; color: var(--accent-blue);">${escapeHtml(cat)}</h4>`;
                 grouped[cat].forEach(s => {
                     container.innerHTML += `
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-primary); border-radius: 8px; margin-bottom: 5px;">
-                            <span>${s.name} <small style="color: var(--text-secondary);">(${s.unit})</small></span>
-                            <button class="btn btn-success" style="padding: 4px 10px; font-size: 0.8rem;" onclick="selectCatalogService('${s.id}')">Selecionar</button>
+                            <span>${escapeHtml(s.name)} <small style="color: var(--text-secondary);">(${escapeHtml(s.unit)})</small></span>
+                            <button class="btn btn-success" style="padding: 4px 10px; font-size: 0.8rem;" onclick="selectCatalogService('${escapeAttr(s.id)}')">Selecionar</button>
                         </div>
                     `;
                 });
@@ -21068,14 +21102,14 @@ Dados exportados:
                 <div style="margin-bottom: 20px;">
                     <h3 style="margin-bottom: 10px; color: var(--accent-blue);">📍 Frentes de Serviço</h3>
                     <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                        ${rdo.workFronts?.map(wf => `<span style="padding: 6px 12px; background: var(--accent-blue); color: white; border-radius: 15px; font-size: 0.85rem;">${wf.name}</span>`).join('') || '<span style="color: var(--text-secondary);">Nenhuma frente registrada</span>'}
+                        ${rdo.workFronts?.map(wf => `<span style="padding: 6px 12px; background: var(--accent-blue); color: white; border-radius: 15px; font-size: 0.85rem;">${escapeHtml(wf.name)}</span>`).join('') || '<span style="color: var(--text-secondary);">Nenhuma frente registrada</span>'}
                     </div>
                 </div>
 
                 <div style="margin-bottom: 20px;">
                     <h3 style="margin-bottom: 10px; color: var(--accent-green);">📍 Locais</h3>
                     <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                        ${rdo.locations?.map(loc => `<span style="padding: 6px 12px; background: var(--accent-green); color: white; border-radius: 15px; font-size: 0.85rem;">${loc.name}</span>`).join('') || '<span style="color: var(--text-secondary);">Nenhum local registrado</span>'}
+                        ${rdo.locations?.map(loc => `<span style="padding: 6px 12px; background: var(--accent-green); color: white; border-radius: 15px; font-size: 0.85rem;">${escapeHtml(loc.name)}</span>`).join('') || '<span style="color: var(--text-secondary);">Nenhum local registrado</span>'}
                     </div>
                 </div>
 
@@ -21302,21 +21336,22 @@ Dados exportados:
 
                 const systemIcon = seg.system === 'agua' ? '💧' : seg.system === 'esgoto' ? '🚰' : '🌧️';
 
+                // SECURITY: Escape all user data
                 return `
                     <tr>
-                        <td style="font-weight: 600;">${seg.name}</td>
-                        <td>${systemIcon} ${seg.system}</td>
-                        <td>${seg.planned.toFixed(2)}</td>
-                        <td>${seg.executed.toFixed(2)}</td>
+                        <td style="font-weight: 600;">${escapeHtml(seg.name)}</td>
+                        <td>${systemIcon} ${escapeHtml(seg.system)}</td>
+                        <td>${escapeHtml(seg.planned.toFixed(2))}</td>
+                        <td>${escapeHtml(seg.executed.toFixed(2))}</td>
                         <td>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div style="flex: 1; background: var(--bg-hover); border-radius: 10px; height: 8px; overflow: hidden;">
                                     <div style="background: ${getProgressColor(progress)}; height: 100%; width: ${Math.min(progress, 100)}%;"></div>
                                 </div>
-                                <span style="font-size: 0.85rem; min-width: 45px;">${progress.toFixed(1)}%</span>
+                                <span style="font-size: 0.85rem; min-width: 45px;">${escapeHtml(progress.toFixed(1))}%</span>
                             </div>
                         </td>
-                        <td><span style="padding: 4px 10px; border-radius: 12px; background: ${statusColor}; color: white; font-size: 0.75rem;">${status}</span></td>
+                        <td><span style="padding: 4px 10px; border-radius: 12px; background: ${statusColor}; color: white; font-size: 0.75rem;">${escapeHtml(status)}</span></td>
                     </tr>
                 `;
             }).join('');
@@ -21532,15 +21567,16 @@ Dados exportados:
 
                 const systemIcon = seg.system === 'agua' ? '💧' : seg.system === 'esgoto' ? '🚰' : '🌧️';
 
+                // SECURITY: Escape all user data in popup
                 polyline.bindPopup(`
                     <div style="min-width: 200px;">
-                        <h4 style="margin: 0 0 8px; color: #333;">${seg.name}</h4>
-                        <p style="margin: 4px 0;"><strong>Sistema:</strong> ${systemIcon} ${seg.system}</p>
-                        <p style="margin: 4px 0;"><strong>Planejado:</strong> ${seg.planned}m</p>
-                        <p style="margin: 4px 0;"><strong>Executado:</strong> ${seg.executed}m</p>
-                        <p style="margin: 4px 0;"><strong>Progresso:</strong> ${progress.toFixed(1)}%</p>
+                        <h4 style="margin: 0 0 8px; color: #333;">${escapeHtml(seg.name)}</h4>
+                        <p style="margin: 4px 0;"><strong>Sistema:</strong> ${systemIcon} ${escapeHtml(seg.system)}</p>
+                        <p style="margin: 4px 0;"><strong>Planejado:</strong> ${escapeHtml(String(seg.planned))}m</p>
+                        <p style="margin: 4px 0;"><strong>Executado:</strong> ${escapeHtml(String(seg.executed))}m</p>
+                        <p style="margin: 4px 0;"><strong>Progresso:</strong> ${escapeHtml(progress.toFixed(1))}%</p>
                         <div style="background: #eee; border-radius: 10px; height: 10px; margin-top: 8px;">
-                            <div style="background: ${color}; height: 100%; width: ${progress}%; border-radius: 10px;"></div>
+                            <div style="background: ${color}; height: 100%; width: ${Math.min(progress, 100)}%; border-radius: 10px;"></div>
                         </div>
                     </div>
                 `);

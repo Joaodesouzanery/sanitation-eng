@@ -1,9 +1,13 @@
 """
 GeoPackage Exporter - Exportador para formato GeoPackage (SQLite espacial)
 Formato interno preferido para dados geoespaciais
+
+SECURITY: This module implements secure SQL practices to prevent injection attacks.
+All table/column names are validated against a strict whitelist pattern.
 """
 
 import json
+import re
 import sqlite3
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -11,6 +15,93 @@ from datetime import datetime
 from dataclasses import dataclass
 
 from ..exporters.shp import load_field_dictionary
+
+
+# Security: Pattern for valid SQL identifiers (alphanumeric and underscore only)
+VALID_IDENTIFIER_PATTERN = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]{0,127}$')
+
+# Security: Reserved SQL keywords that cannot be used as identifiers
+SQL_RESERVED_KEYWORDS = frozenset([
+    'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE', 'ALTER', 'TRUNCATE',
+    'TABLE', 'DATABASE', 'INDEX', 'VIEW', 'TRIGGER', 'PROCEDURE', 'FUNCTION',
+    'WHERE', 'FROM', 'JOIN', 'ON', 'AND', 'OR', 'NOT', 'NULL', 'TRUE', 'FALSE',
+    'PRIMARY', 'KEY', 'FOREIGN', 'REFERENCES', 'UNIQUE', 'CHECK', 'DEFAULT',
+    'CONSTRAINT', 'ORDER', 'BY', 'GROUP', 'HAVING', 'LIMIT', 'OFFSET', 'UNION',
+    'INTERSECT', 'EXCEPT', 'AS', 'INTO', 'VALUES', 'SET', 'CASE', 'WHEN', 'THEN',
+    'ELSE', 'END', 'EXISTS', 'IN', 'BETWEEN', 'LIKE', 'IS', 'ALL', 'ANY', 'SOME',
+    'DISTINCT', 'ASC', 'DESC', 'NULLS', 'FIRST', 'LAST', 'OVER', 'PARTITION',
+    'ROWS', 'RANGE', 'UNBOUNDED', 'PRECEDING', 'FOLLOWING', 'CURRENT', 'ROW'
+])
+
+
+def validate_sql_identifier(name: str, context: str = "identifier") -> str:
+    """
+    Validate and sanitize SQL identifier (table/column name).
+
+    SECURITY: Prevents SQL injection by ensuring identifiers:
+    - Match alphanumeric pattern only
+    - Are not SQL reserved keywords
+    - Are within length limits
+
+    Args:
+        name: The identifier to validate
+        context: Description for error messages
+
+    Returns:
+        The validated identifier
+
+    Raises:
+        ValueError: If identifier is invalid or potentially malicious
+    """
+    if not name or not isinstance(name, str):
+        raise ValueError(f"Invalid {context}: must be a non-empty string")
+
+    # Normalize and strip whitespace
+    name = name.strip()
+
+    if not VALID_IDENTIFIER_PATTERN.match(name):
+        raise ValueError(
+            f"Invalid {context} '{name}': must start with letter/underscore, "
+            "contain only alphanumeric characters and underscores, max 128 chars"
+        )
+
+    if name.upper() in SQL_RESERVED_KEYWORDS:
+        raise ValueError(
+            f"Invalid {context} '{name}': cannot use SQL reserved keyword"
+        )
+
+    return name
+
+
+def validate_sql_type(type_name: str) -> str:
+    """
+    Validate SQL data type against whitelist.
+
+    SECURITY: Only allows known-safe SQLite types.
+
+    Args:
+        type_name: The SQL type to validate
+
+    Returns:
+        The validated type name
+
+    Raises:
+        ValueError: If type is not in whitelist
+    """
+    allowed_types = frozenset([
+        'TEXT', 'INTEGER', 'REAL', 'BLOB', 'NUMERIC',
+        'VARCHAR', 'CHAR', 'BOOLEAN', 'DATE', 'DATETIME'
+    ])
+
+    if not type_name or not isinstance(type_name, str):
+        raise ValueError("SQL type must be a non-empty string")
+
+    type_upper = type_name.upper().strip()
+
+    if type_upper not in allowed_types:
+        raise ValueError(f"Invalid SQL type '{type_name}': allowed types are {allowed_types}")
+
+    return type_upper
 
 
 @dataclass
@@ -314,40 +405,61 @@ class GeoPackageExporter:
         """)
 
     def _add_layer_to_gpkg(self, cursor: sqlite3.Cursor, layer: GeoPackageLayer):
-        """Adiciona uma camada ao GeoPackage"""
+        """
+        Adiciona uma camada ao GeoPackage.
 
-        # Cria tabela da camada
-        field_defs = ["fid INTEGER PRIMARY KEY AUTOINCREMENT", "geom BLOB"]
+        SECURITY: All table and column names are validated against SQL injection.
+        Uses parameterized queries for all data values.
+        """
+        # SECURITY: Validate layer name before use in SQL
+        safe_layer_name = validate_sql_identifier(layer.name, "layer name")
+
+        # SECURITY: Validate all field names and types
+        validated_fields = []
         for field in layer.fields:
-            field_defs.append(f"{field['name']} {field['type']}")
+            safe_field_name = validate_sql_identifier(field['name'], "field name")
+            safe_field_type = validate_sql_type(field['type'])
+            validated_fields.append((safe_field_name, safe_field_type))
 
-        cursor.execute(f"""
-            CREATE TABLE IF NOT EXISTS {layer.name} (
+        # Build CREATE TABLE with validated identifiers
+        field_defs = ["fid INTEGER PRIMARY KEY AUTOINCREMENT", "geom BLOB"]
+        for field_name, field_type in validated_fields:
+            # Use double quotes for identifier quoting (SQL standard)
+            field_defs.append(f'"{field_name}" {field_type}')
+
+        # SECURITY: Table name is validated, using double quotes for extra safety
+        create_sql = f'''
+            CREATE TABLE IF NOT EXISTS "{safe_layer_name}" (
                 {', '.join(field_defs)}
             )
-        """)
+        '''
+        cursor.execute(create_sql)
 
-        # Registra geometria
+        # Registra geometria (using parameterized query for values)
         cursor.execute("""
             INSERT INTO gpkg_geometry_columns VALUES (?, 'geom', ?, ?, 0, 0)
-        """, (layer.name, layer.geometry_type, layer.srid))
+        """, (safe_layer_name, layer.geometry_type, layer.srid))
 
         # Calcula bounding box
         min_x, min_y, max_x, max_y = float('inf'), float('inf'), float('-inf'), float('-inf')
 
-        # Insere features
-        field_names = [f['name'] for f in layer.fields]
-        placeholders = ', '.join(['?' for _ in range(len(field_names) + 1)])
+        # SECURITY: Build INSERT with validated field names
+        safe_field_names = [f[0] for f in validated_fields]
+        quoted_field_names = [f'"{name}"' for name in safe_field_names]
+        placeholders = ', '.join(['?' for _ in range(len(safe_field_names) + 1)])
+
+        # SECURITY: Parameterized INSERT query
+        insert_sql = f'''
+            INSERT INTO "{safe_layer_name}" (geom, {', '.join(quoted_field_names)})
+            VALUES ({placeholders})
+        '''
 
         for feature in layer.features:
             values = [feature['geometry']]  # Geometria como WKT por simplicidade
-            for name in field_names:
+            for name in safe_field_names:
                 values.append(feature['properties'].get(name))
 
-            cursor.execute(f"""
-                INSERT INTO {layer.name} (geom, {', '.join(field_names)})
-                VALUES ({placeholders})
-            """, values)
+            cursor.execute(insert_sql, values)
 
             # Atualiza bbox (simplificado)
             props = feature['properties']
@@ -358,13 +470,13 @@ class GeoPackageExporter:
                 min_y = min(min_y, props['y'])
                 max_y = max(max_y, props['y'])
 
-        # Registra na tabela de conteúdo
+        # Registra na tabela de conteúdo (using parameterized query)
         cursor.execute("""
             INSERT INTO gpkg_contents VALUES (?, 'features', ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            layer.name,
-            layer.name,
-            f"Camada {layer.name} - HydroNetwork",
+            safe_layer_name,
+            safe_layer_name,
+            f"Camada {safe_layer_name} - HydroNetwork",
             datetime.utcnow().isoformat(),
             min_x if min_x != float('inf') else 0,
             min_y if min_y != float('inf') else 0,
