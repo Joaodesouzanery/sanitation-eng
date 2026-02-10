@@ -1267,6 +1267,34 @@
 <body>
     <div class="container">
         <header style="position: relative;">
+            <!-- Link voltar para landing page -->
+            <a href="index.html"
+               style="position: absolute; top: 15px; left: 15px;
+                      display: flex; align-items: center; gap: 8px;
+                      color: rgba(255,255,255,0.8); text-decoration: none;
+                      font-size: 0.9rem; padding: 8px 16px;
+                      background: rgba(255,255,255,0.1); border-radius: 8px;
+                      transition: all 0.3s; border: 1px solid rgba(255,255,255,0.2);"
+               onmouseover="this.style.background='rgba(255,255,255,0.2)'; this.style.color='white';"
+               onmouseout="this.style.background='rgba(255,255,255,0.1)'; this.style.color='rgba(255,255,255,0.8)';"
+               aria-label="Voltar para página inicial">
+                ← Voltar ao Início
+            </a>
+
+            <!-- Botão Tutorial -->
+            <button onclick="openTutorial()"
+                    style="position: absolute; top: 15px; left: 170px;
+                           display: flex; align-items: center; gap: 8px;
+                           color: rgba(255,255,255,0.8); font-size: 0.9rem;
+                           padding: 8px 16px; background: rgba(16, 185, 129, 0.2);
+                           border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.4);
+                           cursor: pointer; transition: all 0.3s;"
+                    onmouseover="this.style.background='rgba(16, 185, 129, 0.4)'; this.style.color='white';"
+                    onmouseout="this.style.background='rgba(16, 185, 129, 0.2)'; this.style.color='rgba(255,255,255,0.8)';"
+                    aria-label="Abrir tutorial da plataforma">
+                📖 Tutorial
+            </button>
+
             <h1>HYDRO NETWORK</h1>
             <p>Motor de Cálculo Hidráulico para Redes de Saneamento</p>
             <span class="version-badge">v3.0 - Plataforma Unificada</span>
@@ -22067,6 +22095,529 @@ Dados exportados:
                 });
             }
         });
+
+        // =====================================================
+        // TUTORIAL SYSTEM
+        // =====================================================
+
+        function openTutorial() {
+            document.getElementById('tutorial-modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeTutorial() {
+            document.getElementById('tutorial-modal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function showTutorialSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.tutorial-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tutorial-nav-item').forEach(n => n.classList.remove('active'));
+
+            // Show selected section
+            document.getElementById('tutorial-' + sectionId).classList.add('active');
+            document.querySelector('[data-section="' + sectionId + '"]').classList.add('active');
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeTutorial();
+            }
+        });
     </script>
+
+    <!-- TUTORIAL MODAL -->
+    <div id="tutorial-modal" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.8);
+        backdrop-filter: blur(5px);
+        z-index: 10000;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    ">
+        <div style="
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 20px;
+            max-width: 1200px;
+            width: 100%;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+        ">
+            <!-- Tutorial Header -->
+            <div style="
+                background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+                padding: 24px 32px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            ">
+                <div>
+                    <h2 id="tutorial-title" style="color: white; margin: 0; font-size: 1.5rem; font-weight: 700;">
+                        📖 Tutorial da Plataforma HydroNetwork
+                    </h2>
+                    <p style="color: rgba(255,255,255,0.7); margin: 8px 0 0 0; font-size: 0.95rem;">
+                        Guia completo de cada módulo e funcionalidade
+                    </p>
+                </div>
+                <button onclick="closeTutorial()" aria-label="Fechar tutorial" style="
+                    background: rgba(255,255,255,0.1);
+                    border: 1px solid rgba(255,255,255,0.2);
+                    color: white;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    font-size: 1.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.3s;
+                " onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">×</button>
+            </div>
+
+            <!-- Tutorial Content -->
+            <div style="display: flex; flex: 1; overflow: hidden;">
+                <!-- Navigation Sidebar -->
+                <nav style="
+                    width: 280px;
+                    background: #f1f5f9;
+                    padding: 20px;
+                    overflow-y: auto;
+                    border-right: 1px solid #e2e8f0;
+                " aria-label="Navegação do tutorial">
+                    <div class="tutorial-nav-item active" data-section="overview" onclick="showTutorialSection('overview')" style="
+                        padding: 14px 18px;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        margin-bottom: 8px;
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        font-weight: 500;
+                        transition: all 0.2s;
+                        background: white;
+                        color: #0f172a;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                    ">🏠 Visão Geral</div>
+                    <div class="tutorial-nav-item" data-section="import" onclick="showTutorialSection('import')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">📂 Importar Topografia</div>
+                    <div class="tutorial-nav-item" data-section="sewer" onclick="showTutorialSection('sewer')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">📍 Esgoto</div>
+                    <div class="tutorial-nav-item" data-section="water" onclick="showTutorialSection('water')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">💧 Água</div>
+                    <div class="tutorial-nav-item" data-section="drainage" onclick="showTutorialSection('drainage')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">🌧️ Drenagem</div>
+                    <div class="tutorial-nav-item" data-section="quantities" onclick="showTutorialSection('quantities')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">🏗️ Quantitativos</div>
+                    <div class="tutorial-nav-item" data-section="planning" onclick="showTutorialSection('planning')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">📅 Planejamento</div>
+                    <div class="tutorial-nav-item" data-section="epanet" onclick="showTutorialSection('epanet')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">💧 EPANET</div>
+                    <div class="tutorial-nav-item" data-section="swmm" onclick="showTutorialSection('swmm')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">🌧️ SWMM</div>
+                    <div class="tutorial-nav-item" data-section="openproject" onclick="showTutorialSection('openproject')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">📋 OpenProject</div>
+                    <div class="tutorial-nav-item" data-section="qgis" onclick="showTutorialSection('qgis')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">🗺️ QGIS</div>
+                    <div class="tutorial-nav-item" data-section="rdo" onclick="showTutorialSection('rdo')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">📋 RDO</div>
+                </nav>
+
+                <!-- Content Area -->
+                <div style="flex: 1; padding: 32px; overflow-y: auto;">
+                    <!-- Overview Section -->
+                    <div id="tutorial-overview" class="tutorial-section active">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">🏠 Bem-vindo ao HydroNetwork</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px; font-size: 1.05rem;">
+                            O HydroNetwork é uma plataforma completa para projetos de redes de saneamento.
+                            Integra dimensionamento hidráulico, orçamentação, planejamento de obra e documentação em um único ambiente.
+                        </p>
+
+                        <div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); padding: 24px; border-radius: 16px; margin-bottom: 24px; border-left: 4px solid #3b82f6;">
+                            <h4 style="color: #1e40af; margin: 0 0 12px 0;">🚀 Fluxo de Trabalho Recomendado</h4>
+                            <ol style="color: #1e3a5a; line-height: 2; margin: 0; padding-left: 20px;">
+                                <li><strong>Importar Topografia</strong> - Carregue seus dados (CAD, GIS, CSV)</li>
+                                <li><strong>Configurar Rede</strong> - Defina PVs, trechos e parâmetros</li>
+                                <li><strong>Calcular</strong> - Execute o dimensionamento hidráulico</li>
+                                <li><strong>Quantitativos</strong> - Gere volumes e custos automaticamente</li>
+                                <li><strong>Planejamento</strong> - Crie cronograma e Gantt</li>
+                                <li><strong>Exportar</strong> - Relatórios, EPANET, SWMM, QGIS</li>
+                            </ol>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                            <div style="background: #f0fdf4; padding: 20px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 2rem; margin-bottom: 8px;">⚡</div>
+                                <div style="font-weight: 600; color: #166534;">87% mais rápido</div>
+                                <div style="font-size: 0.85rem; color: #15803d;">que planilhas manuais</div>
+                            </div>
+                            <div style="background: #fef3c7; padding: 20px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 2rem; margin-bottom: 8px;">✅</div>
+                                <div style="font-weight: 600; color: #92400e;">NBR 9649</div>
+                                <div style="font-size: 0.85rem; color: #a16207;">conformidade automática</div>
+                            </div>
+                            <div style="background: #ede9fe; padding: 20px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 2rem; margin-bottom: 8px;">🔄</div>
+                                <div style="font-weight: 600; color: #5b21b6;">Integração total</div>
+                                <div style="font-size: 0.85rem; color: #6d28d9;">entre todos os módulos</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Import Section -->
+                    <div id="tutorial-import" class="tutorial-section" style="display: none;">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">📂 Importar Topografia</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px;">
+                            Este módulo permite importar dados topográficos de diversas fontes para iniciar seu projeto.
+                        </p>
+
+                        <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4 style="color: #0f172a; margin: 0 0 16px 0;">📁 Formatos Suportados</h4>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                                <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <strong style="color: #0ea5e9;">Topografia</strong>
+                                    <p style="margin: 8px 0 0 0; color: #64748b; font-size: 0.9rem;">CSV, TXT com coordenadas X, Y, Z</p>
+                                </div>
+                                <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <strong style="color: #0ea5e9;">CAD</strong>
+                                    <p style="margin: 8px 0 0 0; color: #64748b; font-size: 0.9rem;">DWG, DXF com layers identificados</p>
+                                </div>
+                                <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <strong style="color: #0ea5e9;">GIS</strong>
+                                    <p style="margin: 8px 0 0 0; color: #64748b; font-size: 0.9rem;">Shapefile, GeoJSON, KML</p>
+                                </div>
+                                <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <strong style="color: #0ea5e9;">BIM</strong>
+                                    <p style="margin: 8px 0 0 0; color: #64748b; font-size: 0.9rem;">IFC para modelos 3D</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="background: #fef3c7; padding: 20px; border-radius: 12px; border-left: 4px solid #f59e0b;">
+                            <h4 style="color: #92400e; margin: 0 0 8px 0;">💡 Dica</h4>
+                            <p style="color: #a16207; margin: 0; line-height: 1.7;">
+                                Para CSV/TXT, certifique-se de que as colunas estejam na ordem: <code style="background: #fef9c3; padding: 2px 6px; border-radius: 4px;">Ponto, X, Y, Z</code>
+                                ou configure o mapeamento de colunas após a importação.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Sewer Section -->
+                    <div id="tutorial-sewer" class="tutorial-section" style="display: none;">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">📍 Rede de Esgoto</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px;">
+                            Dimensionamento completo de redes coletoras de esgoto conforme NBR 9649.
+                        </p>
+
+                        <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4 style="color: #0f172a; margin: 0 0 16px 0;">⚙️ Funcionalidades</h4>
+                            <ul style="color: #64748b; line-height: 2; padding-left: 20px;">
+                                <li><strong>Cadastro de PVs</strong> - Poços de visita com cotas de tampa e fundo</li>
+                                <li><strong>Definição de Trechos</strong> - Conexões entre PVs com extensão automática</li>
+                                <li><strong>Cálculo Hidráulico</strong> - Manning, verificação de velocidades e tensão trativa</li>
+                                <li><strong>Otimização</strong> - Sugestão automática de diâmetros e declividades</li>
+                                <li><strong>Verificação NBR</strong> - Alertas de não-conformidade em tempo real</li>
+                            </ul>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                            <div style="background: #ecfdf5; padding: 20px; border-radius: 12px;">
+                                <h5 style="color: #166534; margin: 0 0 12px 0;">✅ Verificações Automáticas</h5>
+                                <ul style="color: #15803d; font-size: 0.9rem; line-height: 1.8; padding-left: 16px; margin: 0;">
+                                    <li>Velocidade mínima: 0,60 m/s</li>
+                                    <li>Velocidade máxima: 5,0 m/s</li>
+                                    <li>Tensão trativa: ≥ 1,0 Pa</li>
+                                    <li>Lâmina máxima: 75% do diâmetro</li>
+                                </ul>
+                            </div>
+                            <div style="background: #eff6ff; padding: 20px; border-radius: 12px;">
+                                <h5 style="color: #1e40af; margin: 0 0 12px 0;">📊 Resultados Gerados</h5>
+                                <ul style="color: #1e3a5a; font-size: 0.9rem; line-height: 1.8; padding-left: 16px; margin: 0;">
+                                    <li>Planilha de dimensionamento</li>
+                                    <li>Perfil longitudinal</li>
+                                    <li>Quantitativos de escavação</li>
+                                    <li>Relatório técnico PDF</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Water Section -->
+                    <div id="tutorial-water" class="tutorial-section" style="display: none;">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">💧 Rede de Água</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px;">
+                            Dimensionamento de redes de distribuição de água conforme NBR 12218.
+                        </p>
+
+                        <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4 style="color: #0f172a; margin: 0 0 16px 0;">⚙️ Funcionalidades</h4>
+                            <ul style="color: #64748b; line-height: 2; padding-left: 20px;">
+                                <li><strong>Cadastro de Nós</strong> - Pontos de consumo e interseções</li>
+                                <li><strong>Tubulações</strong> - Definição de materiais e diâmetros</li>
+                                <li><strong>Cálculo de Perdas</strong> - Hazen-Williams e Darcy-Weisbach</li>
+                                <li><strong>Pressões</strong> - Verificação de pressões mínimas e máximas</li>
+                                <li><strong>Reservatórios</strong> - Dimensionamento de volumes</li>
+                            </ul>
+                        </div>
+
+                        <div style="background: #e0f2fe; padding: 20px; border-radius: 12px; border-left: 4px solid #0ea5e9;">
+                            <h4 style="color: #0369a1; margin: 0 0 8px 0;">🔗 Integração EPANET</h4>
+                            <p style="color: #0c4a6e; margin: 0; line-height: 1.7;">
+                                Os dados da rede podem ser exportados diretamente para o formato EPANET (.inp)
+                                para simulações hidráulicas avançadas e análises de cenários.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Drainage Section -->
+                    <div id="tutorial-drainage" class="tutorial-section" style="display: none;">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">🌧️ Drenagem Pluvial</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px;">
+                            Dimensionamento de sistemas de drenagem urbana pelo método racional.
+                        </p>
+
+                        <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4 style="color: #0f172a; margin: 0 0 16px 0;">⚙️ Funcionalidades</h4>
+                            <ul style="color: #64748b; line-height: 2; padding-left: 20px;">
+                                <li><strong>Bacias de Contribuição</strong> - Delimitação automática ou manual</li>
+                                <li><strong>Intensidade de Chuva</strong> - Equações IDF regionais</li>
+                                <li><strong>Coeficientes de Runoff</strong> - Por tipo de ocupação do solo</li>
+                                <li><strong>Tempo de Concentração</strong> - Métodos Kirpich, SCS, etc.</li>
+                                <li><strong>Galerias e Bocas de Lobo</strong> - Dimensionamento completo</li>
+                            </ul>
+                        </div>
+
+                        <div style="background: #fef3c7; padding: 20px; border-radius: 12px; border-left: 4px solid #f59e0b;">
+                            <h4 style="color: #92400e; margin: 0 0 8px 0;">🔗 Integração SWMM</h4>
+                            <p style="color: #a16207; margin: 0; line-height: 1.7;">
+                                Exporte para o EPA SWMM para simulações de propagação de cheias,
+                                análise de reservatórios de detenção e qualidade da água.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Quantities Section -->
+                    <div id="tutorial-quantities" class="tutorial-section" style="display: none;">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">🏗️ Quantitativos e Orçamento</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px;">
+                            Geração automática de quantitativos e orçamento baseado em tabelas oficiais.
+                        </p>
+
+                        <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4 style="color: #0f172a; margin: 0 0 16px 0;">📊 Quantitativos Calculados</h4>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">📏 Volume de escavação (m³)</div>
+                                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">🏗️ Volume de reaterro (m³)</div>
+                                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">🔩 Tubulações por diâmetro (m)</div>
+                                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">🕳️ Poços de visita (un)</div>
+                                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">🧱 Escoramento (m²)</div>
+                                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">🛤️ Berço e envoltória (m³)</div>
+                            </div>
+                        </div>
+
+                        <div style="background: #ecfdf5; padding: 20px; border-radius: 12px; border-left: 4px solid #10b981;">
+                            <h4 style="color: #166534; margin: 0 0 8px 0;">💰 Tabelas de Preço Integradas</h4>
+                            <p style="color: #15803d; margin: 0; line-height: 1.7;">
+                                <strong>SINAPI</strong> (Caixa Econômica) • <strong>SICRO</strong> (DNIT) • <strong>SEINFRA</strong> (estaduais)<br>
+                                BDI configurável e composições de preços unitários automáticas.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Planning Section -->
+                    <div id="tutorial-planning" class="tutorial-section" style="display: none;">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">📅 Planejamento de Obra</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px;">
+                            Cronograma automático com gráfico de Gantt interativo baseado nos quantitativos.
+                        </p>
+
+                        <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4 style="color: #0f172a; margin: 0 0 16px 0;">⚙️ Funcionalidades</h4>
+                            <ul style="color: #64748b; line-height: 2; padding-left: 20px;">
+                                <li><strong>Cronograma por Trecho</strong> - Sequenciamento automático</li>
+                                <li><strong>Produtividades SINAPI</strong> - Durações calculadas automaticamente</li>
+                                <li><strong>Gráfico de Gantt</strong> - Visualização interativa com dependências</li>
+                                <li><strong>Caminho Crítico</strong> - Identificação automática</li>
+                                <li><strong>Curva S</strong> - Avanço físico-financeiro planejado vs realizado</li>
+                                <li><strong>Histograma</strong> - Recursos por período</li>
+                            </ul>
+                        </div>
+
+                        <div style="background: #ede9fe; padding: 20px; border-radius: 12px; border-left: 4px solid #8b5cf6;">
+                            <h4 style="color: #5b21b6; margin: 0 0 8px 0;">🔗 Integração OpenProject</h4>
+                            <p style="color: #6d28d9; margin: 0; line-height: 1.7;">
+                                Exporte o cronograma para OpenProject e gerencie sua obra com
+                                uma ferramenta profissional de gestão de projetos.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- EPANET Section -->
+                    <div id="tutorial-epanet" class="tutorial-section" style="display: none;">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">💧 Exportação EPANET</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px;">
+                            Exporte sua rede de água para simulação no EPA EPANET.
+                        </p>
+
+                        <div style="background: #e0f2fe; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4 style="color: #0369a1; margin: 0 0 16px 0;">📤 O que é exportado</h4>
+                            <ul style="color: #0c4a6e; line-height: 2; padding-left: 20px;">
+                                <li>Nós com elevação e demanda</li>
+                                <li>Tubulações com comprimento, diâmetro e rugosidade</li>
+                                <li>Reservatórios e tanques</li>
+                                <li>Bombas e válvulas</li>
+                                <li>Padrões de consumo</li>
+                            </ul>
+                        </div>
+
+                        <div style="background: #f1f5f9; padding: 20px; border-radius: 12px;">
+                            <h4 style="color: #334155; margin: 0 0 8px 0;">📁 Formato de Saída</h4>
+                            <p style="color: #64748b; margin: 0;">
+                                Arquivo <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 4px;">.inp</code>
+                                compatível com EPANET 2.0 e 2.2
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- SWMM Section -->
+                    <div id="tutorial-swmm" class="tutorial-section" style="display: none;">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">🌧️ Exportação SWMM</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px;">
+                            Exporte sua rede de drenagem para simulação no EPA SWMM.
+                        </p>
+
+                        <div style="background: #fef3c7; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4 style="color: #92400e; margin: 0 0 16px 0;">📤 O que é exportado</h4>
+                            <ul style="color: #a16207; line-height: 2; padding-left: 20px;">
+                                <li>Sub-bacias com área, largura e declividade</li>
+                                <li>Nós (junctions) com elevação</li>
+                                <li>Condutos com geometria e rugosidade</li>
+                                <li>Outfalls (exutórios)</li>
+                                <li>Dados de precipitação</li>
+                            </ul>
+                        </div>
+
+                        <div style="background: #f1f5f9; padding: 20px; border-radius: 12px;">
+                            <h4 style="color: #334155; margin: 0 0 8px 0;">📁 Formato de Saída</h4>
+                            <p style="color: #64748b; margin: 0;">
+                                Arquivo <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 4px;">.inp</code>
+                                compatível com EPA SWMM 5.1 e 5.2
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- OpenProject Section -->
+                    <div id="tutorial-openproject" class="tutorial-section" style="display: none;">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">📋 Integração OpenProject</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px;">
+                            Gerencie sua obra com uma plataforma profissional de gestão de projetos.
+                        </p>
+
+                        <div style="background: #ede9fe; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4 style="color: #5b21b6; margin: 0 0 16px 0;">🔗 Funcionalidades de Integração</h4>
+                            <ul style="color: #6d28d9; line-height: 2; padding-left: 20px;">
+                                <li>Exportação de work packages por trecho</li>
+                                <li>Hierarquia de tarefas preservada</li>
+                                <li>Datas de início e fim calculadas</li>
+                                <li>Dependências entre tarefas</li>
+                                <li>Atribuição de recursos</li>
+                            </ul>
+                        </div>
+
+                        <div style="background: #f1f5f9; padding: 20px; border-radius: 12px;">
+                            <h4 style="color: #334155; margin: 0 0 8px 0;">📁 Formato de Saída</h4>
+                            <p style="color: #64748b; margin: 0;">
+                                CSV compatível com importação do OpenProject ou arquivo XML para MS Project
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- QGIS Section -->
+                    <div id="tutorial-qgis" class="tutorial-section" style="display: none;">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">🗺️ Exportação QGIS</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px;">
+                            Exporte sua rede para visualização e análise espacial no QGIS.
+                        </p>
+
+                        <div style="background: #ecfdf5; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4 style="color: #166534; margin: 0 0 16px 0;">📤 Camadas Exportadas</h4>
+                            <ul style="color: #15803d; line-height: 2; padding-left: 20px;">
+                                <li><strong>Pontos (PVs/Nós)</strong> - Com todos os atributos calculados</li>
+                                <li><strong>Linhas (Trechos)</strong> - Com diâmetro, material, vazão, etc.</li>
+                                <li><strong>Polígonos</strong> - Bacias de contribuição (drenagem)</li>
+                                <li><strong>Simbologia</strong> - Estilos pré-configurados (.qml)</li>
+                            </ul>
+                        </div>
+
+                        <div style="background: #f1f5f9; padding: 20px; border-radius: 12px;">
+                            <h4 style="color: #334155; margin: 0 0 8px 0;">📁 Formatos de Saída</h4>
+                            <p style="color: #64748b; margin: 0;">
+                                <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 4px;">GeoJSON</code>
+                                <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 4px; margin-left: 8px;">Shapefile</code>
+                                <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 4px; margin-left: 8px;">GeoPackage</code>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- RDO Section -->
+                    <div id="tutorial-rdo" class="tutorial-section" style="display: none;">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">📋 RDO - Relatório Diário de Obra</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px;">
+                            Documente o avanço da obra com rastreabilidade total vinculada ao projeto.
+                        </p>
+
+                        <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4 style="color: #0f172a; margin: 0 0 16px 0;">📝 Informações Registradas</h4>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">🗓️ Data e condições climáticas</div>
+                                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">👷 Mão de obra por categoria</div>
+                                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">🚜 Equipamentos utilizados</div>
+                                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">📍 Avanço por trecho</div>
+                                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">⚠️ Ocorrências e impedimentos</div>
+                                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">📸 Registro fotográfico</div>
+                            </div>
+                        </div>
+
+                        <div style="background: #fef3c7; padding: 20px; border-radius: 12px; border-left: 4px solid #f59e0b;">
+                            <h4 style="color: #92400e; margin: 0 0 8px 0;">💡 Rastreabilidade</h4>
+                            <p style="color: #a16207; margin: 0; line-height: 1.7;">
+                                Cada registro de avanço é vinculado ao trecho do projeto, permitindo
+                                comparação automática entre planejado e executado na Curva S.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Tutorial Navigation Styles */
+        .tutorial-nav-item:hover {
+            background: rgba(255,255,255,0.7) !important;
+            color: #0f172a !important;
+        }
+        .tutorial-nav-item.active {
+            background: white !important;
+            color: #0f172a !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+        }
+        .tutorial-section {
+            display: none;
+        }
+        .tutorial-section.active {
+            display: block !important;
+        }
+
+        /* Responsive Tutorial */
+        @media (max-width: 768px) {
+            #tutorial-modal > div {
+                flex-direction: column !important;
+            }
+            #tutorial-modal nav {
+                width: 100% !important;
+                max-height: 200px !important;
+                border-right: none !important;
+                border-bottom: 1px solid #e2e8f0 !important;
+            }
+        }
+    </style>
 </body>
 </html>
