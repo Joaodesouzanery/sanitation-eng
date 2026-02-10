@@ -7,7 +7,8 @@
 
     <!-- SECURITY HEADERS - Maximum Protection -->
     <!-- Content Security Policy - Restricts resource loading -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' https:; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests;">
+    <!-- NOTE: 'unsafe-inline' is required for inline scripts - consider migrating to external JS files with nonces -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; img-src 'self' blob: https:; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' https:; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'; worker-src 'self' blob:; child-src 'self'; manifest-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
 
     <!-- Prevent MIME type sniffing -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
@@ -5620,31 +5621,92 @@ PV02,359290.456,7352780.123,1.82</pre>
                 return true;
             },
 
-            // Validate file type by magic bytes
+            // Validate file type by magic bytes and content analysis
             async validateFileType(file, allowedTypes) {
-                const header = await this.readFileHeader(file, 8);
+                const header = await this.readFileHeader(file, 16);
                 const signatures = {
-                    'json': [0x7B, 0x22], // {"
-                    'csv': null, // Text-based
-                    'txt': null, // Text-based
-                    'dxf': null, // Text-based
+                    'json': [0x7B], // {
+                    'csv': null, // Text-based - validate content
+                    'txt': null, // Text-based - validate content
+                    'dxf': null, // Text-based - validate DXF header
                     'geojson': [0x7B], // {
                     'xlsx': [0x50, 0x4B, 0x03, 0x04], // PK ZIP
-                    'zip': [0x50, 0x4B, 0x03, 0x04]
+                    'zip': [0x50, 0x4B, 0x03, 0x04],
+                    'shp': [0x00, 0x00, 0x27, 0x0A], // Shapefile magic
+                    'kml': null, // XML-based
+                    'xml': [0x3C, 0x3F, 0x78, 0x6D, 0x6C] // <?xml
                 };
 
                 const ext = file.name.split('.').pop().toLowerCase();
                 if (!allowedTypes.includes(ext)) return false;
 
-                // For text-based files, just check extension
-                if (!signatures[ext]) return true;
+                // File size limits by type (in bytes)
+                const sizeLimits = {
+                    'json': 100 * 1024 * 1024, // 100MB
+                    'csv': 50 * 1024 * 1024,   // 50MB
+                    'txt': 50 * 1024 * 1024,   // 50MB
+                    'dxf': 200 * 1024 * 1024,  // 200MB
+                    'geojson': 100 * 1024 * 1024, // 100MB
+                    'xlsx': 50 * 1024 * 1024,  // 50MB
+                    'zip': 200 * 1024 * 1024,  // 200MB
+                    'shp': 200 * 1024 * 1024,  // 200MB
+                    'kml': 50 * 1024 * 1024,   // 50MB
+                    'xml': 50 * 1024 * 1024    // 50MB
+                };
+
+                // Check file size limit
+                const maxSize = sizeLimits[ext] || 50 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    console.warn(`File exceeds size limit for ${ext}: ${file.size} > ${maxSize}`);
+                    return false;
+                }
+
+                // For text-based files, validate content structure
+                if (!signatures[ext]) {
+                    return await this.validateTextFileContent(file, ext);
+                }
 
                 // Validate magic bytes
                 const sig = signatures[ext];
-                for (let i = 0; i < sig.length; i++) {
-                    if (header[i] !== sig[i]) return false;
+                if (sig) {
+                    for (let i = 0; i < sig.length; i++) {
+                        if (header[i] !== sig[i]) return false;
+                    }
                 }
                 return true;
+            },
+
+            // Validate text file content for specific formats
+            async validateTextFileContent(file, ext) {
+                try {
+                    // Read first 1KB for validation
+                    const sample = await file.slice(0, 1024).text();
+
+                    switch (ext) {
+                        case 'csv':
+                            // CSV should have printable characters and common delimiters
+                            return /^[\x20-\x7E\t\r\n,;|]+$/.test(sample) &&
+                                   (sample.includes(',') || sample.includes(';') || sample.includes('\t'));
+
+                        case 'txt':
+                            // TXT should be mostly printable ASCII or UTF-8
+                            return /^[\x20-\x7E\t\r\n\xA0-\xFF]+$/.test(sample.slice(0, 200));
+
+                        case 'dxf':
+                            // DXF files start with specific patterns
+                            const dxfStart = sample.trim().substring(0, 50);
+                            return dxfStart.includes('0') && (dxfStart.includes('SECTION') || dxfStart.includes('EOF'));
+
+                        case 'kml':
+                            // KML is XML with specific tags
+                            return sample.includes('<?xml') || sample.includes('<kml') || sample.includes('<Document');
+
+                        default:
+                            return true;
+                    }
+                } catch {
+                    return false;
+                }
             },
 
             // Read file header bytes
@@ -5723,28 +5785,91 @@ PV02,359290.456,7352780.123,1.82</pre>
                 return true;
             },
 
-            // Secure storage with encoding
+            // Secure storage with AES-GCM encryption using Web Crypto API
             secureStorage: {
-                set(key, value) {
+                // Generate or retrieve encryption key
+                async _getKey() {
+                    const storedKey = sessionStorage.getItem('hydro_enc_key');
+                    if (storedKey) {
+                        const keyData = Uint8Array.from(atob(storedKey), c => c.charCodeAt(0));
+                        return await crypto.subtle.importKey('raw', keyData, 'AES-GCM', false, ['encrypt', 'decrypt']);
+                    }
+
+                    // Generate new key
+                    const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+                    const exportedKey = await crypto.subtle.exportKey('raw', key);
+                    sessionStorage.setItem('hydro_enc_key', btoa(String.fromCharCode(...new Uint8Array(exportedKey))));
+                    return key;
+                },
+
+                async set(key, value) {
+                    try {
+                        const encKey = await this._getKey();
+                        const iv = crypto.getRandomValues(new Uint8Array(12));
+                        const data = new TextEncoder().encode(JSON.stringify(value));
+
+                        const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, encKey, data);
+
+                        // Store IV + encrypted data as base64
+                        const combined = new Uint8Array(iv.length + encrypted.byteLength);
+                        combined.set(iv);
+                        combined.set(new Uint8Array(encrypted), iv.length);
+
+                        localStorage.setItem(`hydro_${key}`, btoa(String.fromCharCode(...combined)));
+                        return true;
+                    } catch (e) {
+                        console.warn('SecureStorage: Encryption failed, using fallback', e);
+                        // Fallback to encoded storage if crypto fails
+                        try {
+                            const encoded = btoa(encodeURIComponent(JSON.stringify(value)));
+                            localStorage.setItem(`hydro_${key}`, encoded);
+                            return true;
+                        } catch { return false; }
+                    }
+                },
+
+                async get(key, defaultValue = null) {
+                    try {
+                        const stored = localStorage.getItem(`hydro_${key}`);
+                        if (!stored) return defaultValue;
+
+                        const encKey = await this._getKey();
+                        const combined = Uint8Array.from(atob(stored), c => c.charCodeAt(0));
+
+                        const iv = combined.slice(0, 12);
+                        const encrypted = combined.slice(12);
+
+                        const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, encKey, encrypted);
+                        return JSON.parse(new TextDecoder().decode(decrypted));
+                    } catch {
+                        // Try fallback decode (for backwards compatibility)
+                        try {
+                            const encoded = localStorage.getItem(`hydro_${key}`);
+                            if (!encoded) return defaultValue;
+                            return JSON.parse(decodeURIComponent(atob(encoded)));
+                        } catch { return defaultValue; }
+                    }
+                },
+
+                remove(key) {
+                    localStorage.removeItem(`hydro_${key}`);
+                },
+
+                // Synchronous versions for backwards compatibility (less secure)
+                setSync(key, value) {
                     try {
                         const encoded = btoa(encodeURIComponent(JSON.stringify(value)));
                         localStorage.setItem(`hydro_${key}`, encoded);
                         return true;
-                    } catch {
-                        return false;
-                    }
+                    } catch { return false; }
                 },
-                get(key, defaultValue = null) {
+
+                getSync(key, defaultValue = null) {
                     try {
                         const encoded = localStorage.getItem(`hydro_${key}`);
                         if (!encoded) return defaultValue;
                         return JSON.parse(decodeURIComponent(atob(encoded)));
-                    } catch {
-                        return defaultValue;
-                    }
-                },
-                remove(key) {
-                    localStorage.removeItem(`hydro_${key}`);
+                    } catch { return defaultValue; }
                 }
             },
 
@@ -6822,26 +6947,33 @@ PV02,359290.456,7352780.123,1.82</pre>
                 filtered = filtered.filter(e => e.type === typeFilter);
             }
 
-            // Build table rows
+            // Build table rows - SECURITY: All user data escaped to prevent XSS
             let html = '';
             filtered.forEach(entity => {
                 const isSelected = selectedCADEntities.has(entity.id);
                 const typeIcon = getEntityTypeIcon(entity.type);
                 const zValue = entity.z !== null && !isNaN(entity.z) ? entity.z.toFixed(3) : '-';
-                const info = entity.text || entity.blockName || (entity.radius ? `r=${entity.radius.toFixed(2)}` : '');
+                const rawInfo = entity.text || entity.blockName || (entity.radius ? `r=${entity.radius.toFixed(2)}` : '');
+
+                // SECURITY: Escape all user-controlled data from CAD files
+                const safeType = SecurityUtils.escapeHtml(entity.type);
+                const safeLayer = SecurityUtils.escapeHtml(entity.layer);
+                const safeInfo = SecurityUtils.escapeHtml(rawInfo);
+                const safeInfoAttr = SecurityUtils.escapeAttr(rawInfo);
+                const entityId = SecurityUtils.sanitizeNumber(entity.id, 0, Number.MAX_SAFE_INTEGER, 0);
 
                 html += `
-                    <tr data-entity-id="${entity.id}" style="cursor: pointer; ${isSelected ? 'background: rgba(34, 197, 94, 0.15);' : ''}"
-                        onclick="toggleCADEntity(${entity.id})">
+                    <tr data-entity-id="${entityId}" style="cursor: pointer; ${isSelected ? 'background: rgba(34, 197, 94, 0.15);' : ''}"
+                        onclick="toggleCADEntity(${entityId})">
                         <td style="padding: 8px; border-bottom: 1px solid var(--border-color);">
                             <input type="checkbox" ${isSelected ? 'checked' : ''}
-                                onclick="event.stopPropagation(); toggleCADEntity(${entity.id})">
+                                onclick="event.stopPropagation(); toggleCADEntity(${entityId})">
                         </td>
                         <td style="padding: 8px; border-bottom: 1px solid var(--border-color);">
-                            <span title="${entity.type}">${typeIcon} ${entity.type}</span>
+                            <span title="${SecurityUtils.escapeAttr(entity.type)}">${typeIcon} ${safeType}</span>
                         </td>
                         <td style="padding: 8px; border-bottom: 1px solid var(--border-color); color: var(--accent-purple);">
-                            ${entity.layer}
+                            ${safeLayer}
                         </td>
                         <td style="padding: 8px; border-bottom: 1px solid var(--border-color); text-align: right; font-family: monospace;">
                             ${entity.x !== null && !isNaN(entity.x) ? entity.x.toFixed(3) : '-'}
@@ -6852,8 +6984,8 @@ PV02,359290.456,7352780.123,1.82</pre>
                         <td style="padding: 8px; border-bottom: 1px solid var(--border-color); text-align: right; font-family: monospace; color: ${zValue !== '-' ? 'var(--accent-green)' : 'var(--text-secondary)'};">
                             ${zValue}
                         </td>
-                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${info}">
-                            ${info || '-'}
+                        <td style="padding: 8px; border-bottom: 1px solid var(--border-color); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${safeInfoAttr}">
+                            ${safeInfo || '-'}
                         </td>
                     </tr>
                 `;
@@ -7836,7 +7968,12 @@ PV02,359290.456,7352780.123,1.82</pre>
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
-                        const geojson = JSON.parse(e.target.result);
+                        // SECURITY: Use safeJsonParse for user-provided data
+                        const geojson = SecurityUtils.safeJsonParse(e.target.result, null);
+                        if (!geojson) {
+                            reject(new Error('Invalid JSON format'));
+                            return;
+                        }
                         const layers = [];
                         const layerCounts = {};
                         const layerGeomTypes = {};
@@ -8331,7 +8468,12 @@ PV02,359290.456,7352780.123,1.82</pre>
 
                 try {
                     const content = await file.text();
-                    const config = JSON.parse(content);
+                    // SECURITY: Use safeJsonParse for user-provided config files
+                    const config = SecurityUtils.safeJsonParse(content, null);
+                    if (!config) {
+                        ToastSystem.error('Arquivo de configuração inválido');
+                        return;
+                    }
 
                     if (config.layerMapping) {
                         // Apply loaded configuration
@@ -13351,7 +13493,12 @@ DATA;
         async function loadPlanningGISFile(file, fileName) {
             if (fileName.endsWith('.geojson') || fileName.endsWith('.json')) {
                 const text = await file.text();
-                const geojson = JSON.parse(text);
+                // SECURITY: Use safeJsonParse for user-provided GeoJSON
+                const geojson = SecurityUtils.safeJsonParse(text, null);
+                if (!geojson) {
+                    ToastSystem.error('Arquivo GeoJSON inválido');
+                    return;
+                }
                 const features = geojson.features || [geojson];
 
                 importedGISData = features;
@@ -15819,12 +15966,17 @@ DATA;
                 let data;
 
                 if (file.name.endsWith('.json')) {
-                    data = JSON.parse(content);
+                    // SECURITY: Use safeJsonParse for user-provided project files
+                    data = SecurityUtils.safeJsonParse(content, null);
+                    if (!data) {
+                        ToastSystem.error('Arquivo de projeto inválido');
+                        return;
+                    }
                 } else if (file.name.endsWith('.xml')) {
                     data = parseProjectXML(content);
                 }
 
-                if (data.tasks) {
+                if (data && data.tasks) {
                     moduleData.openproject.tasks = data.tasks;
                     populateOpenProjectTasks(data.tasks);
                 }
@@ -15975,9 +16127,10 @@ DATA;
 
             try {
                 const content = await readFileAsText(file);
-                const geojson = JSON.parse(content);
+                // SECURITY: Use safeJsonParse for user-provided network data
+                const geojson = SecurityUtils.safeJsonParse(content, null);
 
-                if (!SecurityUtils.validateGeoJSON(geojson)) {
+                if (!geojson || !SecurityUtils.validateGeoJSON(geojson)) {
                     throw new Error('Arquivo GeoJSON inválido');
                 }
 
@@ -19364,16 +19517,43 @@ DATA;
                     return;
                 }
 
-                let htmlContent = '<!DOCTYPE html><html><head><title>Gráfico de Gantt</title>';
-                htmlContent += '<meta charset="UTF-8">';
-                htmlContent += '<style>body { margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #1e293b; color: white; } img { max-width: 100%; } h1 { margin-bottom: 20px; }</style>';
-                htmlContent += '</head><body>';
-                htmlContent += '<h1>Gráfico de Gantt - ' + safeProjectName + '</h1>';
-                htmlContent += '<p style="color: #94a3b8; margin-bottom: 20px;">Exportado em: ' + new Date().toLocaleString('pt-BR') + '</p>';
-                htmlContent += '<img src="' + dataUrl + '" alt="Gantt Chart">';
-                htmlContent += '</body></html>';
-                printWindow.document.write(htmlContent);
-                printWindow.document.close();
+                // SECURITY: Use DOM manipulation instead of document.write()
+                const doc = printWindow.document;
+                doc.open();
+
+                // Build document using DOM methods for better security
+                const doctype = doc.implementation.createDocumentType('html', '', '');
+                doc.doctype?.parentNode?.replaceChild(doctype, doc.doctype);
+
+                // Set document content safely
+                doc.head.innerHTML = `
+                    <meta charset="UTF-8">
+                    <title>Gráfico de Gantt</title>
+                    <style>
+                        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #1e293b; color: white; }
+                        img { max-width: 100%; }
+                        h1 { margin-bottom: 20px; }
+                    </style>
+                `;
+
+                // Create body content with escaped data
+                const h1 = doc.createElement('h1');
+                h1.textContent = 'Gráfico de Gantt - ' + projectName; // textContent is safe
+
+                const p = doc.createElement('p');
+                p.style.cssText = 'color: #94a3b8; margin-bottom: 20px;';
+                p.textContent = 'Exportado em: ' + new Date().toLocaleString('pt-BR');
+
+                const img = doc.createElement('img');
+                img.src = dataUrl;
+                img.alt = 'Gantt Chart';
+
+                doc.body.appendChild(h1);
+                doc.body.appendChild(p);
+                doc.body.appendChild(img);
+                doc.body.style.cssText = 'margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #1e293b; color: white;';
+
+                doc.close();
                 printWindow.onload = function() { printWindow.print(); };
 
                 LoadingSystem.hide();
@@ -21007,7 +21187,9 @@ Dados exportados:
             try {
                 const stored = localStorage.getItem('rdoData');
                 if (stored) {
-                    rdoData.rdos = JSON.parse(stored);
+                    // SECURITY: Use safeJsonParse for stored data
+                    const parsed = SecurityUtils.safeJsonParse(stored, []);
+                    rdoData.rdos = Array.isArray(parsed) ? parsed : [];
                 }
             } catch (e) {
                 console.warn('Could not load from localStorage', e);
@@ -21713,20 +21895,36 @@ Dados exportados:
 
                 doc.save(`RDO_${rdo.date}_${rdo.id}.pdf`);
             } else {
-                // Fallback: create printable HTML
-                const printWindow = window.open('', '_blank');
-                printWindow.document.write(pdfContent);
-                printWindow.document.close();
-                printWindow.print();
+                // Fallback: create printable HTML using Blob URL (safer than document.write)
+                const printWindow = window.open('', '_blank', 'noopener,noreferrer');
+                if (!printWindow) {
+                    alert('Popup bloqueado. Permita popups para exportar.');
+                    return;
+                }
+
+                // SECURITY: Use Blob URL instead of document.write
+                const blob = new Blob([pdfContent], { type: 'text/html; charset=utf-8' });
+                const blobUrl = URL.createObjectURL(blob);
+                printWindow.location.href = blobUrl;
+
+                // Clean up blob URL after print
+                printWindow.onload = function() {
+                    printWindow.print();
+                    URL.revokeObjectURL(blobUrl);
+                };
             }
         }
 
         function generateRDOPDFContent(rdo) {
+            // SECURITY: Helper to escape HTML in PDF content
+            const esc = (str) => SecurityUtils.escapeHtml(str);
+            const escNum = (val) => SecurityUtils.sanitizeNumber(val, -Infinity, Infinity, 0);
+
             return `
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>RDO - ${formatDate(rdo.date)}</title>
+                    <title>RDO - ${esc(formatDate(rdo.date))}</title>
                     <style>
                         body { font-family: Arial, sans-serif; padding: 20px; }
                         h1 { text-align: center; color: #333; }
@@ -21749,31 +21947,31 @@ Dados exportados:
                         <div class="info-grid">
                             <div class="info-item">
                                 <div class="info-label">Projeto</div>
-                                <div class="info-value">${rdo.projectName}</div>
+                                <div class="info-value">${esc(rdo.projectName)}</div>
                             </div>
                             <div class="info-item">
                                 <div class="info-label">Obra</div>
-                                <div class="info-value">${rdo.obraName || '-'}</div>
+                                <div class="info-value">${esc(rdo.obraName || '-')}</div>
                             </div>
                             <div class="info-item">
                                 <div class="info-label">Data</div>
-                                <div class="info-value">${formatDate(rdo.date)}</div>
+                                <div class="info-value">${esc(formatDate(rdo.date))}</div>
                             </div>
                             <div class="info-item">
                                 <div class="info-label">Status</div>
-                                <div class="info-value">${rdo.status}</div>
+                                <div class="info-value">${esc(rdo.status)}</div>
                             </div>
                         </div>
                     </div>
 
                     <div class="section">
                         <h2>Frentes de Serviço</h2>
-                        <p>${rdo.workFronts?.map(wf => wf.name).join(', ') || '-'}</p>
+                        <p>${esc(rdo.workFronts?.map(wf => wf.name).join(', ') || '-')}</p>
                     </div>
 
                     <div class="section">
                         <h2>Locais da Obra</h2>
-                        <p>${rdo.locations?.map(l => l.name).join(', ') || '-'}</p>
+                        <p>${esc(rdo.locations?.map(l => l.name).join(', ') || '-')}</p>
                     </div>
 
                     <div class="section">
@@ -21790,10 +21988,10 @@ Dados exportados:
                             <tbody>
                                 ${rdo.services?.map(s => `
                                     <tr>
-                                        <td>${s.serviceName}</td>
-                                        <td>${s.quantity} ${s.unit}</td>
-                                        <td>${s.equipment || '-'}</td>
-                                        <td>${s.employeeName || '-'}</td>
+                                        <td>${esc(s.serviceName)}</td>
+                                        <td>${escNum(s.quantity)} ${esc(s.unit)}</td>
+                                        <td>${esc(s.equipment || '-')}</td>
+                                        <td>${esc(s.employeeName || '-')}</td>
                                     </tr>
                                 `).join('') || '<tr><td colspan="4">Nenhum serviço registrado</td></tr>'}
                             </tbody>
@@ -21815,14 +22013,17 @@ Dados exportados:
                             </thead>
                             <tbody>
                                 ${rdo.segments?.map(s => {
-                                    const total = s.executedBefore + s.executedToday;
-                                    const progress = (total / s.plannedTotal * 100).toFixed(1);
+                                    const execBefore = escNum(s.executedBefore);
+                                    const execToday = escNum(s.executedToday);
+                                    const planned = escNum(s.plannedTotal);
+                                    const total = execBefore + execToday;
+                                    const progress = planned > 0 ? (total / planned * 100).toFixed(1) : '0.0';
                                     return `
                                         <tr>
-                                            <td>${s.segmentName}</td>
-                                            <td>${s.system}</td>
-                                            <td>${s.plannedTotal}m</td>
-                                            <td>${s.executedToday}m</td>
+                                            <td>${esc(s.segmentName)}</td>
+                                            <td>${esc(s.system)}</td>
+                                            <td>${planned}m</td>
+                                            <td>${execToday}m</td>
                                             <td>${total}m</td>
                                             <td>${progress}%</td>
                                         </tr>
@@ -21835,21 +22036,21 @@ Dados exportados:
                     ${rdo.visits ? `
                         <div class="section">
                             <h2>Visitas Recebidas</h2>
-                            <p>${rdo.visits}</p>
+                            <p>${esc(rdo.visits)}</p>
                         </div>
                     ` : ''}
 
                     ${rdo.occurrences ? `
                         <div class="section">
                             <h2>Ocorrências</h2>
-                            <p>${rdo.occurrences}</p>
+                            <p>${esc(rdo.occurrences)}</p>
                         </div>
                     ` : ''}
 
                     ${rdo.notes ? `
                         <div class="section">
                             <h2>Observações Gerais</h2>
-                            <p>${rdo.notes}</p>
+                            <p>${esc(rdo.notes)}</p>
                         </div>
                     ` : ''}
 

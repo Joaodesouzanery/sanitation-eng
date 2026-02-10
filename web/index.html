@@ -6,10 +6,24 @@
     <title>ConstruData | HydroNetwork - Plataforma Completa de Engenharia de Saneamento</title>
     <meta name="description" content="ConstruData HydroNetwork - Plataforma completa para dimensionamento hidráulico, mapas interativos, planejamento de obra, orçamento SINAPI/SICRO e gestão de redes de saneamento.">
 
-    <!-- Security Headers -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-ancestors 'none';">
+    <!-- SECURITY HEADERS - Comprehensive Protection -->
+    <!-- Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' blob: https:; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests; block-all-mixed-content;">
+
+    <!-- Prevent MIME type sniffing -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
+
+    <!-- Prevent clickjacking -->
     <meta http-equiv="X-Frame-Options" content="DENY">
+
+    <!-- XSS Protection (legacy browsers) -->
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+
+    <!-- Referrer Policy -->
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+
+    <!-- Permissions Policy - Disable unnecessary features -->
+    <meta http-equiv="Permissions-Policy" content="accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
