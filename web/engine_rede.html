@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HydroNetwork - Motor de Cálculo Hidráulico</title>
+    <title>ConstruData | HydroNetwork - Motor de Cálculo Hidráulico</title>
 
     <!-- SECURITY HEADERS - Maximum Protection -->
     <!-- Content Security Policy - Restricts resource loading -->
@@ -45,23 +45,30 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
         :root {
+            /* ConstruData Brand Colors */
+            --brand-dark: #1a1f2e;
+            --brand-blue: #2c4a7c;
+            --brand-blue-light: #3d6cb9;
+            --brand-gold: #c9a227;
+            --brand-gold-light: #e8c547;
+
             /* Light Theme - Modern & Clean */
-            --bg-primary: #f8fafc;
+            --bg-primary: #f5f7fa;
             --bg-secondary: #ffffff;
             --bg-card: #f1f5f9;
             --bg-hover: #e2e8f0;
-            --text-primary: #0f172a;
-            --text-secondary: #64748b;
+            --text-primary: #1a1f2e;
+            --text-secondary: #5a6577;
             --text-muted: #94a3b8;
 
-            /* Accent Colors - Vibrant & Professional */
-            --accent-blue: #0ea5e9;
-            --accent-blue-dark: #0284c7;
-            --accent-blue-light: #e0f2fe;
+            /* Accent Colors - ConstruData Palette */
+            --accent-blue: #2c4a7c;
+            --accent-blue-dark: #1a1f2e;
+            --accent-blue-light: #e8eef6;
             --accent-green: #10b981;
             --accent-green-dark: #059669;
             --accent-green-light: #d1fae5;
@@ -72,21 +79,22 @@
             --accent-purple: #8b5cf6;
             --accent-purple-light: #ede9fe;
             --accent-teal: #14b8a6;
-            --accent-cyan: #06b6d4;
+            --accent-cyan: #3d6cb9;
+            --accent-gold: #c9a227;
 
             /* Borders & Shadows */
-            --border-color: #e2e8f0;
-            --border-focus: #0ea5e9;
+            --border-color: #e0e5ed;
+            --border-focus: #2c4a7c;
             --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
             --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-            --shadow-glow: 0 0 20px rgba(14, 165, 233, 0.15);
+            --shadow-glow: 0 0 20px rgba(44, 74, 124, 0.15);
 
-            /* Gradients */
-            --gradient-primary: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+            /* Gradients - ConstruData Style */
+            --gradient-primary: linear-gradient(135deg, #2c4a7c 0%, #3d6cb9 100%);
             --gradient-success: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
-            --gradient-header: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            --gradient-header: linear-gradient(135deg, #1a1f2e 0%, #2c4a7c 50%, #3d6cb9 100%);
             --gradient-card: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
 
             /* Spacing */
@@ -1285,26 +1293,28 @@
             <button onclick="openTutorial()"
                     style="position: absolute; top: 15px; left: 170px;
                            display: flex; align-items: center; gap: 8px;
-                           color: rgba(255,255,255,0.8); font-size: 0.9rem;
-                           padding: 8px 16px; background: rgba(16, 185, 129, 0.2);
-                           border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.4);
+                           color: #c9a227; font-size: 0.9rem; font-weight: 600;
+                           padding: 8px 16px; background: rgba(201, 162, 39, 0.15);
+                           border-radius: 8px; border: 1px solid rgba(201, 162, 39, 0.4);
                            cursor: pointer; transition: all 0.3s;"
-                    onmouseover="this.style.background='rgba(16, 185, 129, 0.4)'; this.style.color='white';"
-                    onmouseout="this.style.background='rgba(16, 185, 129, 0.2)'; this.style.color='rgba(255,255,255,0.8)';"
+                    onmouseover="this.style.background='rgba(201, 162, 39, 0.3)'; this.style.color='#e8c547';"
+                    onmouseout="this.style.background='rgba(201, 162, 39, 0.15)'; this.style.color='#c9a227';"
                     aria-label="Abrir tutorial da plataforma">
                 📖 Tutorial
             </button>
 
-            <h1>HYDRO NETWORK</h1>
+            <h1 style="font-family: 'Montserrat', sans-serif; letter-spacing: 2px;">
+                CONSTRUDATA <span style="color: #c9a227; font-weight: 300;">| HYDRONETWORK</span>
+            </h1>
             <p>Motor de Cálculo Hidráulico para Redes de Saneamento</p>
-            <span class="version-badge">v3.0 - Plataforma Unificada</span>
+            <span class="version-badge" style="background: linear-gradient(135deg, #c9a227, #e8c547); color: #1a1f2e;">v3.0 - Plataforma Unificada</span>
             <button onclick="verificarPlataforma()"
                     title="Verificar status de todos os módulos"
                     style="position: absolute; top: 15px; right: 15px; padding: 8px 16px;
-                           background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white;
+                           background: linear-gradient(135deg, #c9a227, #e8c547); color: #1a1f2e;
                            border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem;
-                           display: flex; align-items: center; gap: 6px; transition: all 0.3s;
-                           box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);">
+                           font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.3s;
+                           box-shadow: 0 4px 15px rgba(201, 162, 39, 0.3);">
                 🔍 Verificar Plataforma
             </button>
         </header>

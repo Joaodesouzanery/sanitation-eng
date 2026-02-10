@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HydroNetwork - Plataforma de Engenharia de Redes de Saneamento</title>
-    <meta name="description" content="Plataforma completa para dimensionamento hidráulico, planejamento de obra e gestão de redes de saneamento. Reduza custos, elimine erros e acelere seus projetos.">
+    <title>ConstruData - HydroNetwork | Plataforma de Engenharia de Saneamento</title>
+    <meta name="description" content="ConstruData HydroNetwork - Plataforma completa para dimensionamento hidráulico, planejamento de obra e gestão de redes de saneamento.">
 
     <!-- Security Headers -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-ancestors 'none';">
@@ -15,30 +15,24 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Noto+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --primary: #0a1628;
-            --primary-light: #1a2d4a;
-            --accent: #2563eb;
-            --accent-hover: #1d4ed8;
-            --accent-light: #3b82f6;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --text: #0f172a;
-            --text-light: #64748b;
-            --text-muted: #94a3b8;
-            --bg: #ffffff;
-            --bg-alt: #f8fafc;
-            --bg-dark: #0f172a;
-            --border: #e2e8f0;
-            --gradient-hero: linear-gradient(135deg, rgba(10, 22, 40, 0.95) 0%, rgba(26, 45, 74, 0.9) 50%, rgba(37, 99, 235, 0.8) 100%);
-            --gradient-accent: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%);
-            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
-            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+            --primary-dark: #1a1f2e;
+            --primary-blue: #2c4a7c;
+            --accent-blue: #3d6cb9;
+            --accent-light: #5a8fd4;
+            --gold: #c9a227;
+            --gold-light: #e8c547;
+            --text-white: #ffffff;
+            --text-light: rgba(255,255,255,0.85);
+            --text-muted: rgba(255,255,255,0.6);
+            --bg-light: #f5f7fa;
+            --bg-white: #ffffff;
+            --text-dark: #1a1f2e;
+            --text-gray: #5a6577;
+            --border-light: #e0e5ed;
         }
 
         * {
@@ -52,8 +46,8 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            color: var(--text);
+            font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-dark);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
         }
@@ -65,68 +59,55 @@
             left: 0;
             right: 0;
             z-index: 1000;
-            background: rgba(10, 22, 40, 0.95);
-            backdrop-filter: blur(20px);
+            background: rgba(26, 31, 46, 0.95);
+            backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(255,255,255,0.1);
             transition: all 0.3s ease;
-        }
-
-        .header.scrolled {
-            background: rgba(10, 22, 40, 0.98);
-            box-shadow: var(--shadow-lg);
         }
 
         .header-container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 0 2rem;
+            padding: 0 40px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            height: 80px;
+            height: 70px;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             text-decoration: none;
         }
 
-        .logo-icon {
-            width: 45px;
-            height: 45px;
-            background: var(--gradient-accent);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-
         .logo-text {
-            font-size: 1.5rem;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.3rem;
             font-weight: 700;
             color: white;
-            letter-spacing: -0.5px;
+            letter-spacing: 2px;
         }
 
         .logo-text span {
-            color: var(--accent-light);
+            color: var(--gold);
+            font-weight: 300;
         }
 
         .nav {
             display: flex;
             align-items: center;
-            gap: 2rem;
+            gap: 40px;
         }
 
         .nav-link {
             color: rgba(255,255,255,0.8);
             text-decoration: none;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: 500;
-            transition: color 0.2s;
+            letter-spacing: 0.5px;
+            transition: color 0.3s;
             position: relative;
         }
 
@@ -137,11 +118,11 @@
         .nav-link::after {
             content: '';
             position: absolute;
-            bottom: -4px;
+            bottom: -5px;
             left: 0;
             width: 0;
             height: 2px;
-            background: var(--accent-light);
+            background: var(--gold);
             transition: width 0.3s;
         }
 
@@ -149,788 +130,681 @@
             width: 100%;
         }
 
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px 28px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: none;
-        }
-
-        .btn-primary {
-            background: var(--gradient-accent);
-            color: white;
-            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
-        }
-
-        .btn-outline {
+        .nav-btn {
+            padding: 10px 28px;
             background: transparent;
-            color: white;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-decoration: none;
+            transition: all 0.3s;
         }
 
-        .btn-outline:hover {
-            background: rgba(255,255,255,0.1);
-            border-color: rgba(255,255,255,0.5);
-        }
-
-        .btn-large {
-            padding: 16px 40px;
-            font-size: 1.1rem;
+        .nav-btn:hover {
+            background: var(--gold);
+            color: var(--primary-dark);
         }
 
         /* ==================== HERO ==================== */
         .hero {
             position: relative;
-            min-height: 100vh;
+            height: 100vh;
+            min-height: 700px;
             display: flex;
             align-items: center;
-            background: var(--primary);
+            justify-content: center;
             overflow: hidden;
         }
 
-        .hero-bg {
+        .hero-slider {
             position: absolute;
             inset: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%230a1628"/><stop offset="50%" style="stop-color:%231a2d4a"/><stop offset="100%" style="stop-color:%230f172a"/></linearGradient></defs><rect fill="url(%23g1)" width="1200" height="800"/></svg>');
-            background-size: cover;
+            z-index: 1;
         }
 
-        .hero-bg::before {
-            content: '';
+        .hero-slide {
             position: absolute;
             inset: 0;
-            background:
-                radial-gradient(circle at 20% 80%, rgba(37, 99, 235, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(14, 165, 233, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.05) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 1.5s ease;
         }
 
-        .hero-pattern {
+        .hero-slide.active {
+            opacity: 1;
+        }
+
+        .hero-slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .hero-overlay {
             position: absolute;
             inset: 0;
-            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%232563eb' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-            opacity: 0.5;
+            background: linear-gradient(
+                135deg,
+                rgba(26, 31, 46, 0.85) 0%,
+                rgba(44, 74, 124, 0.75) 50%,
+                rgba(26, 31, 46, 0.85) 100%
+            );
+            z-index: 2;
         }
 
         .hero-content {
             position: relative;
-            z-index: 2;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 120px 2rem 80px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4rem;
-            align-items: center;
+            z-index: 3;
+            text-align: center;
+            max-width: 900px;
+            padding: 0 40px;
         }
 
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(37, 99, 235, 0.2);
-            border: 1px solid rgba(37, 99, 235, 0.3);
-            padding: 8px 16px;
-            border-radius: 100px;
-            font-size: 0.85rem;
-            color: var(--accent-light);
-            margin-bottom: 1.5rem;
-        }
-
-        .hero-badge-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--success);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
+        .hero-pretitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1rem;
+            font-weight: 400;
+            color: var(--gold);
+            letter-spacing: 4px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
         }
 
         .hero-title {
-            font-size: 3.5rem;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 4.5rem;
             font-weight: 800;
             color: white;
             line-height: 1.1;
-            margin-bottom: 1.5rem;
+            margin-bottom: 10px;
             letter-spacing: -1px;
         }
 
         .hero-title span {
-            background: var(--gradient-accent);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-subtitle {
-            font-size: 1.25rem;
-            color: rgba(255,255,255,0.7);
-            margin-bottom: 2rem;
-            line-height: 1.7;
-        }
-
-        .hero-cta {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 3rem;
-        }
-
-        .hero-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 2rem;
-            padding-top: 2rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .hero-stat {
-            text-align: left;
-        }
-
-        .hero-stat-value {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: white;
-            line-height: 1;
-            margin-bottom: 0.5rem;
-        }
-
-        .hero-stat-value span {
-            color: var(--accent-light);
-        }
-
-        .hero-stat-label {
-            font-size: 0.9rem;
-            color: rgba(255,255,255,0.6);
-        }
-
-        .hero-visual {
-            position: relative;
-        }
-
-        .hero-image-container {
-            position: relative;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-        }
-
-        .hero-image {
-            width: 100%;
-            height: auto;
             display: block;
-            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
-            aspect-ratio: 4/3;
-            position: relative;
-        }
-
-        .hero-image::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-                linear-gradient(45deg, rgba(37, 99, 235, 0.1) 0%, transparent 50%),
-                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Cdefs%3E%3ClinearGradient id='pipe' x1='0%25' y1='0%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' style='stop-color:%232563eb'/%3E%3Cstop offset='100%25' style='stop-color:%230ea5e9'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='%230f172a' width='400' height='300'/%3E%3Ccircle cx='50' cy='50' r='20' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='150' cy='80' r='25' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='280' cy='60' r='18' fill='none' stroke='%230ea5e9' stroke-width='3'/%3E%3Ccircle cx='350' cy='120' r='22' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='100' cy='180' r='30' fill='none' stroke='%230ea5e9' stroke-width='3'/%3E%3Ccircle cx='220' cy='200' r='20' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='320' cy='220' r='25' fill='none' stroke='%230ea5e9' stroke-width='3'/%3E%3Cline x1='70' y1='50' x2='125' y2='80' stroke='url(%23pipe)' stroke-width='4'/%3E%3Cline x1='175' y1='80' x2='262' y2='60' stroke='url(%23pipe)' stroke-width='4'/%3E%3Cline x1='298' y1='60' x2='328' y2='120' stroke='url(%23pipe)' stroke-width='4'/%3E%3Cline x1='50' y1='70' x2='70' y2='180' stroke='url(%23pipe)' stroke-width='4'/%3E%3Cline x1='130' y1='180' x2='200' y2='200' stroke='url(%23pipe)' stroke-width='4'/%3E%3Cline x1='240' y1='200' x2='295' y2='220' stroke='url(%23pipe)' stroke-width='4'/%3E%3Cline x1='150' y1='105' x2='100' y2='150' stroke='url(%23pipe)' stroke-width='4'/%3E%3Cline x1='280' y1='78' x2='220' y2='180' stroke='url(%23pipe)' stroke-width='4'/%3E%3Ctext x='200' y='270' text-anchor='middle' fill='%2364748b' font-family='Inter' font-size='12'%3ERede de Saneamento - Modelo HydroNetwork%3C/text%3E%3C/svg%3E");
-            background-size: cover;
-        }
-
-        .hero-float-card {
-            position: absolute;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: var(--shadow-xl);
-            animation: float 6s ease-in-out infinite;
-        }
-
-        .hero-float-card-1 {
-            top: 10%;
-            right: -30px;
-            animation-delay: 0s;
-        }
-
-        .hero-float-card-2 {
-            bottom: 15%;
-            left: -30px;
-            animation-delay: 2s;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-15px); }
-        }
-
-        .float-card-icon {
-            width: 48px;
-            height: 48px;
-            background: var(--gradient-accent);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 12px;
-        }
-
-        .float-card-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text);
-        }
-
-        .float-card-label {
-            font-size: 0.85rem;
+            font-weight: 300;
+            font-size: 2.5rem;
+            letter-spacing: 8px;
+            margin-top: 10px;
             color: var(--text-light);
         }
 
-        /* ==================== PROBLEM SECTION ==================== */
-        .problem {
-            padding: 100px 2rem;
-            background: var(--bg-alt);
+        .hero-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin: 30px 0 40px;
+            line-height: 1.8;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-btn {
+            display: inline-block;
+            padding: 18px 50px;
+            background: var(--gold);
+            color: var(--primary-dark);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-decoration: none;
+            text-transform: uppercase;
+            transition: all 0.3s;
+            border: 2px solid var(--gold);
+        }
+
+        .hero-btn:hover {
+            background: transparent;
+            color: var(--gold);
+        }
+
+        .hero-scroll {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .hero-scroll-line {
+            width: 1px;
+            height: 60px;
+            background: linear-gradient(to bottom, var(--gold), transparent);
+            animation: scrollPulse 2s infinite;
+        }
+
+        @keyframes scrollPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .slider-dots {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            z-index: 3;
+            display: flex;
+            gap: 10px;
+        }
+
+        .slider-dot {
+            width: 40px;
+            height: 3px;
+            background: rgba(255,255,255,0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .slider-dot.active {
+            background: var(--gold);
+        }
+
+        /* ==================== BUSINESS AREA ==================== */
+        .business-section {
+            position: relative;
+            padding: 120px 0;
+            background: var(--bg-white);
+            overflow: hidden;
         }
 
         .section-container {
             max-width: 1200px;
             margin: 0 auto;
+            padding: 0 40px;
         }
 
         .section-header {
             text-align: center;
-            max-width: 800px;
-            margin: 0 auto 4rem;
-        }
-
-        .section-tag {
-            display: inline-block;
-            background: rgba(37, 99, 235, 0.1);
-            color: var(--accent);
-            padding: 8px 20px;
-            border-radius: 100px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 1rem;
+            margin-bottom: 60px;
         }
 
         .section-title {
-            font-size: 2.75rem;
-            font-weight: 800;
-            color: var(--text);
-            margin-bottom: 1rem;
-            line-height: 1.2;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 15px;
         }
 
         .section-subtitle {
-            font-size: 1.15rem;
-            color: var(--text-light);
-            line-height: 1.7;
+            font-size: 1rem;
+            color: var(--text-gray);
+            max-width: 600px;
+            margin: 0 auto;
         }
 
-        .problem-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 2rem;
-        }
-
-        .problem-card {
-            background: white;
-            border-radius: 20px;
-            padding: 2.5rem;
-            border: 1px solid var(--border);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .problem-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #ef4444, #f59e0b);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .problem-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-xl);
-        }
-
-        .problem-card:hover::before {
-            opacity: 1;
-        }
-
-        .problem-icon {
-            width: 64px;
-            height: 64px;
-            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .problem-card h3 {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 1rem;
-        }
-
-        .problem-card p {
-            color: var(--text-light);
-            line-height: 1.7;
-        }
-
-        .problem-stat {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--border);
-        }
-
-        .problem-stat-value {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: #ef4444;
-        }
-
-        .problem-stat-label {
-            font-size: 0.85rem;
-            color: var(--text-light);
-        }
-
-        /* ==================== SOLUTION INTRO ==================== */
-        .solution-intro {
-            padding: 100px 2rem;
-            background: var(--primary);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .solution-intro::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(circle at 0% 100%, rgba(37, 99, 235, 0.2) 0%, transparent 50%),
-                radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.15) 0%, transparent 50%);
-        }
-
-        .solution-intro .section-container {
-            position: relative;
-            z-index: 2;
-        }
-
-        .solution-intro .section-tag {
-            background: rgba(37, 99, 235, 0.3);
-            color: var(--accent-light);
-        }
-
-        .solution-intro .section-title {
-            color: white;
-        }
-
-        .solution-intro .section-subtitle {
-            color: rgba(255,255,255,0.7);
-        }
-
-        .solution-big-text {
-            font-size: 8rem;
-            font-weight: 900;
-            color: rgba(255,255,255,0.03);
+        .big-text-bg {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 15rem;
+            font-weight: 900;
+            color: rgba(0,0,0,0.03);
             white-space: nowrap;
             letter-spacing: 20px;
             pointer-events: none;
+            user-select: none;
         }
 
-        /* ==================== MODULES ==================== */
-        .modules {
-            padding: 100px 2rem;
-            background: white;
+        .business-image {
+            position: absolute;
+            top: 80px;
+            right: -100px;
+            width: 400px;
+            height: 250px;
+            object-fit: cover;
+            border-radius: 4px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
         }
 
-        .modules-grid {
+        .business-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .business-tab {
+            padding: 18px 40px;
+            background: transparent;
+            border: 1px solid var(--border-light);
+            color: var(--text-gray);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 0 -1px;
+        }
+
+        .business-tab:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+
+        .business-tab:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+
+        .business-tab:hover,
+        .business-tab.active {
+            background: var(--primary-blue);
+            border-color: var(--primary-blue);
+            color: white;
+        }
+
+        .business-content {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .business-content p {
+            color: var(--text-gray);
+            line-height: 1.9;
+            margin-bottom: 30px;
+        }
+
+        .view-btn {
+            display: inline-block;
+            padding: 14px 45px;
+            background: transparent;
+            border: 1px solid var(--text-dark);
+            color: var(--text-dark);
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .view-btn:hover {
+            background: var(--text-dark);
+            color: white;
+        }
+
+        /* ==================== ABOUT SECTION ==================== */
+        .about-section {
+            padding: 100px 0 0;
+            background: var(--bg-light);
+        }
+
+        .about-header {
+            text-align: center;
+            padding-bottom: 80px;
+        }
+
+        .about-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 2rem;
+            grid-template-columns: 350px 1fr;
+            background: var(--primary-dark);
+            min-height: 500px;
         }
 
-        .module-card {
-            background: var(--bg-alt);
-            border-radius: 24px;
-            padding: 2.5rem;
-            border: 1px solid var(--border);
-            transition: all 0.4s ease;
+        .about-sidebar {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-dark) 100%);
+            padding: 50px 40px;
             position: relative;
             overflow: hidden;
         }
 
-        .module-card::before {
+        .about-sidebar::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            background: var(--gradient-accent);
-            transform: scaleX(0);
-            transition: transform 0.4s ease;
+            bottom: 0;
+            background: url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600') center/cover;
+            opacity: 0.15;
         }
 
-        .module-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-xl);
-            background: white;
-        }
-
-        .module-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .module-icon {
-            width: 72px;
-            height: 72px;
-            background: var(--gradient-accent);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
-        }
-
-        .module-card h3 {
-            font-size: 1.35rem;
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 1rem;
-        }
-
-        .module-card p {
-            color: var(--text-light);
-            line-height: 1.7;
-            margin-bottom: 1.5rem;
-        }
-
-        .module-features {
-            list-style: none;
-        }
-
-        .module-features li {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            padding: 8px 0;
-            font-size: 0.9rem;
-            color: var(--text-light);
-        }
-
-        .module-features li::before {
-            content: '✓';
-            color: var(--success);
-            font-weight: 700;
-            flex-shrink: 0;
-        }
-
-        /* ==================== BENEFITS ==================== */
-        .benefits {
-            padding: 100px 2rem;
-            background: linear-gradient(180deg, var(--bg-alt) 0%, white 100%);
-        }
-
-        .benefits-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 2rem;
-        }
-
-        .benefit-card {
-            text-align: center;
-            padding: 2.5rem 1.5rem;
-            background: white;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            transition: all 0.3s ease;
-        }
-
-        .benefit-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--accent);
-        }
-
-        .benefit-icon {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(14, 165, 233, 0.1) 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            margin: 0 auto 1.5rem;
-        }
-
-        .benefit-value {
-            font-size: 3rem;
-            font-weight: 800;
-            background: var(--gradient-accent);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
-        }
-
-        .benefit-card h3 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 0.5rem;
-        }
-
-        .benefit-card p {
-            font-size: 0.9rem;
-            color: var(--text-light);
-        }
-
-        /* ==================== HOW IT WORKS ==================== */
-        .how-it-works {
-            padding: 100px 2rem;
-            background: white;
-        }
-
-        .steps {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 2rem;
-            position: relative;
-        }
-
-        .steps::before {
-            content: '';
-            position: absolute;
-            top: 60px;
-            left: 10%;
-            right: 10%;
-            height: 4px;
-            background: linear-gradient(90deg, var(--accent), var(--success));
-            border-radius: 2px;
-        }
-
-        .step {
-            flex: 1;
-            text-align: center;
+        .about-sidebar-content {
             position: relative;
             z-index: 2;
         }
 
-        .step-number {
-            width: 120px;
-            height: 120px;
-            background: white;
-            border: 4px solid var(--accent);
+        .about-year {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 4rem;
+            font-weight: 300;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .about-year span {
+            font-size: 2rem;
+        }
+
+        .about-sidebar h3 {
+            color: var(--gold);
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .about-sidebar p {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+
+        .sidebar-link {
+            display: block;
+            color: white;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s;
+        }
+
+        .sidebar-link:hover {
+            color: var(--gold);
+            padding-left: 10px;
+        }
+
+        .about-main {
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .about-main-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 30px;
+        }
+
+        .about-main-title {
+            color: var(--gold);
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .about-main-subtitle {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .news-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .news-card {
+            background: rgba(255,255,255,0.05);
+            padding: 25px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .news-card:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .news-card h4 {
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .news-card p {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.7;
+            margin-bottom: 15px;
+        }
+
+        .news-date {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .contact-row {
+            display: flex;
+            gap: 40px;
+            margin-top: auto;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .contact-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.1);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 2rem;
-            font-size: 3rem;
-            box-shadow: var(--shadow-lg);
+            font-size: 1.2rem;
         }
 
-        .step h3 {
-            font-size: 1.25rem;
+        .contact-item h5 {
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .contact-item p {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* ==================== FEATURES SECTION ==================== */
+        .features-section {
+            padding: 120px 0;
+            background: var(--bg-white);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .feature-card {
+            text-align: center;
+            padding: 40px 30px;
+            background: var(--bg-light);
+            border-radius: 4px;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .feature-card:hover {
+            background: white;
+            border-color: var(--border-light);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--accent-blue));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            font-size: 2rem;
+        }
+
+        .feature-card h3 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.1rem;
             font-weight: 700;
-            color: var(--text);
-            margin-bottom: 0.75rem;
+            color: var(--text-dark);
+            margin-bottom: 12px;
         }
 
-        .step p {
-            font-size: 0.95rem;
-            color: var(--text-light);
-            max-width: 250px;
-            margin: 0 auto;
+        .feature-card p {
+            color: var(--text-gray);
+            font-size: 0.9rem;
+            line-height: 1.7;
         }
 
-        /* ==================== TESTIMONIAL ==================== */
-        .testimonial {
-            padding: 100px 2rem;
-            background: var(--primary);
+        /* ==================== STATS SECTION ==================== */
+        .stats-section {
+            padding: 100px 0;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-blue) 100%);
             position: relative;
+            overflow: hidden;
         }
 
-        .testimonial::before {
+        .stats-section::before {
             content: '';
             position: absolute;
             inset: 0;
-            background: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.15) 0%, transparent 70%);
+            background: url('https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=1600') center/cover;
+            opacity: 0.1;
         }
 
-        .testimonial-content {
-            max-width: 900px;
-            margin: 0 auto;
-            text-align: center;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 40px;
             position: relative;
             z-index: 2;
         }
 
-        .testimonial-quote {
-            font-size: 1.75rem;
-            color: white;
-            font-weight: 500;
-            line-height: 1.6;
-            margin-bottom: 2rem;
-            font-style: italic;
-        }
-
-        .testimonial-quote::before {
-            content: '"';
-            font-size: 6rem;
-            color: var(--accent);
-            line-height: 0;
-            display: block;
-            margin-bottom: -2rem;
-        }
-
-        .testimonial-author {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-        }
-
-        .testimonial-avatar {
-            width: 64px;
-            height: 64px;
-            background: var(--gradient-accent);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: white;
-        }
-
-        .testimonial-info h4 {
-            color: white;
-            font-weight: 600;
-        }
-
-        .testimonial-info p {
-            color: rgba(255,255,255,0.6);
-            font-size: 0.9rem;
-        }
-
-        /* ==================== CTA ==================== */
-        .cta {
-            padding: 120px 2rem;
-            background: linear-gradient(135deg, var(--bg-alt) 0%, white 100%);
+        .stat-item {
             text-align: center;
         }
 
-        .cta-container {
-            max-width: 800px;
-            margin: 0 auto;
+        .stat-value {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 4rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+
+        .stat-value span {
+            color: var(--gold);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* ==================== CTA SECTION ==================== */
+        .cta-section {
+            padding: 120px 0;
+            background: var(--bg-light);
+            text-align: center;
         }
 
         .cta-title {
+            font-family: 'Montserrat', sans-serif;
             font-size: 3rem;
-            font-weight: 800;
-            color: var(--text);
-            margin-bottom: 1.5rem;
-            line-height: 1.2;
-        }
-
-        .cta-title span {
-            background: var(--gradient-accent);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 20px;
         }
 
         .cta-subtitle {
-            font-size: 1.25rem;
-            color: var(--text-light);
-            margin-bottom: 2.5rem;
-            line-height: 1.7;
+            font-size: 1.1rem;
+            color: var(--text-gray);
+            max-width: 600px;
+            margin: 0 auto 40px;
+            line-height: 1.8;
         }
 
-        .cta-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
+        .cta-btn {
+            display: inline-block;
+            padding: 20px 60px;
+            background: var(--primary-blue);
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-decoration: none;
+            text-transform: uppercase;
+            transition: all 0.3s;
         }
 
-        .cta-note {
-            margin-top: 2rem;
-            font-size: 0.9rem;
-            color: var(--text-muted);
+        .cta-btn:hover {
+            background: var(--primary-dark);
         }
 
         /* ==================== FOOTER ==================== */
         .footer {
-            background: var(--bg-dark);
-            padding: 80px 2rem 40px;
-        }
-
-        .footer-container {
-            max-width: 1200px;
-            margin: 0 auto;
+            background: var(--primary-dark);
+            padding: 80px 0 0;
         }
 
         .footer-top {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr;
-            gap: 4rem;
-            padding-bottom: 4rem;
+            grid-template-columns: 2fr repeat(4, 1fr);
+            gap: 60px;
+            padding-bottom: 60px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
+        .footer-brand .logo-text {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
         .footer-brand p {
-            color: rgba(255,255,255,0.6);
-            margin-top: 1.5rem;
-            line-height: 1.7;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.8;
         }
 
         .footer h4 {
             color: white;
-            font-size: 1rem;
+            font-size: 0.85rem;
             font-weight: 600;
-            margin-bottom: 1.5rem;
+            letter-spacing: 1px;
+            margin-bottom: 25px;
+            text-transform: uppercase;
         }
 
         .footer-links {
@@ -938,14 +812,14 @@
         }
 
         .footer-links li {
-            margin-bottom: 0.75rem;
+            margin-bottom: 12px;
         }
 
         .footer-links a {
-            color: rgba(255,255,255,0.6);
+            color: var(--text-muted);
             text-decoration: none;
             font-size: 0.9rem;
-            transition: color 0.2s;
+            transition: color 0.3s;
         }
 
         .footer-links a:hover {
@@ -956,17 +830,17 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-top: 2rem;
+            padding: 30px 0;
         }
 
         .footer-bottom p {
-            color: rgba(255,255,255,0.4);
-            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
         }
 
         .footer-social {
             display: flex;
-            gap: 1rem;
+            gap: 15px;
         }
 
         .footer-social a {
@@ -979,63 +853,56 @@
             justify-content: center;
             color: white;
             text-decoration: none;
+            font-size: 0.9rem;
             transition: all 0.3s;
         }
 
         .footer-social a:hover {
-            background: var(--accent);
-            transform: translateY(-3px);
+            background: var(--gold);
+            color: var(--primary-dark);
         }
 
         /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 1200px) {
+            .business-image {
+                display: none;
+            }
+
+            .big-text-bg {
+                font-size: 10rem;
+            }
+        }
+
         @media (max-width: 1024px) {
-            .hero-content {
-                grid-template-columns: 1fr;
-                text-align: center;
-            }
-
             .hero-title {
-                font-size: 2.75rem;
+                font-size: 3.5rem;
             }
 
-            .hero-cta {
-                justify-content: center;
+            .hero-title span {
+                font-size: 2rem;
             }
 
-            .hero-stats {
-                justify-content: center;
+            .about-grid {
+                grid-template-columns: 1fr;
             }
 
-            .hero-visual {
-                display: none;
-            }
-
-            .modules-grid,
-            .problem-grid {
+            .features-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
 
-            .benefits-grid {
+            .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
-            }
-
-            .steps {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .steps::before {
-                display: none;
+                gap: 50px;
             }
 
             .footer-top {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: repeat(2, 1fr);
             }
         }
 
         @media (max-width: 768px) {
             .header-container {
-                padding: 0 1rem;
+                padding: 0 20px;
             }
 
             .nav {
@@ -1043,420 +910,310 @@
             }
 
             .hero-title {
-                font-size: 2rem;
+                font-size: 2.5rem;
             }
 
-            .section-title {
-                font-size: 2rem;
+            .hero-title span {
+                font-size: 1.5rem;
+                letter-spacing: 4px;
             }
 
-            .modules-grid,
-            .problem-grid {
+            .big-text-bg {
+                font-size: 5rem;
+            }
+
+            .business-tabs {
+                flex-wrap: wrap;
+            }
+
+            .business-tab {
+                flex: 1 1 45%;
+                border-radius: 0 !important;
+            }
+
+            .features-grid {
                 grid-template-columns: 1fr;
             }
 
-            .benefits-grid {
+            .stats-grid {
                 grid-template-columns: 1fr;
+                gap: 40px;
             }
 
-            .hero-stats {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
+            .stat-value {
+                font-size: 3rem;
             }
 
             .cta-title {
                 font-size: 2rem;
             }
 
-            .cta-buttons {
-                flex-direction: column;
-            }
-
             .footer-top {
                 grid-template-columns: 1fr;
-                gap: 2rem;
+                gap: 40px;
             }
 
             .footer-bottom {
                 flex-direction: column;
-                gap: 1rem;
+                gap: 20px;
                 text-align: center;
+            }
+        }
+
+        /* Mobile Menu Toggle */
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
             }
         }
     </style>
 </head>
 <body>
     <!-- Header -->
-    <header class="header" id="header">
+    <header class="header">
         <div class="header-container">
             <a href="#" class="logo">
-                <div class="logo-icon">💧</div>
-                <div class="logo-text">Hydro<span>Network</span></div>
+                <span class="logo-text">CONSTRUDATA <span>| HYDRONETWORK</span></span>
             </a>
             <nav class="nav">
-                <a href="#problemas" class="nav-link">O Problema</a>
-                <a href="#solucao" class="nav-link">Solução</a>
+                <a href="#sobre" class="nav-link">Sobre</a>
+                <a href="#solucoes" class="nav-link">Soluções</a>
                 <a href="#modulos" class="nav-link">Módulos</a>
-                <a href="#beneficios" class="nav-link">Benefícios</a>
-                <a href="engine_rede.html" class="btn btn-primary">Acessar Plataforma</a>
+                <a href="#contato" class="nav-link">Contato</a>
+                <a href="engine_rede.html" class="nav-btn">ACESSAR PLATAFORMA</a>
             </nav>
+            <button class="mobile-menu-btn" aria-label="Menu">☰</button>
         </div>
     </header>
 
     <!-- Hero Section -->
     <section class="hero">
-        <div class="hero-bg"></div>
-        <div class="hero-pattern"></div>
+        <div class="hero-slider">
+            <div class="hero-slide active">
+                <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920" alt="Construção de infraestrutura">
+            </div>
+            <div class="hero-slide">
+                <img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=1920" alt="Obras de saneamento">
+            </div>
+            <div class="hero-slide">
+                <img src="https://images.unsplash.com/photo-1590069261209-f8e9b8642343?w=1920" alt="Tubulação industrial">
+            </div>
+        </div>
+        <div class="hero-overlay"></div>
         <div class="hero-content">
-            <div class="hero-text">
-                <div class="hero-badge">
-                    <span class="hero-badge-dot"></span>
-                    Plataforma Brasileira de Engenharia
-                </div>
-                <h1 class="hero-title">
-                    Projete Redes de Saneamento com <span>Precisão Absoluta</span>
-                </h1>
-                <p class="hero-subtitle">
-                    A única plataforma que integra dimensionamento hidráulico, orçamentação com tabelas SINAPI/SICRO,
-                    planejamento de obra e RDO em um único ambiente. Elimine planilhas, reduza erros e entregue
-                    projetos que impressionam.
-                </p>
-                <div class="hero-cta">
-                    <a href="engine_rede.html" class="btn btn-primary btn-large">
-                        Acessar Plataforma Gratuitamente
-                        <span>→</span>
-                    </a>
-                    <a href="#modulos" class="btn btn-outline btn-large">
-                        Conhecer Módulos
-                    </a>
-                </div>
-                <div class="hero-stats">
-                    <div class="hero-stat">
-                        <div class="hero-stat-value">87<span>%</span></div>
-                        <div class="hero-stat-label">Redução de tempo<br>em dimensionamento</div>
-                    </div>
-                    <div class="hero-stat">
-                        <div class="hero-stat-value">R$0</div>
-                        <div class="hero-stat-label">Custo de licença<br>ou assinatura</div>
-                    </div>
-                    <div class="hero-stat">
-                        <div class="hero-stat-value">100<span>%</span></div>
-                        <div class="hero-stat-label">Conformidade com<br>normas brasileiras</div>
-                    </div>
-                </div>
-            </div>
-            <div class="hero-visual">
-                <div class="hero-image-container">
-                    <div class="hero-image"></div>
-                    <div class="hero-float-card hero-float-card-1">
-                        <div class="float-card-icon">📊</div>
-                        <div class="float-card-value">NBR 9649</div>
-                        <div class="float-card-label">Conformidade automática</div>
-                    </div>
-                    <div class="hero-float-card hero-float-card-2">
-                        <div class="float-card-icon">💰</div>
-                        <div class="float-card-value">-35%</div>
-                        <div class="float-card-label">Redução em custos</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Problem Section -->
-    <section class="problem" id="problemas">
-        <div class="section-container">
-            <div class="section-header">
-                <span class="section-tag">O Problema</span>
-                <h2 class="section-title">Sua Equipe Ainda Trabalha Assim?</h2>
-                <p class="section-subtitle">
-                    Enquanto você lê isso, engenheiros em todo o Brasil estão perdendo horas em tarefas
-                    que poderiam ser automatizadas. O resultado? Projetos atrasados, orçamentos estourados
-                    e retrabalho constante.
-                </p>
-            </div>
-            <div class="problem-grid">
-                <div class="problem-card">
-                    <div class="problem-icon">📋</div>
-                    <h3>Planilhas Intermináveis</h3>
-                    <p>
-                        Excel para dimensionamento, outra planilha para orçamento, mais uma para cronograma.
-                        Dados duplicados, fórmulas quebradas e versões conflitantes que ninguém controla.
-                    </p>
-                    <div class="problem-stat">
-                        <span class="problem-stat-value">23h</span>
-                        <span class="problem-stat-label">semanais perdidas em planilhas</span>
-                    </div>
-                </div>
-                <div class="problem-card">
-                    <div class="problem-icon">🔄</div>
-                    <h3>Retrabalho Constante</h3>
-                    <p>
-                        Alterou uma cota? Precisa recalcular declividade, diâmetro, profundidade de vala,
-                        volume de escavação e todos os custos associados. Manualmente. De novo.
-                    </p>
-                    <div class="problem-stat">
-                        <span class="problem-stat-value">40%</span>
-                        <span class="problem-stat-label">do tempo gasto em retrabalho</span>
-                    </div>
-                </div>
-                <div class="problem-card">
-                    <div class="problem-icon">⚠️</div>
-                    <h3>Erros que Custam Caro</h3>
-                    <p>
-                        Um decimal errado no dimensionamento. Uma referência de célula quebrada no orçamento.
-                        Descobertos apenas na obra, quando já é tarde demais para corrigir sem prejuízo.
-                    </p>
-                    <div class="problem-stat">
-                        <span class="problem-stat-value">R$50k</span>
-                        <span class="problem-stat-label">custo médio de correções</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Solution Intro -->
-    <section class="solution-intro" id="solucao">
-        <div class="solution-big-text">HYDRONETWORK</div>
-        <div class="section-container">
-            <div class="section-header">
-                <span class="section-tag">A Solução</span>
-                <h2 class="section-title">Uma Plataforma. Todas as Respostas.</h2>
-                <p class="section-subtitle">
-                    O HydroNetwork integra todo o ciclo do projeto de saneamento: do CAD ao RDO.
-                    Importa, calcula, orça, planeja e documenta. Automaticamente.
-                    Enquanto seus concorrentes ainda brigam com planilhas, você entrega resultados.
-                </p>
-            </div>
-        </div>
-    </section>
-
-    <!-- Modules Section -->
-    <section class="modules" id="modulos">
-        <div class="section-container">
-            <div class="section-header">
-                <span class="section-tag">Módulos</span>
-                <h2 class="section-title">Tudo Que Você Precisa, Integrado</h2>
-                <p class="section-subtitle">
-                    Cada módulo resolve um problema específico. Juntos, transformam completamente
-                    a forma como sua equipe projeta e executa obras de saneamento.
-                </p>
-            </div>
-            <div class="modules-grid">
-                <div class="module-card">
-                    <div class="module-icon">🗺️</div>
-                    <h3>Importação CAD Inteligente</h3>
-                    <p>
-                        Importe arquivos DXF/DWG e veja suas camadas automaticamente identificadas.
-                        Reconhecimento de PVs, trechos, cotas e atributos sem digitação manual.
-                    </p>
-                    <ul class="module-features">
-                        <li>Leitura automática de camadas</li>
-                        <li>Extração de coordenadas e elevações</li>
-                        <li>Mapeamento inteligente de entidades</li>
-                        <li>Suporte a múltiplos sistemas de coordenadas</li>
-                    </ul>
-                </div>
-                <div class="module-card">
-                    <div class="module-icon">📐</div>
-                    <h3>Motor de Cálculo Hidráulico</h3>
-                    <p>
-                        Dimensionamento completo conforme NBR 9649. Cálculos de Manning, verificação
-                        de velocidades críticas e otimização automática de diâmetros.
-                    </p>
-                    <ul class="module-features">
-                        <li>Cálculo por Manning e Hazen-Williams</li>
-                        <li>Verificação de tensão trativa</li>
-                        <li>Otimização automática de declividades</li>
-                        <li>Relatórios técnicos completos</li>
-                    </ul>
-                </div>
-                <div class="module-card">
-                    <div class="module-icon">💰</div>
-                    <h3>Orçamentação Automática</h3>
-                    <p>
-                        Quantitativos calculados automaticamente. Vinculação direta com tabelas
-                        SINAPI, SICRO e SEINFRA. Composições de preços unitários em segundos.
-                    </p>
-                    <ul class="module-features">
-                        <li>Integração SINAPI/SICRO/SEINFRA</li>
-                        <li>Cálculo automático de volumes</li>
-                        <li>BDI e encargos configuráveis</li>
-                        <li>Exportação para Excel e PDF</li>
-                    </ul>
-                </div>
-                <div class="module-card">
-                    <div class="module-icon">📅</div>
-                    <h3>Planejamento de Obra</h3>
-                    <p>
-                        Cronograma gerado automaticamente baseado nos quantitativos e produtividades.
-                        Gráfico de Gantt interativo com dependências e caminho crítico.
-                    </p>
-                    <ul class="module-features">
-                        <li>Cronograma automático por trecho</li>
-                        <li>Produtividades SINAPI integradas</li>
-                        <li>Gestão de equipes e frentes</li>
-                        <li>Curva S e avanço físico-financeiro</li>
-                    </ul>
-                </div>
-                <div class="module-card">
-                    <div class="module-icon">📝</div>
-                    <h3>RDO Digital</h3>
-                    <p>
-                        Relatório Diário de Obra 100% digital. Registre avanços, ocorrências e medições
-                        vinculados aos trechos do projeto. Rastreabilidade total.
-                    </p>
-                    <ul class="module-features">
-                        <li>Registro de avanço por trecho</li>
-                        <li>Controle de mão de obra e equipamentos</li>
-                        <li>Registro fotográfico georreferenciado</li>
-                        <li>Exportação para PDF e planilhas</li>
-                    </ul>
-                </div>
-                <div class="module-card">
-                    <div class="module-icon">🗺️</div>
-                    <h3>Mapa Interativo</h3>
-                    <p>
-                        Visualize toda a rede sobre mapa real. Identifique gargalos, analise
-                        alternativas de traçado e apresente projetos de forma impressionante.
-                    </p>
-                    <ul class="module-features">
-                        <li>Visualização em tempo real</li>
-                        <li>Camadas configuráveis</li>
-                        <li>Análise de interferências</li>
-                        <li>Exportação de mapas temáticos</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Benefits Section -->
-    <section class="benefits" id="beneficios">
-        <div class="section-container">
-            <div class="section-header">
-                <span class="section-tag">Resultados Comprovados</span>
-                <h2 class="section-title">Números Que Falam Por Si</h2>
-                <p class="section-subtitle">
-                    Não prometemos milagres. Entregamos engenharia de verdade,
-                    com resultados mensuráveis e impacto direto no seu projeto.
-                </p>
-            </div>
-            <div class="benefits-grid">
-                <div class="benefit-card">
-                    <div class="benefit-icon">⏱️</div>
-                    <div class="benefit-value">87%</div>
-                    <h3>Mais Rápido</h3>
-                    <p>Dimensionamento que levava dias agora leva horas</p>
-                </div>
-                <div class="benefit-card">
-                    <div class="benefit-icon">💵</div>
-                    <div class="benefit-value">35%</div>
-                    <h3>Economia</h3>
-                    <p>Redução média em custos de projeto e retrabalho</p>
-                </div>
-                <div class="benefit-card">
-                    <div class="benefit-icon">✅</div>
-                    <div class="benefit-value">99.9%</div>
-                    <h3>Precisão</h3>
-                    <p>Cálculos verificados e conformes com normas</p>
-                </div>
-                <div class="benefit-card">
-                    <div class="benefit-icon">📈</div>
-                    <div class="benefit-value">3x</div>
-                    <h3>Produtividade</h3>
-                    <p>Entregue mais projetos com a mesma equipe</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- How It Works -->
-    <section class="how-it-works">
-        <div class="section-container">
-            <div class="section-header">
-                <span class="section-tag">Como Funciona</span>
-                <h2 class="section-title">Do CAD ao RDO em 4 Passos</h2>
-                <p class="section-subtitle">
-                    Simplicidade não significa superficialidade. Cada passo foi projetado
-                    para extrair o máximo de automação sem sacrificar o controle do engenheiro.
-                </p>
-            </div>
-            <div class="steps">
-                <div class="step">
-                    <div class="step-number">📥</div>
-                    <h3>Importe</h3>
-                    <p>Carregue seu arquivo CAD ou GeoJSON. Nós identificamos as camadas automaticamente.</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">⚙️</div>
-                    <h3>Configure</h3>
-                    <p>Ajuste parâmetros hidráulicos, tabelas de preço e produtividades conforme seu projeto.</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">🧮</div>
-                    <h3>Calcule</h3>
-                    <p>Com um clique, dimensione a rede, gere orçamento e crie o cronograma completo.</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">📤</div>
-                    <h3>Exporte</h3>
-                    <p>Relatórios técnicos, planilhas orçamentárias e cronogramas prontos para apresentar.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Testimonial -->
-    <section class="testimonial">
-        <div class="testimonial-content">
-            <p class="testimonial-quote">
-                Eu gastava uma semana inteira para dimensionar e orçar uma rede de 2km.
-                Com o HydroNetwork, faço o mesmo trabalho em uma tarde. E com muito mais confiança
-                nos resultados. Meus clientes perceberam a diferença imediatamente.
+            <p class="hero-pretitle">Engenharia de Precisão</p>
+            <h1 class="hero-title">
+                CONSTRUDATA
+                <span>HYDRONETWORK</span>
+            </h1>
+            <p class="hero-subtitle">
+                Plataforma integrada para dimensionamento hidráulico, orçamentação com tabelas SINAPI/SICRO,
+                planejamento de obra e gestão completa de redes de saneamento.
             </p>
-            <div class="testimonial-author">
-                <div class="testimonial-avatar">EN</div>
-                <div class="testimonial-info">
-                    <h4>Engenheiro de Saneamento</h4>
-                    <p>15 anos de experiência em projetos de infraestrutura</p>
+            <a href="engine_rede.html" class="hero-btn">Acessar Plataforma</a>
+        </div>
+        <div class="hero-scroll">
+            <span>Scroll</span>
+            <div class="hero-scroll-line"></div>
+        </div>
+        <div class="slider-dots">
+            <div class="slider-dot active" data-slide="0"></div>
+            <div class="slider-dot" data-slide="1"></div>
+            <div class="slider-dot" data-slide="2"></div>
+        </div>
+    </section>
+
+    <!-- Business Area Section -->
+    <section class="business-section" id="solucoes">
+        <div class="big-text-bg">CONSTRUDATA</div>
+        <img src="https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600" alt="Engenharia" class="business-image">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">Áreas de Atuação</h2>
+                <p class="section-subtitle">
+                    Soluções completas para engenharia de saneamento, desde o projeto até a execução.
+                </p>
+            </div>
+            <div class="business-tabs">
+                <button class="business-tab active">Esgoto</button>
+                <button class="business-tab">Água</button>
+                <button class="business-tab">Drenagem</button>
+                <button class="business-tab">Planejamento</button>
+                <button class="business-tab">Orçamento</button>
+            </div>
+            <div class="business-content">
+                <p>
+                    Dimensionamento completo de redes coletoras de esgoto conforme NBR 9649.
+                    Cálculos hidráulicos automáticos, verificação de tensão trativa, otimização de diâmetros
+                    e geração de relatórios técnicos prontos para aprovação.
+                </p>
+                <a href="engine_rede.html" class="view-btn">CONHECER MÓDULO</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about-section" id="sobre">
+        <div class="section-container">
+            <div class="about-header">
+                <h2 class="section-title">Sobre a Plataforma</h2>
+                <p class="section-subtitle">
+                    Desenvolvida por engenheiros, para engenheiros. Uma solução brasileira que entende
+                    as necessidades reais do mercado de saneamento.
+                </p>
+            </div>
+        </div>
+        <div class="about-grid">
+            <div class="about-sidebar">
+                <div class="about-sidebar-content">
+                    <div class="about-year">2024<span>~</span></div>
+                    <h3>Plataforma Unificada</h3>
+                    <p>
+                        O ConstruData HydroNetwork integra todo o ciclo do projeto de saneamento
+                        em uma única plataforma: do CAD ao RDO.
+                    </p>
+                    <a href="#modulos" class="sidebar-link">Módulos da Plataforma</a>
+                    <a href="engine_rede.html" class="sidebar-link">Acessar Agora</a>
+                    <a href="#contato" class="sidebar-link">Fale Conosco</a>
+                </div>
+            </div>
+            <div class="about-main">
+                <div class="about-main-header">
+                    <span class="about-main-title">RECURSOS</span>
+                    <span class="about-main-subtitle">Funcionalidades que fazem a diferença no seu projeto</span>
+                </div>
+                <div class="news-grid">
+                    <div class="news-card">
+                        <h4>Importação CAD Inteligente</h4>
+                        <p>Importe arquivos DXF/DWG com reconhecimento automático de layers, PVs e trechos.</p>
+                        <div class="news-date">
+                            <span>Topografia</span>
+                            <span>•</span>
+                            <span>GIS</span>
+                        </div>
+                    </div>
+                    <div class="news-card">
+                        <h4>Orçamentação SINAPI/SICRO</h4>
+                        <p>Quantitativos automáticos com vinculação direta às tabelas oficiais de preços.</p>
+                        <div class="news-date">
+                            <span>BDI configurável</span>
+                            <span>•</span>
+                            <span>Composições</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="contact-row">
+                    <div class="contact-item">
+                        <div class="contact-icon">🌐</div>
+                        <div>
+                            <h5>100% Online</h5>
+                            <p>Acesse de qualquer lugar</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon">📱</div>
+                        <div>
+                            <h5>Suporte Técnico</h5>
+                            <p>Atendimento especializado</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon">📍</div>
+                        <div>
+                            <h5>Brasil</h5>
+                            <p>Feito para normas brasileiras</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="modulos">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">Módulos da Plataforma</h2>
+                <p class="section-subtitle">
+                    Cada módulo foi desenvolvido para resolver problemas específicos da engenharia de saneamento.
+                </p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📐</div>
+                    <h3>Cálculo Hidráulico</h3>
+                    <p>Dimensionamento por Manning com verificação automática de normas NBR.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h3>Orçamento</h3>
+                    <p>Quantitativos e custos com tabelas SINAPI, SICRO e SEINFRA integradas.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📅</div>
+                    <h3>Planejamento</h3>
+                    <p>Cronograma automático com Gantt interativo e Curva S.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📋</div>
+                    <h3>RDO Digital</h3>
+                    <p>Relatório Diário de Obra com rastreabilidade total.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="section-container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value">87<span>%</span></div>
+                    <div class="stat-label">Mais Rápido</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">35<span>%</span></div>
+                    <div class="stat-label">Economia</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">99<span>%</span></div>
+                    <div class="stat-label">Precisão</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">100<span>%</span></div>
+                    <div class="stat-label">Gratuito</div>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- CTA Section -->
-    <section class="cta">
-        <div class="cta-container">
-            <h2 class="cta-title">
-                Pronto Para Transformar<br>Seus <span>Projetos</span>?
-            </h2>
+    <section class="cta-section" id="contato">
+        <div class="section-container">
+            <h2 class="cta-title">Pronto para Começar?</h2>
             <p class="cta-subtitle">
                 Acesse agora a plataforma completa. Sem cadastro, sem cartão de crédito,
-                sem compromisso. Descubra por que engenheiros estão abandonando suas planilhas.
+                sem compromisso. Comece a transformar seus projetos hoje.
             </p>
-            <div class="cta-buttons">
-                <a href="engine_rede.html" class="btn btn-primary btn-large">
-                    Acessar Plataforma Agora
-                    <span>→</span>
-                </a>
-            </div>
-            <p class="cta-note">
-                100% gratuito • Sem necessidade de login • Comece a usar em segundos
-            </p>
+            <a href="engine_rede.html" class="cta-btn">Acessar Plataforma</a>
         </div>
     </section>
 
     <!-- Footer -->
     <footer class="footer">
-        <div class="footer-container">
+        <div class="section-container">
             <div class="footer-top">
                 <div class="footer-brand">
-                    <a href="#" class="logo">
-                        <div class="logo-icon">💧</div>
-                        <div class="logo-text">Hydro<span>Network</span></div>
-                    </a>
+                    <span class="logo-text">CONSTRUDATA <span>| HYDRONETWORK</span></span>
                     <p>
                         Plataforma brasileira de engenharia para projetos de redes de saneamento.
                         Desenvolvida por engenheiros, para engenheiros.
@@ -1466,7 +1223,7 @@
                     <h4>Plataforma</h4>
                     <ul class="footer-links">
                         <li><a href="#modulos">Módulos</a></li>
-                        <li><a href="#beneficios">Benefícios</a></li>
+                        <li><a href="#solucoes">Soluções</a></li>
                         <li><a href="engine_rede.html">Acessar</a></li>
                     </ul>
                 </div>
@@ -1479,71 +1236,83 @@
                     </ul>
                 </div>
                 <div>
-                    <h4>Conformidade</h4>
+                    <h4>Normas</h4>
                     <ul class="footer-links">
                         <li><a href="#">NBR 9649</a></li>
                         <li><a href="#">NBR 12211</a></li>
                         <li><a href="#">SINAPI</a></li>
-                        <li><a href="#">SICRO</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Contato</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">Suporte</a></li>
+                        <li><a href="#">Parcerias</a></li>
+                        <li><a href="#">Comercial</a></li>
                     </ul>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2024 HydroNetwork. Todos os direitos reservados.</p>
+                <p>&copy; 2024 ConstruData HydroNetwork. Todos os direitos reservados.</p>
                 <div class="footer-social">
                     <a href="#" title="LinkedIn">in</a>
-                    <a href="#" title="GitHub">GH</a>
-                    <a href="#" title="YouTube">YT</a>
+                    <a href="#" title="Instagram">ig</a>
+                    <a href="#" title="YouTube">yt</a>
                 </div>
             </div>
         </div>
     </footer>
 
     <script>
-        // Header scroll effect
-        const header = document.getElementById('header');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
+        // Hero Slider
+        const slides = document.querySelectorAll('.hero-slide');
+        const dots = document.querySelectorAll('.slider-dot');
+        let currentSlide = 0;
+
+        function showSlide(index) {
+            slides.forEach(s => s.classList.remove('active'));
+            dots.forEach(d => d.classList.remove('active'));
+            slides[index].classList.add('active');
+            dots[index].classList.add('active');
+            currentSlide = index;
+        }
+
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => showSlide(index));
         });
 
-        // Smooth scroll for anchor links
+        setInterval(() => {
+            const next = (currentSlide + 1) % slides.length;
+            showSlide(next);
+        }, 6000);
+
+        // Business Tabs
+        const tabs = document.querySelectorAll('.business-tab');
+        const contentTexts = [
+            'Dimensionamento completo de redes coletoras de esgoto conforme NBR 9649. Cálculos hidráulicos automáticos, verificação de tensão trativa, otimização de diâmetros e geração de relatórios técnicos prontos para aprovação.',
+            'Redes de distribuição de água com cálculo de perdas por Hazen-Williams e Darcy-Weisbach. Verificação de pressões, dimensionamento de reservatórios e exportação para EPANET.',
+            'Sistemas de drenagem urbana pelo método racional. Bacias de contribuição, equações IDF regionais, dimensionamento de galerias e exportação para SWMM.',
+            'Cronograma automático com gráfico de Gantt interativo. Produtividades SINAPI integradas, caminho crítico, Curva S e integração com OpenProject.',
+            'Quantitativos calculados automaticamente: escavação, reaterro, tubulações, PVs. Vinculação direta com SINAPI, SICRO e SEINFRA com BDI configurável.'
+        ];
+
+        tabs.forEach((tab, index) => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                document.querySelector('.business-content p').textContent = contentTexts[index];
+            });
+        });
+
+        // Smooth scroll
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function(e) {
                 e.preventDefault();
                 const target = document.querySelector(this.getAttribute('href'));
                 if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             });
-        });
-
-        // Animate elements on scroll
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.module-card, .problem-card, .benefit-card, .step').forEach(el => {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(30px)';
-            el.style.transition = 'all 0.6s ease';
-            observer.observe(el);
         });
     </script>
 </body>
