@@ -1105,11 +1105,11 @@
                 <div class="hero-features">
                     <div class="hero-feature">
                         <span class="hero-feature-icon">✓</span>
-                        <span>Mapa interativo com Leaflet</span>
+                        <span>Importação DXF/DWG/Shapefile</span>
                     </div>
                     <div class="hero-feature">
                         <span class="hero-feature-icon">✓</span>
-                        <span>Avanço por trechos em tempo real</span>
+                        <span>Mapa interativo com Leaflet</span>
                     </div>
                     <div class="hero-feature">
                         <span class="hero-feature-icon">✓</span>
@@ -1482,12 +1482,13 @@
                     <h3>Importação Inteligente</h3>
                     <p>Carregue dados de qualquer fonte e transforme em rede calculável automaticamente.</p>
                     <ul class="module-features">
-                        <li>CAD: DXF (R12 até 2024), DWG</li>
-                        <li>GIS: Shapefile, GeoJSON, KML</li>
-                        <li>BIM: IFC com mapeamento de layers</li>
-                        <li>Topografia: CSV, TXT configurável</li>
-                        <li>Reconhecimento automático de PVs</li>
-                        <li>Interpolação de cotas de terreno</li>
+                        <li><strong>DXF Avançado:</strong> R12 até 2024, com mapeamento de layers</li>
+                        <li>DWG com conversão automática</li>
+                        <li>GIS: Shapefile, GeoJSON, KML, GeoPackage</li>
+                        <li>BIM: IFC com mapeamento de categorias</li>
+                        <li>Topografia: CSV, TXT, LandXML</li>
+                        <li>Reconhecimento automático de PVs e redes</li>
+                        <li>Transformação de coordenadas UTM/WGS84</li>
                     </ul>
                 </div>
 
@@ -1610,6 +1611,36 @@
                         <li>Arquivo .inp compatível SWMM 5.2</li>
                     </ul>
                 </div>
+
+                <!-- Revisão por Pares -->
+                <div class="module-card">
+                    <div class="module-icon">👥</div>
+                    <h3>Revisão por Pares</h3>
+                    <p>Sistema completo de peer review para garantir qualidade dos projetos.</p>
+                    <ul class="module-features">
+                        <li>Workflow A + B com adjudicação</li>
+                        <li>Rule Engine com normas brasileiras</li>
+                        <li>Geração automática de findings</li>
+                        <li>Exportação findings.shp georreferenciado</li>
+                        <li>Auditoria completa de revisões</li>
+                        <li>Controle de status e aprovações</li>
+                    </ul>
+                </div>
+
+                <!-- ProjectLibre -->
+                <div class="module-card planejamento">
+                    <div class="module-icon">📊</div>
+                    <h3>Integração ProjectLibre</h3>
+                    <p>Exportação direta para ProjectLibre e MS Project.</p>
+                    <ul class="module-features">
+                        <li>Exportação formato .pod e .xml</li>
+                        <li>Gantt com dependências preservadas</li>
+                        <li>Recursos e custos mapeados</li>
+                        <li>Caminho crítico exportado</li>
+                        <li>Compatível com MS Project</li>
+                        <li>Sincronização bidirecional</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </section>
@@ -1625,7 +1656,7 @@
                 <div class="workflow-step">
                     <div class="step-number">📥</div>
                     <h4>Importe</h4>
-                    <p>Carregue seu CAD, GIS ou planilha com os dados da rede</p>
+                    <p>Carregue seu DXF, DWG, Shapefile ou planilha com os dados da rede</p>
                 </div>
                 <div class="workflow-step">
                     <div class="step-number">⚙️</div>
@@ -1706,10 +1737,10 @@
                 <div>
                     <h4>Módulos</h4>
                     <ul class="footer-links">
-                        <li><a href="#">Importação CAD</a></li>
-                        <li><a href="#">Esgoto</a></li>
-                        <li><a href="#">Água</a></li>
-                        <li><a href="#">Drenagem</a></li>
+                        <li><a href="#">Importação DXF/CAD</a></li>
+                        <li><a href="#">Esgoto / Água</a></li>
+                        <li><a href="#">Drenagem Pluvial</a></li>
+                        <li><a href="#">Revisão por Pares</a></li>
                     </ul>
                 </div>
                 <div>
@@ -1731,12 +1762,12 @@
                     </ul>
                 </div>
                 <div>
-                    <h4>Exportações</h4>
+                    <h4>Formatos</h4>
                     <ul class="footer-links">
-                        <li><a href="#">EPANET</a></li>
-                        <li><a href="#">SWMM</a></li>
-                        <li><a href="#">QGIS</a></li>
-                        <li><a href="#">Excel/PDF</a></li>
+                        <li><a href="#">DXF / DWG (CAD)</a></li>
+                        <li><a href="#">EPANET / SWMM</a></li>
+                        <li><a href="#">Shapefile / GeoJSON</a></li>
+                        <li><a href="#">Excel / PDF</a></li>
                     </ul>
                 </div>
             </div>
