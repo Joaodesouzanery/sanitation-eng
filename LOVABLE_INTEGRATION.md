@@ -1766,3 +1766,1645 @@ Todos os módulos devem funcionar em:
 - Mobile (< 768px)
 
 Usar CSS Grid com `repeat(auto-fit, minmax(Xpx, 1fr))` para cards.
+
+---
+
+## MÓDULO 4: CONSTRUÇÃO E PARÂMETROS DE EXECUÇÃO
+
+### 4.1 Descrição
+Módulo para cálculo de parâmetros construtivos baseados em normas brasileiras, incluindo tipo de solo, escoramento, embasamento, composição de equipe e recomposição de pavimento.
+
+### 4.2 Tipos e Enumerações
+
+```typescript
+// Tipo de Solo
+type TipoSolo = 'normal' | 'saturado' | 'rochoso';
+
+// Tipo de Escavação
+type TipoEscavacao = 'manual' | 'mecanizada' | 'mista';
+
+// Tipo de Pavimento
+type TipoPavimento = 'terra' | 'paralelepipedo' | 'asfalto' | 'concreto' | 'bloquete';
+
+// Tipo de Material
+type TipoMaterial = 'PVC' | 'PEAD' | 'Concreto' | 'Ferro Fundido';
+```
+
+### 4.3 Constantes de Engenharia
+
+```typescript
+// CRÍTICO: Profundidade que exige escoramento
+const PROFUNDIDADE_ESCORAMENTO = 1.25; // metros (NR-18)
+
+// Declividade mínima para gravidade
+const DECLIVIDADE_MIN = 0.005; // 0.5%
+
+// Velocidade máxima em tubulações
+const VELOCIDADE_MAX_AGUA = 3.0; // m/s (NBR 15920)
+const VELOCIDADE_MAX_ESGOTO = 5.0; // m/s (NBR 9649)
+```
+
+### CÁLCULO 19: Requisitos de Escoramento
+
+```typescript
+interface RequisitoEscoramento {
+  necessario: boolean;
+  profundidade: number;
+  tipo: 'Pontaleteamento' | 'Estacas-prancha' | 'Nenhum';
+  descricao: string;
+}
+
+function calcularEscoramento(profundidade: number): RequisitoEscoramento {
+  const necessario = profundidade > PROFUNDIDADE_ESCORAMENTO;
+
+  let tipo: RequisitoEscoramento['tipo'] = 'Nenhum';
+  if (necessario) {
+    tipo = profundidade <= 3.0 ? 'Pontaleteamento' : 'Estacas-prancha';
+  }
+
+  return {
+    necessario,
+    profundidade,
+    tipo,
+    descricao: necessario
+      ? `${tipo} (prof. ${profundidade.toFixed(2)}m)`
+      : 'Não necessário (prof. <= 1,25m)'
+  };
+}
+```
+
+### CÁLCULO 20: Requisitos de Embasamento
+
+```typescript
+interface RequisitoEmbasamento {
+  necessario: boolean;
+  lastroAreia: boolean;    // Colchão de areia ao redor do tubo
+  lastroBrita: boolean;    // Brita para drenagem
+  dreno: boolean;          // Dreno sub-superficial
+  descricao: string;
+}
+
+function calcularEmbasamento(tipoSolo: TipoSolo): RequisitoEmbasamento {
+  if (tipoSolo === 'saturado') {
+    return {
+      necessario: true,
+      lastroAreia: true,
+      lastroBrita: true,
+      dreno: true,
+      descricao: 'Lastro de areia, Lastro de brita, Dreno sub-superficial'
+    };
+  }
+
+  if (tipoSolo === 'rochoso') {
+    return {
+      necessario: true,
+      lastroAreia: true,  // Amortecimento para o tubo
+      lastroBrita: false,
+      dreno: false,
+      descricao: 'Lastro de areia (proteção do tubo)'
+    };
+  }
+
+  return {
+    necessario: false,
+    lastroAreia: false,
+    lastroBrita: false,
+    dreno: false,
+    descricao: 'Padrão (solo normal)'
+  };
+}
+```
+
+### CÁLCULO 21: Requisitos de Assentamento por Material
+
+```typescript
+interface RequisitoAssentamento {
+  material: TipoMaterial;
+  termofusao: boolean;          // PEAD requer termofusão
+  equipamentoPesado: boolean;   // Concreto/Ferro requer guincho
+  juntaEspecial: boolean;       // Juntas especiais
+  descricao: string;
+}
+
+function calcularAssentamento(tipoMaterial: TipoMaterial): RequisitoAssentamento {
+  const requisitos: Record<TipoMaterial, Omit<RequisitoAssentamento, 'material'>> = {
+    'PVC': {
+      termofusao: false,
+      equipamentoPesado: false,
+      juntaEspecial: false,
+      descricao: 'Assentamento padrão'
+    },
+    'PEAD': {
+      termofusao: true,
+      equipamentoPesado: false,
+      juntaEspecial: true,
+      descricao: 'Termofusão, Junta especial'
+    },
+    'Concreto': {
+      termofusao: false,
+      equipamentoPesado: true,
+      juntaEspecial: true,
+      descricao: 'Equipamento de içamento, Junta especial'
+    },
+    'Ferro Fundido': {
+      termofusao: false,
+      equipamentoPesado: true,
+      juntaEspecial: true,
+      descricao: 'Equipamento de içamento, Junta especial'
+    }
+  };
+
+  return {
+    material: tipoMaterial,
+    ...requisitos[tipoMaterial]
+  };
+}
+```
+
+### CÁLCULO 22: Requisitos de Recomposição de Pavimento
+
+```typescript
+interface RequisitoRecomposicao {
+  tipoPavimento: TipoPavimento;
+  subbase: boolean;
+  base: boolean;
+  bgs: boolean;     // Brita Graduada Simples
+  cbuq: boolean;    // Concreto Betuminoso (asfalto)
+  camadas: string[];
+  descricao: string;
+}
+
+function calcularRecomposicao(tipoPavimento: TipoPavimento): RequisitoRecomposicao {
+  const configs: Record<TipoPavimento, Omit<RequisitoRecomposicao, 'tipoPavimento' | 'camadas' | 'descricao'>> = {
+    'asfalto': { subbase: true, base: true, bgs: true, cbuq: true },
+    'concreto': { subbase: true, base: true, bgs: false, cbuq: false },
+    'paralelepipedo': { subbase: false, base: true, bgs: false, cbuq: false },
+    'bloquete': { subbase: false, base: true, bgs: false, cbuq: false },
+    'terra': { subbase: false, base: false, bgs: false, cbuq: false }
+  };
+
+  const config = configs[tipoPavimento];
+  const camadas: string[] = [];
+
+  if (config.subbase) camadas.push('Sub-base');
+  if (config.base) camadas.push('Base');
+  if (config.bgs) camadas.push('BGS (Brita Graduada Simples)');
+  if (config.cbuq) camadas.push('CBUQ (Asfalto)');
+
+  return {
+    tipoPavimento,
+    ...config,
+    camadas,
+    descricao: camadas.length > 0
+      ? `Recomposição: ${camadas.join(' → ')}`
+      : `Recomposição simples (${tipoPavimento})`
+  };
+}
+```
+
+### CÁLCULO 23: Composição de Equipe Detalhada
+
+```typescript
+interface ComposicaoEquipe {
+  encarregado: number;
+  pedreiro: number;
+  servente: number;
+  operadorMaquina: number;
+  soldadorPead: number;
+  adicionalEscoramento: number;
+  adicionalEmbasamento: number;
+  adicionalMaterial: number;
+  totalProfissionais: number;
+  totalAjudantes: number;
+  totalEquipe: number;
+}
+
+function calcularComposicaoEquipe(
+  tipoEscavacao: TipoEscavacao,
+  escoramento: RequisitoEscoramento,
+  embasamento: RequisitoEmbasamento,
+  tipoMaterial: TipoMaterial
+): ComposicaoEquipe {
+  const equipe: ComposicaoEquipe = {
+    encarregado: 1,
+    pedreiro: 0,
+    servente: 2,
+    operadorMaquina: 0,
+    soldadorPead: 0,
+    adicionalEscoramento: 0,
+    adicionalEmbasamento: 0,
+    adicionalMaterial: 0,
+    totalProfissionais: 0,
+    totalAjudantes: 0,
+    totalEquipe: 0
+  };
+
+  // Escavação mecanizada requer operador
+  if (tipoEscavacao === 'mecanizada' || tipoEscavacao === 'mista') {
+    equipe.operadorMaquina = 1;
+  }
+
+  // Escoramento requer equipe adicional
+  if (escoramento.necessario) {
+    equipe.adicionalEscoramento = 1;
+    equipe.pedreiro += 1;
+  }
+
+  // Solo saturado requer equipe adicional
+  if (embasamento.necessario && embasamento.dreno) {
+    equipe.adicionalEmbasamento = 1;
+  }
+
+  // Materiais especiais
+  if (tipoMaterial === 'PEAD') {
+    equipe.soldadorPead = 1;
+    equipe.adicionalMaterial = 1;
+  } else if (tipoMaterial === 'Concreto' || tipoMaterial === 'Ferro Fundido') {
+    equipe.adicionalMaterial = 1;
+  }
+
+  // Calcular totais
+  equipe.totalProfissionais =
+    equipe.encarregado +
+    equipe.pedreiro +
+    equipe.operadorMaquina +
+    equipe.soldadorPead +
+    equipe.adicionalEscoramento +
+    equipe.adicionalEmbasamento +
+    equipe.adicionalMaterial;
+
+  equipe.totalAjudantes = equipe.servente +
+    (equipe.adicionalEscoramento > 0 ? 1 : 0) +
+    (equipe.adicionalEmbasamento > 0 ? 1 : 0) +
+    (equipe.adicionalMaterial > 0 ? 1 : 0);
+
+  equipe.totalEquipe = equipe.totalProfissionais + equipe.totalAjudantes;
+
+  return equipe;
+}
+```
+
+### CÁLCULO 24: Parâmetros de Execução Completos
+
+```typescript
+interface ParametrosExecucao {
+  tipoSolo: TipoSolo;
+  tipoEscavacao: TipoEscavacao;
+  tipoPavimento: TipoPavimento;
+  tipoMaterial: TipoMaterial;
+  profundidade: number;
+  escoramento: RequisitoEscoramento;
+  embasamento: RequisitoEmbasamento;
+  assentamento: RequisitoAssentamento;
+  recomposicao: RequisitoRecomposicao;
+  equipe: ComposicaoEquipe;
+}
+
+function criarParametrosExecucao(
+  tipoSolo: TipoSolo,
+  tipoEscavacao: TipoEscavacao,
+  tipoPavimento: TipoPavimento,
+  tipoMaterial: TipoMaterial,
+  profundidade: number
+): ParametrosExecucao {
+  const escoramento = calcularEscoramento(profundidade);
+  const embasamento = calcularEmbasamento(tipoSolo);
+  const assentamento = calcularAssentamento(tipoMaterial);
+  const recomposicao = calcularRecomposicao(tipoPavimento);
+  const equipe = calcularComposicaoEquipe(tipoEscavacao, escoramento, embasamento, tipoMaterial);
+
+  return {
+    tipoSolo,
+    tipoEscavacao,
+    tipoPavimento,
+    tipoMaterial,
+    profundidade,
+    escoramento,
+    embasamento,
+    assentamento,
+    recomposicao,
+    equipe
+  };
+}
+
+// Exemplo de uso:
+// const params = criarParametrosExecucao('saturado', 'mecanizada', 'asfalto', 'PVC', 2.0);
+// console.log(params.escoramento.descricao);  // "Pontaleteamento (prof. 2.00m)"
+// console.log(params.equipe.totalEquipe);     // 8 pessoas
+```
+
+---
+
+## MÓDULO 5: CÁLCULOS HIDRÁULICOS
+
+### 5.1 Descrição
+Cálculos hidráulicos baseados em Manning (escoamento livre) e Hazen-Williams (pressão) para dimensionamento de redes.
+
+### CÁLCULO 25: Seção Circular - Funções Geométricas
+
+```typescript
+const PI = Math.PI;
+const GRAVITY = 9.81; // m/s²
+
+// Área de seção circular
+function areaCircular(D: number, y: number | null = null): number {
+  // D = diâmetro (m), y = lâmina d'água (m)
+  if (y === null || y >= D) {
+    return PI * D * D / 4;  // Seção cheia
+  }
+  if (y <= 0) return 0;
+
+  // Área parcialmente cheia
+  const r = D / 2;
+  const theta = 2 * Math.acos((r - y) / r);
+  return r * r * (theta - Math.sin(theta)) / 2;
+}
+
+// Perímetro molhado
+function perimetroMolhado(D: number, y: number | null = null): number {
+  if (y === null || y >= D) return PI * D;
+  if (y <= 0) return 0;
+
+  const r = D / 2;
+  const theta = 2 * Math.acos((r - y) / r);
+  return r * theta;
+}
+
+// Raio hidráulico
+function raioHidraulico(D: number, y: number | null = null): number {
+  const A = areaCircular(D, y);
+  const P = perimetroMolhado(D, y);
+  return P > 0 ? A / P : 0;
+}
+```
+
+### CÁLCULO 26: Manning - Escoamento Livre
+
+```typescript
+// Velocidade por Manning
+// V = (1/n) * R^(2/3) * S^(1/2)
+function manningVelocity(R: number, S: number, n: number): number {
+  if (R <= 0 || S <= 0 || n <= 0) return 0;
+  return (1 / n) * Math.pow(R, 2/3) * Math.pow(S, 0.5);
+}
+
+// Vazão por Manning
+// Q = (1/n) * A * R^(2/3) * S^(1/2)
+function manningFlow(A: number, R: number, S: number, n: number): number {
+  const V = manningVelocity(R, S, n);
+  return A * V;
+}
+
+// Vazão em seção circular
+function manningFlowCircular(
+  D: number,    // Diâmetro (m)
+  S: number,    // Declividade (m/m)
+  n: number,    // Coeficiente de Manning
+  yD: number = 1.0  // Relação y/D (1.0 = cheia)
+): number {
+  const y = yD * D;
+  const A = areaCircular(D, y);
+  const R = raioHidraulico(D, y);
+  return manningFlow(A, R, S, n);
+}
+
+// Capacidade máxima (seção cheia)
+function manningFullCapacity(D: number, S: number, n: number): number {
+  return manningFlowCircular(D, S, n, 1.0);
+}
+
+// Coeficientes de Manning típicos
+const COEF_MANNING = {
+  'PVC': 0.010,
+  'PEAD': 0.010,
+  'Concreto': 0.013,
+  'Ferro Fundido': 0.012,
+  'Concreto Rugoso': 0.015
+};
+```
+
+### CÁLCULO 27: Hazen-Williams - Escoamento sob Pressão
+
+```typescript
+// Perda de carga por Hazen-Williams
+// hf = 10.643 * (Q^1.85) / (C^1.85 * D^4.87) * L
+function hazenWilliamsHeadloss(
+  Q: number,  // Vazão (m³/s)
+  D: number,  // Diâmetro (m)
+  L: number,  // Comprimento (m)
+  C: number   // Coeficiente de Hazen-Williams
+): number {
+  if (Q <= 0 || D <= 0 || L <= 0 || C <= 0) return 0;
+  return 10.643 * Math.pow(Q, 1.85) / (Math.pow(C, 1.85) * Math.pow(D, 4.87)) * L;
+}
+
+// Velocidade em conduto sob pressão
+// V = Q / A = 4Q / (π * D²)
+function hazenWilliamsVelocity(Q: number, D: number): number {
+  if (D <= 0) return 0;
+  const A = PI * D * D / 4;
+  return Q / A;
+}
+
+// Diâmetro necessário para limitar perda de carga
+function hazenWilliamsDiameterRequired(
+  Q: number,      // Vazão (m³/s)
+  L: number,      // Comprimento (m)
+  hfMax: number,  // Perda de carga máxima (m)
+  C: number       // Coeficiente HW
+): number {
+  if (Q <= 0 || hfMax <= 0) return 0;
+  const DExp = 10.643 * Math.pow(Q, 1.85) * L / (Math.pow(C, 1.85) * hfMax);
+  return Math.pow(DExp, 1 / 4.87);
+}
+
+// Coeficientes de Hazen-Williams típicos
+const COEF_HAZEN_WILLIAMS = {
+  'PVC': 150,
+  'PEAD': 150,
+  'Ferro Fundido Novo': 130,
+  'Ferro Fundido Usado': 100,
+  'Concreto': 120,
+  'Aço': 120
+};
+```
+
+### CÁLCULO 28: Potência de Bomba
+
+```typescript
+// Potência de bomba em kW
+// P = ρ * g * Q * ΔH / η
+function pumpPowerKW(
+  Q: number,          // Vazão (m³/s)
+  dH: number,         // Altura manométrica (m)
+  efficiency: number = 0.75  // Rendimento (0-1)
+): number {
+  if (Q <= 0 || dH <= 0 || efficiency <= 0) return 0;
+  const P_watts = 1000 * GRAVITY * Q * dH / efficiency;
+  return P_watts / 1000;
+}
+
+// Potência em CV (cavalos-vapor)
+function pumpPowerCV(Q: number, dH: number, efficiency: number = 0.75): number {
+  const P_kw = pumpPowerKW(Q, dH, efficiency);
+  return P_kw / 0.7355;  // 1 CV = 0.7355 kW
+}
+
+// Seleção de bomba comercial
+const BOMBAS_COMERCIAIS_CV = [0.5, 0.75, 1, 1.5, 2, 3, 5, 7.5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100];
+
+function selecionarBombaComercial(potenciaCalculada: number): number {
+  for (const cv of BOMBAS_COMERCIAIS_CV) {
+    if (cv >= potenciaCalculada * 1.1) return cv;  // 10% de margem
+  }
+  return BOMBAS_COMERCIAIS_CV[BOMBAS_COMERCIAIS_CV.length - 1];
+}
+```
+
+### CÁLCULO 29: Intensidade de Chuva (IDF) e Método Racional
+
+```typescript
+// Intensidade de chuva pela equação IDF
+// i = K * T^a / (t + b)^c
+function idfIntensity(
+  T: number,  // Período de retorno (anos)
+  t: number,  // Duração (minutos)
+  K: number, a: number, b: number, c: number  // Coeficientes IDF
+): number {
+  if (T <= 0 || t <= 0) return 0;
+  return K * Math.pow(T, a) / Math.pow(t + b, c);
+}
+
+// Vazão pelo método racional
+// Q = 0.00278 * C * i * A
+function rationalMethodFlow(
+  C: number,  // Coeficiente de runoff (0-1)
+  i: number,  // Intensidade (mm/h)
+  A: number   // Área de contribuição (ha)
+): number {
+  return 0.00278 * C * i * A;
+}
+
+// Tempo de concentração (Kirpich)
+// tc = 0.0195 * L^0.77 * S^(-0.385)
+function timeOfConcentration(L: number, H: number): number {
+  if (L <= 0 || H <= 0) return 5.0;  // Mínimo 5 minutos
+  const S = H / L;
+  const tc = 0.0195 * Math.pow(L, 0.77) * Math.pow(S, -0.385);
+  return Math.max(tc, 5.0);
+}
+
+// Coeficientes de runoff típicos
+const COEF_RUNOFF = {
+  'Telhado': 0.95,
+  'Asfalto': 0.90,
+  'Concreto': 0.85,
+  'Paralelepipedo': 0.60,
+  'Gramado (arenoso)': 0.10,
+  'Gramado (argiloso)': 0.25,
+  'Area Verde': 0.15
+};
+```
+
+---
+
+## MÓDULO 6: PEER REVIEW (REVISÃO POR PARES)
+
+### 6.1 Descrição
+Sistema de verificação de conformidade com normas brasileiras (ABNT) com workflow de revisão A + B e adjudicação.
+
+### 6.2 Estrutura de Dados
+
+```typescript
+type Severity = 'OK' | 'INFO' | 'ALERT' | 'WARNING' | 'ERROR' | 'CRITICAL';
+
+interface NormRef {
+  normId: string;       // Ex: "ABNT_NBR_15920"
+  clauseId?: string;    // Ex: "5.3.2"
+  topic: string;        // Ex: "min_diameter_50mm"
+}
+
+interface Finding {
+  id: string;
+  elementId: string;
+  elementType: string;
+  ruleId: string;
+  severity: Severity;
+  normRefs: NormRef[];
+  message: string;
+  recommendation: string;
+  evidence: Record<string, any>;
+  reviewerId: string;
+  timestamp: string;
+  status: 'open' | 'acknowledged' | 'resolved' | 'wont_fix';
+  x?: number;
+  y?: number;
+}
+
+interface Rule {
+  id: string;
+  title: string;
+  description: string;
+  severity: Severity;
+  appliesTo: string[];     // Tipos de elementos
+  systemFilter?: string;   // water, sewer, drainage
+  normRefs: NormRef[];
+  evalFunc: (element: any) => { passed: boolean; evidence: Record<string, any> };
+  recommendation: string;
+  active: boolean;
+}
+```
+
+### CÁLCULO 30: Regras de Verificação Normativa
+
+```typescript
+// REGRAS PARA ÁGUA (NBR 15920)
+const WATER_RULES: Rule[] = [
+  {
+    id: 'WAT-001',
+    title: 'Diâmetro mínimo',
+    description: 'Verifica se o diâmetro atende ao mínimo normativo',
+    severity: 'ERROR',
+    appliesTo: ['pipe'],
+    systemFilter: 'water',
+    normRefs: [{ normId: 'ABNT_NBR_15920', topic: 'min_diameter_50mm' }],
+    evalFunc: (elem) => ({
+      passed: elem.diameter >= 50,
+      evidence: { diameter: elem.diameter }
+    }),
+    recommendation: 'Ajustar diâmetro para mínimo de 50mm',
+    active: true
+  },
+  {
+    id: 'WAT-002',
+    title: 'Velocidade máxima',
+    description: 'Verifica se velocidade está abaixo do máximo',
+    severity: 'ALERT',
+    appliesTo: ['pipe'],
+    systemFilter: 'water',
+    normRefs: [{ normId: 'ABNT_NBR_15920', topic: 'max_velocity_3m/s' }],
+    evalFunc: (elem) => ({
+      passed: (elem.velocity ?? 0) <= 3.0,
+      evidence: { velocity: elem.velocity }
+    }),
+    recommendation: 'Reduzir velocidade aumentando diâmetro ou reduzindo vazão',
+    active: true
+  },
+  {
+    id: 'WAT-003',
+    title: 'Cobertura mínima',
+    description: 'Verifica cobertura mínima sobre a tubulação',
+    severity: 'WARNING',
+    appliesTo: ['pipe'],
+    systemFilter: 'water',
+    normRefs: [{ normId: 'ABNT_NBR_15920', topic: 'min_cover_0.6m' }],
+    evalFunc: (elem) => ({
+      passed: (elem.cover ?? 1) >= 0.6,
+      evidence: { cover: elem.cover }
+    }),
+    recommendation: 'Ajustar profundidade para mínimo 0.6m de cobertura',
+    active: true
+  }
+];
+
+// REGRAS PARA ESGOTO (NBR 9649)
+const SEWER_RULES: Rule[] = [
+  {
+    id: 'SEW-001',
+    title: 'Diâmetro mínimo',
+    description: 'Verifica diâmetro mínimo para esgoto',
+    severity: 'ERROR',
+    appliesTo: ['pipe', 'conduit'],
+    systemFilter: 'sewer',
+    normRefs: [{ normId: 'ABNT_NBR_9649', topic: 'min_diameter_100mm' }],
+    evalFunc: (elem) => ({
+      passed: elem.diameter >= 100,
+      evidence: { diameter: elem.diameter }
+    }),
+    recommendation: 'Ajustar diâmetro para mínimo de 100mm',
+    active: true
+  },
+  {
+    id: 'SEW-002',
+    title: 'Declividade mínima',
+    description: 'Verifica declividade mínima para DN150',
+    severity: 'ERROR',
+    appliesTo: ['pipe', 'conduit'],
+    systemFilter: 'sewer',
+    normRefs: [{ normId: 'ABNT_NBR_9649', topic: 'min_slope_0.5pct_d150' }],
+    evalFunc: (elem) => ({
+      passed: elem.slope >= 0.005 || elem.diameter > 150,
+      evidence: { slope: elem.slope, diameter: elem.diameter }
+    }),
+    recommendation: 'Ajustar declividade para mínimo 0.5% (DN150)',
+    active: true
+  },
+  {
+    id: 'SEW-003',
+    title: 'Distância máxima entre PVs',
+    description: 'Verifica distância máxima de 100m entre PVs',
+    severity: 'ALERT',
+    appliesTo: ['pipe', 'conduit'],
+    systemFilter: 'sewer',
+    normRefs: [{ normId: 'ABNT_NBR_9649', topic: 'max_distance_100m_PV' }],
+    evalFunc: (elem) => ({
+      passed: elem.length <= 100,
+      evidence: { length: elem.length }
+    }),
+    recommendation: 'Inserir PV intermediário se comprimento > 100m',
+    active: true
+  }
+];
+
+// REGRAS PARA DRENAGEM (NBR 15527)
+const DRAINAGE_RULES: Rule[] = [
+  {
+    id: 'DRN-001',
+    title: 'Velocidade máxima',
+    description: 'Verifica velocidade máxima em condutos de drenagem',
+    severity: 'ALERT',
+    appliesTo: ['conduit'],
+    systemFilter: 'drainage',
+    normRefs: [{ normId: 'ABNT_NBR_15527', topic: 'max_velocity_5m/s' }],
+    evalFunc: (elem) => ({
+      passed: (elem.velocity ?? 0) <= 5.0,
+      evidence: { velocity: elem.velocity }
+    }),
+    recommendation: 'Reduzir velocidade ou prever dissipador',
+    active: true
+  }
+];
+```
+
+### CÁLCULO 31: Motor de Revisão
+
+```typescript
+interface ReviewSession {
+  id: string;
+  reviewerId: string;
+  projectId: string;
+  startedAt: string;
+  completedAt?: string;
+  findings: Finding[];
+  elementsReviewed: Set<string>;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
+function runPeerReview(
+  elements: any[],
+  rules: Rule[],
+  reviewerId: string
+): ReviewSession {
+  const session: ReviewSession = {
+    id: generateId(),
+    reviewerId,
+    projectId: 'current',
+    startedAt: new Date().toISOString(),
+    findings: [],
+    elementsReviewed: new Set(),
+    status: 'in_progress'
+  };
+
+  for (const element of elements) {
+    session.elementsReviewed.add(element.id);
+
+    // Filtrar regras aplicáveis
+    const applicableRules = rules.filter(rule =>
+      rule.active &&
+      rule.appliesTo.includes(element.type) &&
+      (!rule.systemFilter || rule.systemFilter === element.system)
+    );
+
+    for (const rule of applicableRules) {
+      try {
+        const { passed, evidence } = rule.evalFunc(element);
+
+        if (!passed) {
+          session.findings.push({
+            id: generateId(),
+            elementId: element.id,
+            elementType: element.type,
+            ruleId: rule.id,
+            severity: rule.severity,
+            normRefs: rule.normRefs,
+            message: `${rule.title}: ${rule.description}`,
+            recommendation: rule.recommendation,
+            evidence,
+            reviewerId,
+            timestamp: new Date().toISOString(),
+            status: 'open',
+            x: element.x,
+            y: element.y
+          });
+        }
+      } catch (error) {
+        console.error(`Erro ao avaliar regra ${rule.id}:`, error);
+      }
+    }
+  }
+
+  session.status = 'completed';
+  session.completedAt = new Date().toISOString();
+
+  return session;
+}
+
+function getReviewSummary(session: ReviewSession): Record<string, any> {
+  const severityCounts: Record<string, number> = {};
+
+  for (const finding of session.findings) {
+    severityCounts[finding.severity] = (severityCounts[finding.severity] || 0) + 1;
+  }
+
+  return {
+    sessionId: session.id,
+    reviewerId: session.reviewerId,
+    startedAt: session.startedAt,
+    completedAt: session.completedAt,
+    totalFindings: session.findings.length,
+    elementsReviewed: session.elementsReviewed.size,
+    severityCounts,
+    status: session.status
+  };
+}
+```
+
+### 6.3 Interface de Usuário para Peer Review
+
+#### 6.3.1 Dashboard de Findings
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│ 🔍 PEER REVIEW - Verificação de Conformidade                   │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  [🔴 CRITICAL: 0] [🟠 ERROR: 3] [🟡 WARNING: 5] [🔵 INFO: 12]  │
+│                                                                │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │ Findings por Norma                                       │  │
+│  │ ████████████████████ NBR 9649 (Esgoto) - 12             │  │
+│  │ ████████████         NBR 15920 (Água) - 6               │  │
+│  │ ████                 NBR 15527 (Drenagem) - 2           │  │
+│  └─────────────────────────────────────────────────────────┘  │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+```
+
+#### 6.3.2 Lista de Findings
+
+| Severidade | Elemento | Regra | Mensagem | Norma | Ações |
+|------------|----------|-------|----------|-------|-------|
+| 🟠 ERROR | T01-T02 | SEW-002 | Declividade mínima: 0.3% < 0.5% | NBR 9649 | 👁️ ✓ |
+| 🟡 WARNING | N05 | WAT-003 | Cobertura: 0.5m < 0.6m | NBR 15920 | 👁️ ✓ |
+
+---
+
+## MÓDULO 7: EXPORTAÇÃO GIS
+
+### 7.1 Descrição
+Exportação para formatos GIS compatíveis com QGIS: GeoJSON, Shapefile conceitual e GeoPackage.
+
+### CÁLCULO 32: Geração de GeoJSON Completo
+
+```typescript
+interface GeoJSONFeatureCollection {
+  type: 'FeatureCollection';
+  crs?: {
+    type: 'name';
+    properties: { name: string };
+  };
+  features: Array<{
+    type: 'Feature';
+    geometry: {
+      type: 'LineString' | 'Point';
+      coordinates: number[][] | number[];
+    };
+    properties: Record<string, any>;
+  }>;
+}
+
+function exportNetworkToGeoJSON(
+  trechos: Trecho[],
+  parametrosExecucao?: Map<string, ParametrosExecucao>
+): GeoJSONFeatureCollection {
+  const features = trechos.map(trecho => {
+    const params = parametrosExecucao?.get(`${trecho.idInicio}_${trecho.idFim}`);
+
+    return {
+      type: 'Feature' as const,
+      geometry: {
+        type: 'LineString' as const,
+        coordinates: [
+          [trecho.xInicio, trecho.yInicio],
+          [trecho.xFim, trecho.yFim]
+        ]
+      },
+      properties: {
+        id_inicio: trecho.idInicio,
+        id_fim: trecho.idFim,
+        comprim_m: Math.round(trecho.comprimento * 100) / 100,
+        decliv_pct: Math.round(trecho.declividade * 10000) / 100,
+        tipo_rede: trecho.tipoRede,
+        diam_mm: trecho.diametroMm,
+        material: trecho.material,
+        cota_ini: trecho.cotaInicio,
+        cota_fim: trecho.cotaFim,
+        desnivel: Math.round((trecho.cotaInicio - trecho.cotaFim) * 1000) / 1000,
+        // Parâmetros de execução (se disponíveis)
+        ...(params && {
+          solo: params.tipoSolo,
+          escavacao: params.tipoEscavacao,
+          pavimento: params.tipoPavimento,
+          prof_m: params.profundidade,
+          escoram: params.escoramento.necessario,
+          equipe: params.equipe.totalEquipe
+        })
+      }
+    };
+  });
+
+  return {
+    type: 'FeatureCollection',
+    crs: {
+      type: 'name',
+      properties: { name: 'EPSG:31983' }  // SIRGAS 2000 / UTM zone 23S
+    },
+    features
+  };
+}
+
+function downloadGeoJSON(data: GeoJSONFeatureCollection, filename: string): void {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/geo+json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename.endsWith('.geojson') ? filename : `${filename}.geojson`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+```
+
+### CÁLCULO 33: Exportação de Pontos para GeoJSON
+
+```typescript
+function exportPointsToGeoJSON(pontos: PontoTopografico[]): GeoJSONFeatureCollection {
+  const features = pontos.map((ponto, index) => ({
+    type: 'Feature' as const,
+    geometry: {
+      type: 'Point' as const,
+      coordinates: [ponto.x, ponto.y]
+    },
+    properties: {
+      id: ponto.id,
+      cota: ponto.cota,
+      ordem: index + 1,
+      tipo: index === 0 ? 'inicio' : index === pontos.length - 1 ? 'fim' : 'intermediario'
+    }
+  }));
+
+  return {
+    type: 'FeatureCollection',
+    crs: {
+      type: 'name',
+      properties: { name: 'EPSG:31983' }
+    },
+    features
+  };
+}
+```
+
+### CÁLCULO 34: Exportação de Findings para GeoJSON
+
+```typescript
+function exportFindingsToGeoJSON(findings: Finding[]): GeoJSONFeatureCollection {
+  const features = findings
+    .filter(f => f.x !== undefined && f.y !== undefined)
+    .map(finding => ({
+      type: 'Feature' as const,
+      geometry: {
+        type: 'Point' as const,
+        coordinates: [finding.x!, finding.y!]
+      },
+      properties: {
+        id: finding.id,
+        element_id: finding.elementId,
+        rule_id: finding.ruleId,
+        severity: finding.severity,
+        message: finding.message,
+        recommendation: finding.recommendation,
+        norm_ref: finding.normRefs.map(n => n.normId).join(', '),
+        status: finding.status,
+        timestamp: finding.timestamp
+      }
+    }));
+
+  return {
+    type: 'FeatureCollection',
+    features
+  };
+}
+```
+
+---
+
+## SEÇÃO DE SEGURANÇA (CRÍTICO)
+
+Esta seção define práticas de segurança **obrigatórias** para a implementação na Lovable. Implementar desde o início evita vulnerabilidades futuras.
+
+### SEC-1: Validação de Entrada (Input Sanitization)
+
+```typescript
+// ⚠️ SEMPRE sanitizar entrada de usuário antes de:
+// - Exibir em HTML (previne XSS)
+// - Armazenar em localStorage
+// - Usar em cálculos
+
+// Escape HTML
+function escapeHtml(text: string): string {
+  if (!text) return '';
+  const escapeMap: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+    '`': '&#96;'
+  };
+  return String(text).replace(/[&<>"'`]/g, char => escapeMap[char]);
+}
+
+// Padrões de injeção a detectar
+const INJECTION_PATTERNS = [
+  /<script[^>]*>.*?<\/script>/gi,    // Script tags
+  /javascript:/gi,                     // JS protocol
+  /on\w+\s*=/gi,                       // Event handlers (onclick=, onerror=)
+  /expression\s*\(/gi,                 // CSS expression
+  /(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE)\s/gi,  // SQL keywords
+  /UNION\s+SELECT/gi,                  // SQL UNION
+];
+
+function detectInjection(text: string): string[] {
+  const attacks: string[] = [];
+  for (const pattern of INJECTION_PATTERNS) {
+    if (pattern.test(text)) {
+      attacks.push(`Padrão suspeito detectado: ${pattern.source}`);
+    }
+  }
+  return attacks;
+}
+
+function validateAndSanitize(text: string, maxLength: number = 10000): {
+  isValid: boolean;
+  errors: string[];
+  sanitized: string;
+  warnings: string[];
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!text) {
+    return { isValid: true, errors: [], sanitized: '', warnings: [] };
+  }
+
+  let sanitized = String(text);
+
+  // Verificar tamanho
+  if (sanitized.length > maxLength) {
+    errors.push(`Texto excede tamanho máximo de ${maxLength} caracteres`);
+    sanitized = sanitized.slice(0, maxLength);
+  }
+
+  // Detectar ataques
+  const attacks = detectInjection(sanitized);
+  if (attacks.length > 0) {
+    warnings.push(...attacks.map(a => `Potencial ataque detectado: ${a}`));
+  }
+
+  // Sanitizar
+  sanitized = escapeHtml(sanitized);
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    sanitized,
+    warnings
+  };
+}
+```
+
+### SEC-2: Validação de Arquivos (File Upload)
+
+```typescript
+// ⚠️ SEMPRE validar arquivos antes de processar
+
+interface FileValidationResult {
+  isValid: boolean;
+  errors: string[];
+  safeFilename: string;
+  warnings: string[];
+}
+
+// Extensões permitidas
+const ALLOWED_EXTENSIONS = new Set(['.csv', '.txt', '.json', '.geojson', '.xlsx']);
+
+// Tamanho máximo (50MB)
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+
+// Magic bytes para validar tipo real do arquivo
+const MAGIC_BYTES: Record<string, string[]> = {
+  'PK': ['.xlsx', '.zip'],      // ZIP-based
+  '%PDF': ['.pdf'],
+  '{"': ['.json', '.geojson'],
+  '[{': ['.json', '.geojson'],
+};
+
+function sanitizeFilename(filename: string): string {
+  if (!filename) return 'unnamed';
+
+  // Remover caminho
+  let safe = filename.split(/[/\\]/).pop() || 'unnamed';
+
+  // Remover null bytes
+  safe = safe.replace(/\x00/g, '');
+
+  // Manter apenas caracteres seguros
+  const safeChars = /[a-zA-Z0-9._-]/;
+  safe = Array.from(safe).map(c => safeChars.test(c) ? c : '_').join('');
+
+  // Não permitir arquivos ocultos
+  safe = safe.replace(/^\.+/, '');
+
+  // Limitar tamanho
+  if (safe.length > 255) {
+    const ext = safe.slice(safe.lastIndexOf('.'));
+    const name = safe.slice(0, 200);
+    safe = name + ext;
+  }
+
+  return safe || 'unnamed';
+}
+
+function validateFile(
+  file: File,
+  allowedExtensions: Set<string> = ALLOWED_EXTENSIONS
+): FileValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  const safeFilename = sanitizeFilename(file.name);
+  const ext = '.' + safeFilename.split('.').pop()?.toLowerCase();
+
+  // Verificar tamanho
+  if (file.size > MAX_FILE_SIZE) {
+    errors.push(`Arquivo excede tamanho máximo de ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+  }
+
+  // Verificar extensão
+  if (!allowedExtensions.has(ext)) {
+    errors.push(`Extensão '${ext}' não permitida. Permitidas: ${Array.from(allowedExtensions).join(', ')}`);
+  }
+
+  // Arquivos muito pequenos podem ser suspeitos
+  if (file.size < 10) {
+    warnings.push('Arquivo muito pequeno');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    safeFilename,
+    warnings
+  };
+}
+
+// Verificar conteúdo do arquivo para scripts maliciosos
+async function validateFileContent(file: File): Promise<string[]> {
+  const errors: string[] = [];
+
+  try {
+    const text = await file.text();
+
+    // Verificar padrões perigosos em arquivos de texto
+    const dangerousPatterns = [
+      '<script',
+      'javascript:',
+      'vbscript:',
+      'onload=',
+      'onerror=',
+      'onclick=',
+      'eval('
+    ];
+
+    const lowerText = text.toLowerCase();
+    for (const pattern of dangerousPatterns) {
+      if (lowerText.includes(pattern)) {
+        errors.push(`Arquivo contém conteúdo potencialmente malicioso: ${pattern}`);
+      }
+    }
+  } catch {
+    // Arquivo binário, ignorar validação de texto
+  }
+
+  return errors;
+}
+```
+
+### SEC-3: Validação de GeoJSON
+
+```typescript
+// ⚠️ Validar estrutura e conteúdo de dados GeoJSON
+
+const VALID_GEOMETRY_TYPES = new Set([
+  'Point', 'MultiPoint', 'LineString', 'MultiLineString',
+  'Polygon', 'MultiPolygon', 'GeometryCollection'
+]);
+
+interface GeoJSONValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  sanitized?: GeoJSONFeatureCollection;
+}
+
+function validateGeoJSON(data: any): GeoJSONValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!data || typeof data !== 'object') {
+    return { isValid: false, errors: ['GeoJSON deve ser um objeto'], warnings: [] };
+  }
+
+  // Verificar tipo
+  const type = data.type;
+  if (!type) {
+    errors.push("Propriedade 'type' ausente");
+  } else if (!['Feature', 'FeatureCollection', ...VALID_GEOMETRY_TYPES].includes(type)) {
+    errors.push(`Tipo inválido: ${type}`);
+  }
+
+  // Validar FeatureCollection
+  if (type === 'FeatureCollection') {
+    const features = data.features;
+    if (!Array.isArray(features)) {
+      errors.push("'features' deve ser um array");
+    } else {
+      features.forEach((feature: any, i: number) => {
+        if (feature.type !== 'Feature') {
+          errors.push(`Feature[${i}]: type deve ser 'Feature'`);
+        }
+
+        // Validar geometria
+        const geometry = feature.geometry;
+        if (geometry && !VALID_GEOMETRY_TYPES.has(geometry.type)) {
+          errors.push(`Feature[${i}]: tipo de geometria inválido: ${geometry.type}`);
+        }
+
+        // Validar coordenadas
+        if (geometry?.coordinates) {
+          const coordErrors = validateCoordinates(geometry.coordinates, geometry.type);
+          errors.push(...coordErrors.map(e => `Feature[${i}]: ${e}`));
+        }
+      });
+    }
+  }
+
+  // Sanitizar propriedades de string
+  const sanitized = errors.length === 0 ? sanitizeGeoJSONStrings(data) : undefined;
+
+  return { isValid: errors.length === 0, errors, warnings, sanitized };
+}
+
+function validateCoordinates(coords: any, type: string): string[] {
+  const errors: string[] = [];
+
+  function checkPoint(point: any, path: string) {
+    if (!Array.isArray(point) || point.length < 2) {
+      errors.push(`${path}: ponto deve ter pelo menos 2 coordenadas`);
+      return;
+    }
+
+    const [lon, lat] = point;
+    if (lon < -180 || lon > 180) {
+      errors.push(`${path}: longitude ${lon} fora do intervalo [-180, 180]`);
+    }
+    if (lat < -90 || lat > 90) {
+      errors.push(`${path}: latitude ${lat} fora do intervalo [-90, 90]`);
+    }
+  }
+
+  if (type === 'Point') {
+    checkPoint(coords, 'coordinates');
+  } else if (type === 'LineString') {
+    coords.forEach((c: any, i: number) => checkPoint(c, `coordinates[${i}]`));
+  }
+  // ... similar para outros tipos
+
+  return errors;
+}
+
+function sanitizeGeoJSONStrings(data: any): any {
+  if (typeof data === 'string') {
+    return escapeHtml(data);
+  }
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizeGeoJSONStrings(item));
+  }
+  if (data && typeof data === 'object') {
+    const sanitized: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data)) {
+      const safeKey = escapeHtml(key);
+      sanitized[safeKey] = sanitizeGeoJSONStrings(value);
+    }
+    return sanitized;
+  }
+  return data;
+}
+```
+
+### SEC-4: Validação de CSV/Topografia
+
+```typescript
+// ⚠️ Validar dados numéricos antes de usar em cálculos
+
+interface CSVValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  rowsValidated: number;
+  rowsWithErrors: number;
+}
+
+function validateCSVData(pontos: PontoTopografico[]): CSVValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  let rowsWithErrors = 0;
+
+  // Verificar mínimo de pontos
+  if (pontos.length < 2) {
+    errors.push('Mínimo de 2 pontos necessários para criar trechos');
+  }
+
+  // Verificar máximo (prevenir DoS)
+  const MAX_POINTS = 10000;
+  if (pontos.length > MAX_POINTS) {
+    errors.push(`Máximo de ${MAX_POINTS} pontos permitido`);
+  }
+
+  // Validar cada ponto
+  pontos.forEach((ponto, i) => {
+    const rowErrors: string[] = [];
+
+    // Verificar ID
+    if (!ponto.id || ponto.id.trim() === '') {
+      rowErrors.push('ID vazio');
+    }
+
+    // Verificar coordenadas
+    if (isNaN(ponto.x) || !isFinite(ponto.x)) {
+      rowErrors.push('Coordenada X inválida');
+    }
+    if (isNaN(ponto.y) || !isFinite(ponto.y)) {
+      rowErrors.push('Coordenada Y inválida');
+    }
+    if (isNaN(ponto.cota) || !isFinite(ponto.cota)) {
+      rowErrors.push('Cota inválida');
+    }
+
+    // Verificar limites razoáveis para coordenadas UTM
+    if (ponto.x < 100000 || ponto.x > 900000) {
+      warnings.push(`Linha ${i + 2}: X=${ponto.x} fora do intervalo típico UTM`);
+    }
+    if (ponto.y < 1000000 || ponto.y > 10000000) {
+      warnings.push(`Linha ${i + 2}: Y=${ponto.y} fora do intervalo típico UTM`);
+    }
+
+    if (rowErrors.length > 0) {
+      rowsWithErrors++;
+      errors.push(`Linha ${i + 2}: ${rowErrors.join(', ')}`);
+    }
+  });
+
+  // Verificar IDs duplicados
+  const ids = pontos.map(p => p.id);
+  const duplicates = ids.filter((id, i) => ids.indexOf(id) !== i);
+  if (duplicates.length > 0) {
+    warnings.push(`IDs duplicados encontrados: ${[...new Set(duplicates)].join(', ')}`);
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+    rowsValidated: pontos.length,
+    rowsWithErrors
+  };
+}
+```
+
+### SEC-5: Proteção de localStorage
+
+```typescript
+// ⚠️ Proteger dados sensíveis no localStorage
+
+const STORAGE_KEYS = {
+  RDO_LIST: 'rdoData',
+  PROJECTS: 'rdoProjects',
+  USER_PREFERENCES: 'userPrefs'
+} as const;
+
+// Limite de tamanho por chave (5MB)
+const MAX_STORAGE_SIZE = 5 * 1024 * 1024;
+
+function safeSetItem(key: string, value: any): { success: boolean; error?: string } {
+  try {
+    const json = JSON.stringify(value);
+
+    // Verificar tamanho
+    if (json.length > MAX_STORAGE_SIZE) {
+      return { success: false, error: `Dados excedem ${MAX_STORAGE_SIZE / 1024 / 1024}MB` };
+    }
+
+    localStorage.setItem(key, json);
+    return { success: true };
+  } catch (error) {
+    if (error instanceof Error) {
+      // QuotaExceededError
+      if (error.name === 'QuotaExceededError') {
+        return { success: false, error: 'localStorage cheio' };
+      }
+      return { success: false, error: error.message };
+    }
+    return { success: false, error: 'Erro desconhecido' };
+  }
+}
+
+function safeGetItem<T>(key: string, defaultValue: T): T {
+  try {
+    const item = localStorage.getItem(key);
+    if (item === null) return defaultValue;
+
+    const parsed = JSON.parse(item);
+
+    // Validar estrutura básica (evita dados corrompidos)
+    if (parsed === null || parsed === undefined) {
+      return defaultValue;
+    }
+
+    return parsed as T;
+  } catch {
+    console.warn(`Erro ao ler ${key} do localStorage, usando valor padrão`);
+    return defaultValue;
+  }
+}
+
+// Limpar dados antigos para liberar espaço
+function cleanupOldData(): void {
+  const keysToClean = Object.values(STORAGE_KEYS);
+
+  for (const key of keysToClean) {
+    try {
+      const item = localStorage.getItem(key);
+      if (item && item.length > MAX_STORAGE_SIZE) {
+        console.warn(`Removendo ${key} por exceder tamanho máximo`);
+        localStorage.removeItem(key);
+      }
+    } catch {
+      // Ignorar erros de limpeza
+    }
+  }
+}
+```
+
+### SEC-6: Proteção contra Path Traversal
+
+```typescript
+// ⚠️ NUNCA usar caminhos de arquivo fornecidos pelo usuário diretamente
+
+function sanitizePath(path: string, baseDir: string): string | null {
+  if (!path || !baseDir) return null;
+
+  // Remover tentativas de path traversal
+  const dangerous = ['..', '~', '%2e%2e', '%252e%252e'];
+  for (const pattern of dangerous) {
+    if (path.toLowerCase().includes(pattern)) {
+      console.warn(`Path traversal detectado: ${path}`);
+      return null;
+    }
+  }
+
+  // No browser, validar que é um nome de arquivo simples
+  const safeName = sanitizeFilename(path);
+
+  return safeName;
+}
+```
+
+### SEC-7: Rate Limiting (Proteção contra Abuso)
+
+```typescript
+// ⚠️ Limitar operações pesadas para prevenir DoS
+
+interface RateLimiter {
+  checkLimit(operation: string): boolean;
+  reset(operation: string): void;
+}
+
+function createRateLimiter(maxOperations: number, windowMs: number): RateLimiter {
+  const operations: Map<string, number[]> = new Map();
+
+  return {
+    checkLimit(operation: string): boolean {
+      const now = Date.now();
+      const windowStart = now - windowMs;
+
+      let timestamps = operations.get(operation) || [];
+
+      // Remover operações fora da janela
+      timestamps = timestamps.filter(t => t > windowStart);
+
+      if (timestamps.length >= maxOperations) {
+        return false; // Limite atingido
+      }
+
+      timestamps.push(now);
+      operations.set(operation, timestamps);
+      return true;
+    },
+
+    reset(operation: string): void {
+      operations.delete(operation);
+    }
+  };
+}
+
+// Uso:
+// const limiter = createRateLimiter(10, 60000); // 10 operações por minuto
+// if (!limiter.checkLimit('file_upload')) {
+//   alert('Muitas operações. Aguarde um momento.');
+//   return;
+// }
+```
+
+### SEC-8: Checklist de Segurança para Implementação
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ ✅ CHECKLIST DE SEGURANÇA - OBRIGATÓRIO                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ □ Entrada de Texto                                              │
+│   ├─ escapeHtml() antes de exibir em HTML                       │
+│   ├─ detectInjection() para campos de texto livre               │
+│   └─ validateAndSanitize() para dados do usuário                │
+│                                                                 │
+│ □ Upload de Arquivos                                            │
+│   ├─ validateFile() para extensão e tamanho                     │
+│   ├─ sanitizeFilename() para nome do arquivo                    │
+│   └─ validateFileContent() para conteúdo                        │
+│                                                                 │
+│ □ Dados GeoJSON                                                 │
+│   ├─ validateGeoJSON() para estrutura                           │
+│   ├─ validateCoordinates() para valores                         │
+│   └─ sanitizeGeoJSONStrings() para propriedades                 │
+│                                                                 │
+│ □ Dados CSV/Topografia                                          │
+│   ├─ validateCSVData() após parse                               │
+│   ├─ Verificar limites numéricos                                │
+│   └─ Limitar número de pontos (MAX_POINTS)                      │
+│                                                                 │
+│ □ localStorage                                                  │
+│   ├─ safeSetItem() com verificação de tamanho                   │
+│   ├─ safeGetItem() com tratamento de erros                      │
+│   └─ cleanupOldData() periodicamente                            │
+│                                                                 │
+│ □ Operações Pesadas                                             │
+│   ├─ Rate limiting para uploads                                 │
+│   ├─ Rate limiting para cálculos complexos                      │
+│   └─ Timeout para operações longas                              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## DEPENDÊNCIAS ATUALIZADAS
+
+```json
+{
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "chart.js": "^4.4.0",
+    "react-leaflet": "^4.2.1",
+    "chartjs-plugin-annotation": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.8"
+  }
+}
+```
+
+---
+
+## RESUMO DE PARIDADE COM ENGINE PYTHON
+
+| Funcionalidade | Engine Python | Documento Lovable | Status |
+|----------------|---------------|-------------------|--------|
+| Parse CSV/TXT | reader.py | CÁLCULO 2 | ✅ |
+| Criação de Trechos | domain.py | CÁLCULO 3 | ✅ |
+| Classificação Gravidade/Elevatória | geometry.py | CÁLCULO 4 | ✅ |
+| Parâmetros de Construção | construction.py | CÁLCULOS 19-24 | ✅ |
+| Escoramento | construction.py | CÁLCULO 19 | ✅ |
+| Embasamento | construction.py | CÁLCULO 20 | ✅ |
+| Composição de Equipe | construction.py | CÁLCULO 23 | ✅ |
+| Recomposição de Pavimento | construction.py | CÁLCULO 22 | ✅ |
+| Orçamento | budget.py | CÁLCULO 6 | ✅ |
+| Cronograma | planning.ts | CÁLCULOS 5, 7, 11 | ✅ |
+| Curva S | planning.ts | CÁLCULO 8 | ✅ |
+| Histograma | planning.ts | CÁLCULO 9 | ✅ |
+| EVM | dashboard.ts | CÁLCULO 12 | ✅ |
+| RDO Completo | rdo.ts | CÁLCULOS 10, 13 | ✅ |
+| Manning | hydraulics.py | CÁLCULO 26 | ✅ |
+| Hazen-Williams | hydraulics.py | CÁLCULO 27 | ✅ |
+| Bombeamento | hydraulics.py | CÁLCULO 28 | ✅ |
+| IDF/Método Racional | hydraulics.py | CÁLCULO 29 | ✅ |
+| Peer Review | peer_review/ | CÁLCULOS 30-31 | ✅ |
+| Regras NBR | peer_review/rules/ | CÁLCULO 30 | ✅ |
+| Export GeoJSON | gis_export.py | CÁLCULOS 32-34 | ✅ |
+| UTM → Lat/Lng | geometry.ts | CÁLCULO 1 | ✅ |
+| **Segurança** | security/ | SEC-1 a SEC-8 | ✅ |
+
+---
+
+## FLUXO COMPLETO DE IMPLEMENTAÇÃO
+
+```
+1. TOPOGRAFIA
+   └─→ Upload CSV → validateFile() → parseCSV() → validateCSVData()
+   └─→ createTrechosFromTopography() → summarizeNetwork()
+   └─→ Mapa Leaflet com getMapCoordinates()
+
+2. PARÂMETROS DE CONSTRUÇÃO
+   └─→ Configurar: Solo, Escavação, Pavimento, Material
+   └─→ criarParametrosExecucao() para cada trecho
+   └─→ Exibir requisitos de escoramento, embasamento, equipe
+
+3. PLANEJAMENTO
+   └─→ Configurar equipes e produtividade
+   └─→ generateFullSchedule() com Same-Day Completion
+   └─→ Gantt Chart, Curva S, Histograma
+
+4. PEER REVIEW
+   └─→ runPeerReview() com SEWER_RULES, WATER_RULES
+   └─→ Dashboard de Findings por severidade
+   └─→ exportFindingsToGeoJSON() para QGIS
+
+5. RDO
+   └─→ Formulário com validateRDO()
+   └─→ safeSetItem() para persistência
+   └─→ Dashboard com calculateDashboardMetrics()
+
+6. EXPORTAÇÃO
+   └─→ exportNetworkToGeoJSON() com parâmetros
+   └─→ downloadGeoJSON() ou downloadFile()
+```
