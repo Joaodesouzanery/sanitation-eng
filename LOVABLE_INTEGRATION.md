@@ -1431,23 +1431,271 @@ function allocateTeams(
 }
 ```
 
+### CÁLCULO 12: EVM - Earned Value Management (Controle Financeiro)
+
+```typescript
+// Indicadores de desempenho de projeto
+interface EVMMetrics {
+  PV: number;   // Planned Value - valor planejado até a data
+  EV: number;   // Earned Value - valor agregado (trabalho realizado)
+  AC: number;   // Actual Cost - custo real
+  CPI: number;  // Cost Performance Index = EV / AC
+  SPI: number;  // Schedule Performance Index = EV / PV
+  CV: number;   // Cost Variance = EV - AC (positivo = economia)
+  SV: number;   // Schedule Variance = EV - PV (positivo = adiantado)
+  EAC: number;  // Estimate At Completion = orçamento total / CPI
+  VAC: number;  // Variance At Completion = orçamento total - EAC
+}
+
+function calculateEVM(
+  budgetTotal: number,        // Orçamento total do projeto
+  physicalPercent: number,    // % físico executado (0-100)
+  actualCost: number          // Custo real gasto até agora
+): EVMMetrics {
+  const PV = budgetTotal * (physicalPercent / 100);
+  const EV = budgetTotal * (physicalPercent / 100);
+  const AC = actualCost;
+
+  const CPI = AC > 0 ? EV / AC : 0;  // > 1 = gastando menos que planejado
+  const SPI = PV > 0 ? EV / PV : 0;  // > 1 = adiantado no cronograma
+
+  const CV = EV - AC;  // positivo = economia
+  const SV = EV - PV;  // positivo = adiantado
+
+  const EAC = CPI > 0 ? budgetTotal / CPI : budgetTotal;
+  const VAC = budgetTotal - EAC;
+
+  return { PV, EV, AC, CPI, SPI, CV, SV, EAC, VAC };
+}
+
+// Interpretação:
+// CPI > 1.0: Gastando MENOS que planejado (bom)
+// CPI < 1.0: Gastando MAIS que planejado (ruim)
+// SPI > 1.0: Projeto ADIANTADO
+// SPI < 1.0: Projeto ATRASADO
+```
+
+### CÁLCULO 13: Estrutura Completa do RDO
+
+```typescript
+type ServiceUnit = 'm' | 'm2' | 'm3' | 'un' | 'h' | 'dia' | 'kg' | 't' | 'L';
+type RDOStatus = 'rascunho' | 'enviado' | 'aprovado' | 'rejeitado';
+type SystemType = 'agua' | 'esgoto' | 'drenagem';
+type Severity = 'baixa' | 'media' | 'alta' | 'critica';
+
+interface ExecutedService {
+  id: string;
+  serviceName: string;
+  quantity: number;
+  unit: ServiceUnit;
+  equipmentUsed?: string[];
+  responsibleWorkerName?: string;
+  notes?: string;
+}
+
+interface SegmentProgress {
+  segmentId: string;
+  segmentName?: string;
+  projectId: string;
+  systemType: SystemType;
+  executionDate: string;
+  plannedLength?: number;
+  executedLength: number;
+  progressPercentage: number;
+  startCoordinates?: { latitude: number; longitude: number };
+  endCoordinates?: { latitude: number; longitude: number };
+  status: string;
+}
+
+interface Occurrence {
+  id: string;
+  type: string;
+  description: string;
+  severity: Severity;
+  affectedServices?: string[];
+  correctiveActions?: string;
+  timestamp: string;
+}
+
+interface FinancialEntry {
+  id: string;
+  description: string;
+  category: 'mao_obra' | 'material' | 'equipamento' | 'outros';
+  value: number;
+  quantity?: number;
+  unit?: string;
+  trechoId?: string;
+  notes?: string;
+}
+
+interface RDO {
+  id: string;
+  projectId: string;
+  projectName?: string;
+  date: string;
+  location?: { latitude: number; longitude: number };
+  executedServices: ExecutedService[];
+  segmentProgress: SegmentProgress[];
+  occurrences: Occurrence[];
+  financialEntries: FinancialEntry[];
+  dailyLaborCost: number;
+  dailyMaterialCost: number;
+  dailyEquipmentCost: number;
+  dailyTotalCost: number;
+  generalNotes?: string;
+  status: RDOStatus;
+  createdAt: string;
+  updatedAt: string;
+  version: number;
+}
+```
+
+### CÁLCULO 14: Catálogo de Serviços Padrão
+
+```typescript
+const DEFAULT_SERVICES = [
+  { code: 'ESC001', name: 'Escavação de vala', unit: 'm3', category: 'Escavacao' },
+  { code: 'ESC002', name: 'Escavação em rocha', unit: 'm3', category: 'Escavacao' },
+  { code: 'REA001', name: 'Reaterro compactado', unit: 'm3', category: 'Reaterro' },
+  { code: 'TUB001', name: 'Assentamento de tubulação PVC', unit: 'm', category: 'Tubulacao' },
+  { code: 'TUB002', name: 'Assentamento de tubulação PEAD', unit: 'm', category: 'Tubulacao' },
+  { code: 'PV001', name: 'Execução de poço de visita', unit: 'un', category: 'Pocos' },
+  { code: 'LIG001', name: 'Ligação domiciliar de água', unit: 'un', category: 'Ligacoes' },
+  { code: 'LIG002', name: 'Ligação domiciliar de esgoto', unit: 'un', category: 'Ligacoes' },
+  { code: 'PAV001', name: 'Recomposição de pavimento', unit: 'm2', category: 'Pavimentacao' },
+  { code: 'TEST001', name: 'Teste de estanqueidade', unit: 'm', category: 'Testes' },
+  { code: 'TEST002', name: 'Teste hidrostático', unit: 'm', category: 'Testes' }
+];
+```
+
+### CÁLCULO 15: Persistência LocalStorage
+
+```typescript
+const STORAGE_KEYS = {
+  RDO_LIST: 'rdoData',
+  PROJECTS: 'rdoProjects',
+  PLANNED_SEGMENTS: 'rdoPlannedSegments'
+};
+
+function saveRDOs(rdos: RDO[]): void {
+  localStorage.setItem(STORAGE_KEYS.RDO_LIST, JSON.stringify(rdos));
+}
+
+function loadRDOs(): RDO[] {
+  const data = localStorage.getItem(STORAGE_KEYS.RDO_LIST);
+  return data ? JSON.parse(data) : [];
+}
+
+function generateId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+```
+
+### CÁLCULO 16: GeoJSON para Mapa
+
+```typescript
+interface MapData {
+  type: 'FeatureCollection';
+  features: Array<{
+    type: 'Feature';
+    geometry: {
+      type: 'LineString';
+      coordinates: number[][];  // [[lng, lat], [lng, lat]]
+    };
+    properties: {
+      segmentId: string;
+      progressPercentage: number;
+      status: string;
+      color: string;
+    };
+  }>;
+}
+
+function generateMapData(segments: SegmentProgress[]): MapData {
+  const features = segments
+    .filter(s => s.startCoordinates && s.endCoordinates)
+    .map(segment => {
+      const progress = segment.progressPercentage;
+      let color = '#ef4444';  // Vermelho - não iniciado
+      if (progress >= 100) color = '#22c55e';  // Verde - concluído
+      else if (progress > 0) color = '#f59e0b';  // Laranja - em execução
+
+      return {
+        type: 'Feature' as const,
+        geometry: {
+          type: 'LineString' as const,
+          coordinates: [
+            [segment.startCoordinates!.longitude, segment.startCoordinates!.latitude],
+            [segment.endCoordinates!.longitude, segment.endCoordinates!.latitude]
+          ]
+        },
+        properties: {
+          segmentId: segment.segmentId,
+          progressPercentage: progress,
+          status: progress >= 100 ? 'concluido' : progress > 0 ? 'em_execucao' : 'nao_iniciado',
+          color
+        }
+      };
+    });
+
+  return { type: 'FeatureCollection', features };
+}
+```
+
+### CÁLCULO 17: Validações de Formulário
+
+```typescript
+function validateRDO(rdo: Partial<RDO>): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (!rdo.date) errors.push('Data é obrigatória');
+
+  const hasServices = rdo.executedServices && rdo.executedServices.length > 0;
+  const hasSegments = rdo.segmentProgress && rdo.segmentProgress.length > 0;
+  if (!hasServices && !hasSegments) {
+    errors.push('RDO deve ter pelo menos um serviço ou avanço de trecho');
+  }
+
+  if (rdo.executedServices) {
+    for (const service of rdo.executedServices) {
+      if (!service.serviceName?.trim()) errors.push('Nome do serviço é obrigatório');
+      if (service.quantity <= 0) errors.push('Quantidade deve ser maior que zero');
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+```
+
+### CÁLCULO 18: Exportação de Dados
+
+```typescript
+function exportRDOsToCSV(rdos: RDO[]): string {
+  const headers = ['ID', 'Data', 'Projeto', 'Status', 'Serviços', 'Custo Total'];
+  const rows = rdos.map(rdo => [
+    rdo.id, rdo.date, rdo.projectName || '', rdo.status,
+    rdo.executedServices.length, rdo.dailyTotalCost.toFixed(2)
+  ]);
+  return [headers.join(';'), ...rows.map(row => row.join(';'))].join('\n');
+}
+
+function downloadFile(content: string, filename: string, mimeType: string): void {
+  const blob = new Blob([content], { type: mimeType });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+```
+
 ---
 
-## ARQUIVOS DE ENGINE (COPIAR PARA O PROJETO)
+## ARQUIVOS DE ENGINE (OPCIONAIS)
 
-Copie os seguintes arquivos de `src/engine/` para o projeto Lovable:
-
-1. **geometry.ts** - Cálculos geométricos
-2. **reader.ts** - Parser de arquivos topográficos
-3. **domain.ts** - Modelo de Trecho e fábrica
-4. **planning.ts** - Cronograma e Same-Day Completion
-5. **construction.ts** - Parâmetros de execução
-6. **budget.ts** - Orçamento e custos
-7. **rdo.ts** - Engine de RDO
-8. **dashboard.ts** - Métricas e dados para gráficos
-9. **materials.ts** - Materiais e compras
-10. **peer-review.ts** - Revisão por pares
-11. **index.ts** - Exports
+Os cálculos acima são suficientes para implementar as funcionalidades. Opcionalmente, copie os arquivos de `src/engine/` para reutilizar código já testado
 
 ---
 
