@@ -21058,7 +21058,33 @@ Dados exportados:
             services: [],
             segmentProgress: [],
             currentRDOId: null,
-            rdoMap: null
+            rdoMap: null,
+            // Financial data for EVM calculations
+            financial: {
+                budget: 850000,           // BAC - Budget at Completion
+                plannedValue: 425000,     // PV - Planned Value (current)
+                earnedValue: 380000,      // EV - Earned Value
+                actualCost: 365000,       // AC - Actual Cost
+                entries: [
+                    { id: 'fe1', date: '2024-01-15', category: 'labor', description: 'Mão de obra janeiro', value: 45000, type: 'expense' },
+                    { id: 'fe2', date: '2024-01-20', category: 'materials', description: 'Tubulação PVC DN150', value: 28500, type: 'expense' },
+                    { id: 'fe3', date: '2024-01-25', category: 'equipment', description: 'Aluguel retroescavadeira', value: 12000, type: 'expense' },
+                    { id: 'fe4', date: '2024-02-01', category: 'labor', description: 'Mão de obra fevereiro', value: 48000, type: 'expense' },
+                    { id: 'fe5', date: '2024-02-10', category: 'materials', description: 'PVs concreto armado', value: 35000, type: 'expense' },
+                    { id: 'fe6', date: '2024-02-15', category: 'transport', description: 'Transporte materiais', value: 8500, type: 'expense' },
+                    { id: 'fe7', date: '2024-02-20', category: 'equipment', description: 'Compactador de solo', value: 6500, type: 'expense' },
+                    { id: 'fe8', date: '2024-03-01', category: 'labor', description: 'Mão de obra março', value: 52000, type: 'expense' },
+                    { id: 'fe9', date: '2024-03-05', category: 'materials', description: 'Conexões e peças', value: 18500, type: 'expense' },
+                    { id: 'fe10', date: '2024-03-10', category: 'admin', description: 'Custos administrativos', value: 15000, type: 'expense' }
+                ],
+                costByCategory: {
+                    labor: 145000,
+                    materials: 82000,
+                    equipment: 18500,
+                    transport: 8500,
+                    admin: 15000
+                }
+            }
         };
 
         // Initialize RDO module on tab switch
@@ -21069,6 +21095,12 @@ Dados exportados:
             addServiceRow();
             addSegmentProgressRow();
             setDefaultDate();
+
+            // Load initial segments for dashboard to work
+            if (rdoData.segments.length === 0) {
+                loadProjectSegments('proj1'); // Load default project segments
+            }
+
             updateRDODashboardSummary();
         }
 
@@ -21922,6 +21954,13 @@ Dados exportados:
             document.getElementById('rdo-detail-container').style.display = 'none';
 
             updateRDODashboardFull();
+
+            // Update financial dashboard, S-Curve and costs
+            setTimeout(() => {
+                updateFinancialDashboard();
+                updateSCurve();
+                updateCostByCategory();
+            }, 100);
         }
 
         function updateRDODashboardSummary() {
@@ -22179,6 +22218,468 @@ Dados exportados:
                     }
                 });
             }
+        }
+
+        // ============================================
+        // S-CURVE CHART FUNCTION
+        // ============================================
+        function updateSCurve() {
+            const viewType = document.getElementById('scurve-view')?.value || 'financial';
+            const ctx = document.getElementById('scurve-chart');
+
+            if (!ctx || typeof Chart === 'undefined') return;
+
+            // Destroy existing chart
+            if (window.scurveChart) {
+                window.scurveChart.destroy();
+            }
+
+            // Generate timeline labels (12 months)
+            const labels = [];
+            const plannedData = [];
+            const earnedData = [];
+            const actualData = [];
+
+            const budget = rdoData.financial?.budget || 850000;
+            const currentEV = rdoData.financial?.earnedValue || 0;
+            const currentAC = rdoData.financial?.actualCost || 0;
+
+            // S-Curve data simulation based on project progress
+            for (let i = 1; i <= 12; i++) {
+                labels.push(`Mês ${i}`);
+
+                // S-Curve formula for planned value (cumulative)
+                const t = i / 12;
+                const sCurveValue = budget * (1 / (1 + Math.exp(-10 * (t - 0.5))));
+                plannedData.push(Math.round(sCurveValue));
+
+                // Earned value (based on actual progress, trails behind planned)
+                if (i <= 6) {
+                    const evProgress = currentEV * (i / 6);
+                    earnedData.push(Math.round(evProgress));
+                } else {
+                    earnedData.push(null); // Future months
+                }
+
+                // Actual cost (what was actually spent)
+                if (i <= 6) {
+                    const acProgress = currentAC * (i / 6);
+                    actualData.push(Math.round(acProgress));
+                } else {
+                    actualData.push(null); // Future months
+                }
+            }
+
+            const datasets = [];
+
+            // Planned Value (PV) - always show
+            datasets.push({
+                label: 'Valor Planejado (PV)',
+                data: plannedData,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0.4,
+                pointRadius: 3
+            });
+
+            if (viewType === 'financial' || viewType === 'both') {
+                // Earned Value (EV)
+                datasets.push({
+                    label: 'Valor Agregado (EV)',
+                    data: earnedData,
+                    borderColor: '#22c55e',
+                    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4
+                });
+
+                // Actual Cost (AC)
+                datasets.push({
+                    label: 'Custo Real (AC)',
+                    data: actualData,
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 3
+                });
+            }
+
+            if (viewType === 'physical' || viewType === 'both') {
+                // Physical progress percentage
+                const physicalData = earnedData.map((v, i) => v !== null ? Math.round((v / budget) * 100) : null);
+                datasets.push({
+                    label: 'Avanço Físico (%)',
+                    data: physicalData,
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    yAxisID: viewType === 'both' ? 'y1' : 'y'
+                });
+            }
+
+            const options = {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed.y !== null) {
+                                    if (label.includes('%')) {
+                                        label += context.parsed.y.toFixed(1) + '%';
+                                    } else {
+                                        label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR');
+                                    }
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: viewType === 'physical' ? 'Progresso (%)' : 'Valor (R$)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                if (viewType === 'physical') return value + '%';
+                                return 'R$ ' + (value / 1000).toFixed(0) + 'k';
+                            }
+                        }
+                    }
+                }
+            };
+
+            // Add secondary Y axis if showing both
+            if (viewType === 'both') {
+                options.scales.y1 = {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: { display: true, text: 'Progresso (%)' },
+                    grid: { drawOnChartArea: false },
+                    min: 0,
+                    max: 100
+                };
+            }
+
+            window.scurveChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: options
+            });
+        }
+
+        // ============================================
+        // FINANCIAL DASHBOARD UPDATE FUNCTION (EVM)
+        // ============================================
+        function updateFinancialDashboard() {
+            const fin = rdoData.financial || {};
+
+            // Get values
+            const BAC = fin.budget || 0;
+            const PV = fin.plannedValue || 0;
+            const EV = fin.earnedValue || 0;
+            const AC = fin.actualCost || 0;
+
+            // Calculate EVM indicators
+            const CV = EV - AC;           // Cost Variance
+            const SV = EV - PV;           // Schedule Variance
+            const CPI = AC > 0 ? EV / AC : 1;  // Cost Performance Index
+            const SPI = PV > 0 ? EV / PV : 1;  // Schedule Performance Index
+            const EAC = CPI > 0 ? BAC / CPI : BAC; // Estimate at Completion
+            const ETC = EAC - AC;         // Estimate to Complete
+            const VAC = BAC - EAC;        // Variance at Completion
+            const TCPI = (BAC - EV) > 0 && (BAC - AC) > 0 ? (BAC - EV) / (BAC - AC) : 1; // To Complete Performance Index
+
+            // Update main cards
+            const budgetEl = document.getElementById('fin-budget');
+            const earnedEl = document.getElementById('fin-earned');
+            const actualEl = document.getElementById('fin-actual');
+            const plannedEl = document.getElementById('fin-planned');
+
+            if (budgetEl) budgetEl.textContent = formatCurrency(BAC);
+            if (earnedEl) earnedEl.textContent = formatCurrency(EV);
+            if (actualEl) actualEl.textContent = formatCurrency(AC);
+            if (plannedEl) plannedEl.textContent = formatCurrency(PV);
+
+            // Update performance indicators
+            const cpiEl = document.getElementById('fin-cpi');
+            const spiEl = document.getElementById('fin-spi');
+            const cvEl = document.getElementById('fin-cv');
+            const svEl = document.getElementById('fin-sv');
+
+            if (cpiEl) {
+                cpiEl.textContent = CPI.toFixed(2);
+                cpiEl.style.color = CPI >= 1 ? 'var(--accent-green)' : 'var(--accent-red)';
+            }
+            if (spiEl) {
+                spiEl.textContent = SPI.toFixed(2);
+                spiEl.style.color = SPI >= 1 ? 'var(--accent-green)' : 'var(--accent-red)';
+            }
+            if (cvEl) {
+                cvEl.textContent = formatCurrency(CV);
+                cvEl.style.color = CV >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            }
+            if (svEl) {
+                svEl.textContent = formatCurrency(SV);
+                svEl.style.color = SV >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            }
+
+            // Update projections
+            const eacEl = document.getElementById('fin-eac');
+            const etcEl = document.getElementById('fin-etc');
+            const vacEl = document.getElementById('fin-vac');
+            const tcpiEl = document.getElementById('fin-tcpi');
+
+            if (eacEl) eacEl.textContent = formatCurrency(EAC);
+            if (etcEl) etcEl.textContent = formatCurrency(ETC);
+            if (vacEl) {
+                vacEl.textContent = formatCurrency(VAC);
+                vacEl.style.color = VAC >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            }
+            if (tcpiEl) {
+                tcpiEl.textContent = TCPI.toFixed(2);
+                tcpiEl.style.color = TCPI <= 1.1 ? 'var(--accent-green)' : (TCPI <= 1.2 ? 'var(--accent-orange)' : 'var(--accent-red)');
+            }
+
+            // Update financial entries table
+            renderFinancialEntries();
+        }
+
+        function formatCurrency(value) {
+            return 'R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        }
+
+        function renderFinancialEntries() {
+            const tbody = document.getElementById('financial-entries-tbody');
+            if (!tbody) return;
+
+            const entries = rdoData.financial?.entries || [];
+
+            if (entries.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="padding: 20px; text-align: center; color: var(--text-muted);">
+                            Nenhum lançamento registrado. Clique em "Novo Lançamento" para começar.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const categoryLabels = {
+                'labor': '👷 Mão de Obra',
+                'materials': '📦 Materiais',
+                'equipment': '🚜 Equipamentos',
+                'transport': '🚛 Transporte',
+                'admin': '📋 Administrativo'
+            };
+
+            tbody.innerHTML = entries.map(entry => `
+                <tr>
+                    <td style="padding: 8px;">${escapeHtml(entry.date)}</td>
+                    <td style="padding: 8px;">${categoryLabels[entry.category] || escapeHtml(entry.category)}</td>
+                    <td style="padding: 8px;">${escapeHtml(entry.description)}</td>
+                    <td style="padding: 8px; text-align: right; font-weight: 600; color: ${entry.type === 'expense' ? 'var(--accent-red)' : 'var(--accent-green)'};">
+                        ${entry.type === 'expense' ? '-' : '+'}${formatCurrency(entry.value)}
+                    </td>
+                    <td style="padding: 8px;">
+                        <span style="padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; background: ${entry.type === 'expense' ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)'}; color: ${entry.type === 'expense' ? 'var(--accent-red)' : 'var(--accent-green)'};">
+                            ${entry.type === 'expense' ? 'Despesa' : 'Receita'}
+                        </span>
+                    </td>
+                    <td style="padding: 8px;">
+                        <button class="btn btn-small" style="padding: 4px 8px; font-size: 0.7rem;" onclick="editFinancialEntry('${escapeAttr(entry.id)}')">✏️</button>
+                        <button class="btn btn-small" style="padding: 4px 8px; font-size: 0.7rem; background: var(--accent-red); color: white;" onclick="deleteFinancialEntry('${escapeAttr(entry.id)}')">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function addFinancialEntry() {
+            const newEntry = {
+                id: 'fe' + Date.now(),
+                date: new Date().toISOString().split('T')[0],
+                category: 'labor',
+                description: 'Novo lançamento',
+                value: 0,
+                type: 'expense'
+            };
+
+            if (!rdoData.financial.entries) rdoData.financial.entries = [];
+            rdoData.financial.entries.push(newEntry);
+
+            renderFinancialEntries();
+            alert('Novo lançamento adicionado. Edite os detalhes na tabela.');
+        }
+
+        function deleteFinancialEntry(entryId) {
+            if (!confirm('Deseja excluir este lançamento?')) return;
+
+            rdoData.financial.entries = rdoData.financial.entries.filter(e => e.id !== entryId);
+            renderFinancialEntries();
+            updateCostByCategory();
+        }
+
+        function editFinancialEntry(entryId) {
+            const entry = rdoData.financial.entries.find(e => e.id === entryId);
+            if (!entry) return;
+
+            const newDesc = prompt('Descrição:', entry.description);
+            if (newDesc !== null) entry.description = newDesc;
+
+            const newValue = prompt('Valor (apenas números):', entry.value);
+            if (newValue !== null && !isNaN(parseFloat(newValue))) {
+                entry.value = parseFloat(newValue);
+            }
+
+            renderFinancialEntries();
+            updateCostByCategory();
+        }
+
+        function importFinancialData() {
+            alert('Funcionalidade de importação Excel em desenvolvimento.\n\nFormato esperado: Data, Categoria, Descrição, Valor, Tipo');
+        }
+
+        function exportFinancialReport() {
+            const entries = rdoData.financial?.entries || [];
+            let csv = 'Data,Categoria,Descrição,Valor,Tipo\n';
+            entries.forEach(e => {
+                csv += `${e.date},${e.category},"${e.description}",${e.value},${e.type}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'relatorio_financeiro.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // ============================================
+        // COST BY CATEGORY FUNCTION
+        // ============================================
+        function updateCostByCategory() {
+            const costs = rdoData.financial?.costByCategory || {
+                labor: 0,
+                materials: 0,
+                equipment: 0,
+                transport: 0,
+                admin: 0
+            };
+
+            // Recalculate from entries if available
+            if (rdoData.financial?.entries?.length > 0) {
+                // Reset costs
+                Object.keys(costs).forEach(k => costs[k] = 0);
+
+                // Sum by category
+                rdoData.financial.entries.forEach(entry => {
+                    if (entry.type === 'expense' && costs.hasOwnProperty(entry.category)) {
+                        costs[entry.category] += entry.value;
+                    }
+                });
+
+                rdoData.financial.costByCategory = costs;
+            }
+
+            // Update summary values
+            const laborEl = document.getElementById('cost-labor');
+            const materialsEl = document.getElementById('cost-materials');
+            const equipmentEl = document.getElementById('cost-equipment');
+            const transportEl = document.getElementById('cost-transport');
+            const adminEl = document.getElementById('cost-admin');
+            const totalEl = document.getElementById('cost-total-category');
+
+            if (laborEl) laborEl.textContent = formatCurrency(costs.labor);
+            if (materialsEl) materialsEl.textContent = formatCurrency(costs.materials);
+            if (equipmentEl) equipmentEl.textContent = formatCurrency(costs.equipment);
+            if (transportEl) transportEl.textContent = formatCurrency(costs.transport);
+            if (adminEl) adminEl.textContent = formatCurrency(costs.admin);
+
+            const total = Object.values(costs).reduce((sum, v) => sum + v, 0);
+            if (totalEl) totalEl.textContent = formatCurrency(total);
+
+            // Render chart
+            renderCostCategoryChart(costs);
+        }
+
+        function renderCostCategoryChart(costs) {
+            const ctx = document.getElementById('cost-category-chart');
+            if (!ctx || typeof Chart === 'undefined') return;
+
+            if (window.costCategoryChart) {
+                window.costCategoryChart.destroy();
+            }
+
+            const labels = ['Mão de Obra', 'Materiais', 'Equipamentos', 'Transporte', 'Administrativo'];
+            const data = [costs.labor, costs.materials, costs.equipment, costs.transport, costs.admin];
+            const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899'];
+
+            window.costCategoryChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: 'rgba(255,255,255,0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 12
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    return `${context.label}: ${formatCurrency(value)} (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // RDO Map View
