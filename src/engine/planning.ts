@@ -23,11 +23,18 @@ export interface TeamConfig {
   encarregado: number;
   oficiais: number;
   ajudantes: number;
-  operadorMaquinas: number;
-  hasRetroescavadeira: boolean;
-  hasCompactador: boolean;
-  hasCaminhao: boolean;
-  hasBomba: boolean;
+  operador?: number;
+  operadorMaquinas?: number;
+  metrosDiaBase?: number;
+  hoursPerDay?: number;
+  hasRetroescavadeira?: boolean;
+  hasRetro?: boolean;
+  hasCompactador?: boolean;
+  hasCompactor?: boolean;
+  hasCaminhao?: boolean;
+  hasTruck?: boolean;
+  hasBomba?: boolean;
+  hasPump?: boolean;
 }
 
 export interface DailySegment {
@@ -76,11 +83,58 @@ export interface HistogramData {
   avgWorkers: number;
 }
 
+export interface ScheduleItem {
+  wbsId: string;
+  trechoId: string;
+  segmentoId: string;
+  activity: string;
+  quantidade: number;
+  unidade: string;
+  metrosDia?: number;
+  startDay: number;
+  endDay: number;
+  duration: number;
+  team: number;
+  profundidade?: number;
+  diametro?: number;
+  ordemExecucao: number;
+}
+
+export interface DailyPlanItem {
+  day: number;
+  trechoId: string;
+  segmentoId: string;
+  activity: string;
+  activitiesDetail: string[];
+  metrosExecutados: number;
+  team: number;
+  labor: number;
+  equipment: number;
+  dailyCost: number;
+}
+
+export interface CurveSPoint {
+  day: number;
+  physicalPlanned: number;
+  physicalActual?: number;
+  financialPlanned: number;
+  financialActual?: number;
+}
+
+export interface HistogramDay {
+  day: number;
+  labor: number;
+  equipment: number;
+  cost: number;
+}
+
 export interface FullSchedule {
-  startDate: string;
-  endDate: string;
+  startDate: Date;
+  endDate: Date;
   totalDays: number;
   numTeams: number;
+  schedule: ScheduleItem[];
+  dailyPlan: DailyPlanItem[];
   trechos: TrechoSchedule[];
   allSegments: DailySegment[];
   curveS: CurveSData;
@@ -358,35 +412,91 @@ export function generateFullSchedule(
 ): FullSchedule {
   const start = startDate || new Date();
 
+  // Normalize teamConfig to handle both naming conventions
+  const normalizedConfig: TeamConfig = {
+    ...teamConfig,
+    operadorMaquinas: teamConfig.operadorMaquinas ?? teamConfig.operador ?? 1,
+    hasRetroescavadeira: teamConfig.hasRetroescavadeira ?? teamConfig.hasRetro ?? true,
+    hasCompactador: teamConfig.hasCompactador ?? teamConfig.hasCompactor ?? true,
+    hasCaminhao: teamConfig.hasCaminhao ?? teamConfig.hasTruck ?? false,
+    hasBomba: teamConfig.hasBomba ?? teamConfig.hasPump ?? false
+  };
+
   // Rastreia quando cada equipe estara livre
   const teamAvailability = new Array(numTeams).fill(0);
 
   const trechoSchedules: TrechoSchedule[] = [];
   const allSegments: DailySegment[] = [];
+  const schedule: ScheduleItem[] = [];
+  const dailyPlan: DailyPlanItem[] = [];
 
   for (const trecho of trechos) {
     // Encontra equipe mais disponivel
     const teamIdx = teamAvailability.indexOf(Math.min(...teamAvailability));
     const trechoStartDay = teamAvailability[teamIdx] + 1;
 
-    const schedule = generateTrechoSchedule(
+    const trechoSchedule = generateTrechoSchedule(
       trecho.id || trecho.trechoId || '',
       trecho.comprimento || trecho.length || 50,
       trecho.profundidade || 1.5,
       trecho.diametro || trecho.DN || 150,
       trechoStartDay,
       teamIdx + 1,
-      teamConfig
+      normalizedConfig
     );
 
     // Atualiza disponibilidade da equipe
-    teamAvailability[teamIdx] = schedule.endDay;
+    teamAvailability[teamIdx] = trechoSchedule.endDay;
+
+    // Create schedule items for each segment
+    trechoSchedule.segments.forEach((seg, idx) => {
+      schedule.push({
+        wbsId: seg.segmentId,
+        trechoId: seg.trechoId,
+        segmentoId: seg.segmentId,
+        activity: `Ciclo completo DN${seg.diametro}`,
+        quantidade: seg.meters,
+        unidade: 'm',
+        metrosDia: seg.meters,
+        startDay: seg.day,
+        endDay: seg.day,
+        duration: 1,
+        team: seg.team,
+        profundidade: seg.profundidade,
+        diametro: seg.diametro,
+        ordemExecucao: idx + 1
+      });
+    });
+
+    // Create daily plan items
+    trechoSchedule.segments.forEach(seg => {
+      const totalWorkers = getTotalWorkers(normalizedConfig);
+      const equipCount = [
+        normalizedConfig.hasRetroescavadeira,
+        normalizedConfig.hasCompactador,
+        normalizedConfig.hasCaminhao,
+        normalizedConfig.hasBomba
+      ].filter(Boolean).length;
+
+      dailyPlan.push({
+        day: seg.day,
+        trechoId: seg.trechoId,
+        segmentoId: seg.segmentId,
+        activity: `Ciclo completo (${seg.meters.toFixed(1)}m)`,
+        activitiesDetail: seg.activities,
+        metrosExecutados: seg.meters,
+        team: seg.team,
+        labor: totalWorkers,
+        equipment: equipCount,
+        dailyCost: seg.custoTotal
+      });
+    });
 
     // Adiciona teste hidrostatico apos conclusao do trecho
     const testSegment: DailySegment = {
-      segmentId: `${schedule.trechoId}.TESTE`,
-      trechoId: schedule.trechoId,
-      day: schedule.endDay + 1,
+      segmentId: `${trechoSchedule.trechoId}.TESTE`,
+      trechoId: trechoSchedule.trechoId,
+      day: trechoSchedule.endDay + 1,
       meters: 0,
       team: 0, // Equipe de teste separada
       activities: [ActivityType.TESTE],
@@ -401,10 +511,25 @@ export function generateFullSchedule(
       custoMateriais: 0,
       custoTotal: 500 // Custo fixo de teste
     };
-    schedule.segments.push(testSegment);
+    trechoSchedule.segments.push(testSegment);
 
-    trechoSchedules.push(schedule);
-    allSegments.push(...schedule.segments);
+    // Add test to schedule
+    schedule.push({
+      wbsId: testSegment.segmentId,
+      trechoId: testSegment.trechoId,
+      segmentoId: testSegment.segmentId,
+      activity: 'Teste hidrostático',
+      quantidade: 1,
+      unidade: 'vb',
+      startDay: testSegment.day,
+      endDay: testSegment.day,
+      duration: 1,
+      team: 0,
+      ordemExecucao: 99
+    });
+
+    trechoSchedules.push(trechoSchedule);
+    allSegments.push(...trechoSchedule.segments);
   }
 
   const totalDays = allSegments.length > 0
@@ -412,14 +537,19 @@ export function generateFullSchedule(
     : 0;
 
   const curveS = generateCurveS(allSegments, totalDays);
-  const histogram = generateHistogram(allSegments, totalDays, teamConfig);
+  const histogram = generateHistogram(allSegments, totalDays, normalizedConfig);
   const calendar = generateCalendar(start, totalDays);
 
+  const endDate = new Date(start);
+  endDate.setDate(endDate.getDate() + totalDays);
+
   return {
-    startDate: start.toISOString().split('T')[0],
-    endDate: calendar[calendar.length - 1] || start.toISOString().split('T')[0],
+    startDate: start,
+    endDate,
     totalDays,
     numTeams,
+    schedule,
+    dailyPlan,
     trechos: trechoSchedules,
     allSegments,
     curveS,
@@ -445,4 +575,61 @@ export function generateSchedule(
 ): FullSchedule {
   const config = teamConfig ? createTeamConfig(teamConfig) : DEFAULT_TEAM_CONFIG;
   return generateFullSchedule(trechos, numTeams, config, startDate);
+}
+
+/**
+ * Generate Curve S data points for charting.
+ */
+export function generateCurveSData(
+  schedule: ScheduleItem[],
+  dailyPlan: DailyPlanItem[],
+  totalDays: number
+): CurveSPoint[] {
+  const totalQty = schedule.reduce((sum, s) => sum + s.quantidade, 0);
+  const totalCost = dailyPlan.reduce((sum, d) => sum + d.dailyCost, 0);
+
+  const points: CurveSPoint[] = [];
+  let cumQty = 0;
+  let cumCost = 0;
+
+  for (let day = 1; day <= totalDays; day++) {
+    const daySchedule = schedule.filter(s => s.startDay <= day && s.endDay >= day);
+    daySchedule.forEach(s => {
+      cumQty += s.quantidade / s.duration;
+    });
+
+    const dayCosts = dailyPlan.filter(d => d.day === day);
+    dayCosts.forEach(d => {
+      cumCost += d.dailyCost;
+    });
+
+    points.push({
+      day,
+      physicalPlanned: totalQty > 0 ? Math.min(100, (cumQty / totalQty) * 100) : 0,
+      financialPlanned: totalCost > 0 ? Math.min(100, (cumCost / totalCost) * 100) : 0
+    });
+  }
+
+  return points;
+}
+
+/**
+ * Generate histogram data for resource visualization.
+ */
+export function generateHistogramData(
+  dailyPlan: DailyPlanItem[],
+  totalDays: number
+): HistogramDay[] {
+  const data: HistogramDay[] = [];
+
+  for (let day = 1; day <= totalDays; day++) {
+    const dayItems = dailyPlan.filter(d => d.day === day);
+    const labor = dayItems.reduce((sum, d) => sum + d.labor, 0);
+    const equipment = dayItems.reduce((sum, d) => sum + d.equipment, 0);
+    const cost = dayItems.reduce((sum, d) => sum + d.dailyCost, 0);
+
+    data.push({ day, labor, equipment, cost });
+  }
+
+  return data;
 }
