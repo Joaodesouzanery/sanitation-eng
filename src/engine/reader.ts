@@ -30,47 +30,173 @@ export interface TopographyData {
 }
 
 /**
+ * Check if a string looks like a header column name (non-numeric text)
+ */
+function isHeaderColumn(value: string): boolean {
+  const cleaned = value.replace(',', '.').trim();
+  // If it's a pure number, it's not a header
+  if (!isNaN(parseFloat(cleaned)) && isFinite(Number(cleaned))) {
+    return false;
+  }
+  // Check for common header names
+  const headerNames = ['id', 'ponto', 'nome', 'x', 'y', 'z', 'cota', 'este', 'norte',
+                       'easting', 'northing', 'elevacao', 'elevation', 'coord', 'point',
+                       'lat', 'lon', 'lng', 'latitude', 'longitude', 'alt', 'altitude'];
+  return headerNames.some(h => cleaned.toLowerCase().includes(h)) ||
+         /^[a-zA-Z_]/.test(cleaned); // Starts with letter or underscore
+}
+
+/**
+ * Detect if the first line of CSV is a header or data
+ */
+function hasHeader(firstLine: string, delimiter: string): boolean {
+  const values = firstLine.split(delimiter).map(v => v.trim());
+  // If most columns look like header names, it's a header
+  const headerCount = values.filter(v => isHeaderColumn(v)).length;
+  return headerCount >= values.length / 2;
+}
+
+/**
  * Parse CSV content into topographic points.
  *
- * Expected columns: id, x, y, cota
+ * Supports files with or without headers.
+ * Expected columns: id, x, y, cota (or just x, y, cota without id)
+ *
+ * File formats supported:
+ * - With header: id,x,y,cota or ponto,este,norte,z etc.
+ * - Without header (3 columns): x,y,cota - IDs generated as P1, P2, etc.
+ * - Without header (4 columns): id,x,y,cota
+ * - Delimiters: comma (,), semicolon (;), tab, or space
  *
  * @param content - CSV file content as string
  * @param delimiter - Column delimiter (default: ',')
  * @returns Array of PontoTopografico objects
  */
 export function parseCSV(content: string, delimiter = ','): PontoTopografico[] {
-  const lines = content.trim().split('\n');
-  if (lines.length < 2) {
-    throw new Error('CSV must have at least a header and one data row');
+  const lines = content.trim().split('\n').filter(line => line.trim());
+  if (lines.length < 1) {
+    throw new Error('CSV file is empty');
   }
 
-  const header = lines[0].toLowerCase().split(delimiter).map(h => h.trim());
-  const idIndex = header.findIndex(h => h === 'id' || h === 'ponto' || h === 'nome');
-  const xIndex = header.findIndex(h => h === 'x' || h === 'este' || h === 'easting');
-  const yIndex = header.findIndex(h => h === 'y' || h === 'norte' || h === 'northing');
-  const cotaIndex = header.findIndex(h => h === 'cota' || h === 'z' || h === 'elevacao' || h === 'elevation');
+  // Detect delimiter if not working
+  let effectiveDelimiter = delimiter;
+  const firstLine = lines[0];
 
-  if (idIndex === -1 || xIndex === -1 || yIndex === -1 || cotaIndex === -1) {
-    throw new Error(
-      'CSV must contain columns: id (or ponto/nome), x (or este), y (or norte), cota (or z/elevacao)'
-    );
+  // Try to detect delimiter
+  if (firstLine.split(delimiter).length < 3) {
+    // Try other delimiters
+    const delimiters = [';', '\t', ',', ' '];
+    for (const d of delimiters) {
+      const parts = firstLine.split(d).filter(p => p.trim());
+      if (parts.length >= 3) {
+        effectiveDelimiter = d;
+        break;
+      }
+    }
+  }
+
+  // Check if first line is a header
+  const fileHasHeader = hasHeader(firstLine, effectiveDelimiter);
+
+  let idIndex = -1;
+  let xIndex = -1;
+  let yIndex = -1;
+  let cotaIndex = -1;
+  let dataStartLine = 0;
+
+  if (fileHasHeader) {
+    // Parse header
+    const header = firstLine.toLowerCase().split(effectiveDelimiter).map(h => h.trim());
+    idIndex = header.findIndex(h => h === 'id' || h === 'ponto' || h === 'nome' || h === 'point');
+    xIndex = header.findIndex(h => h === 'x' || h === 'este' || h === 'easting' || h === 'e' || h === 'lon' || h === 'longitude');
+    yIndex = header.findIndex(h => h === 'y' || h === 'norte' || h === 'northing' || h === 'n' || h === 'lat' || h === 'latitude');
+    cotaIndex = header.findIndex(h => h === 'cota' || h === 'z' || h === 'elevacao' || h === 'elevation' || h === 'alt' || h === 'altitude' || h === 'h');
+
+    // If we can't find proper columns, assume positional
+    if (xIndex === -1 || yIndex === -1 || cotaIndex === -1) {
+      const numCols = header.length;
+      if (numCols >= 4) {
+        // Assume: id, x, y, cota
+        idIndex = 0;
+        xIndex = 1;
+        yIndex = 2;
+        cotaIndex = 3;
+      } else if (numCols >= 3) {
+        // Assume: x, y, cota
+        idIndex = -1;
+        xIndex = 0;
+        yIndex = 1;
+        cotaIndex = 2;
+      } else {
+        throw new Error(
+          `Arquivo precisa ter pelo menos 3 colunas (x, y, cota). Encontrado: ${numCols} colunas`
+        );
+      }
+    }
+    dataStartLine = 1;
+  } else {
+    // No header - assume columns by position
+    const numCols = firstLine.split(effectiveDelimiter).filter(v => v.trim()).length;
+    if (numCols >= 4) {
+      // Assume: id, x, y, cota
+      idIndex = 0;
+      xIndex = 1;
+      yIndex = 2;
+      cotaIndex = 3;
+    } else if (numCols >= 3) {
+      // Assume: x, y, cota (most common for topography files)
+      idIndex = -1;
+      xIndex = 0;
+      yIndex = 1;
+      cotaIndex = 2;
+    } else {
+      throw new Error(
+        `Arquivo precisa ter pelo menos 3 colunas (x, y, cota). Encontrado: ${numCols} colunas. ` +
+        `Primeira linha: "${firstLine.substring(0, 100)}"`
+      );
+    }
+    dataStartLine = 0;
   }
 
   const pontos: PontoTopografico[] = [];
+  let autoId = 1;
 
-  for (let i = 1; i < lines.length; i++) {
+  for (let i = dataStartLine; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
-    const values = line.split(delimiter).map(v => v.trim());
+    // Skip comment lines
+    if (line.startsWith('#') || line.startsWith('//')) continue;
 
-    const id = values[idIndex];
-    const x = parseFloat(values[xIndex].replace(',', '.'));
-    const y = parseFloat(values[yIndex].replace(',', '.'));
-    const cota = parseFloat(values[cotaIndex].replace(',', '.'));
+    const values = line.split(effectiveDelimiter).map(v => v.trim()).filter(v => v);
 
-    if (!id || isNaN(x) || isNaN(y) || isNaN(cota)) {
-      console.warn(`Skipping invalid row ${i + 1}: ${line}`);
+    if (values.length < 3) {
+      console.warn(`Pulando linha ${i + 1} com dados insuficientes: ${line}`);
+      continue;
+    }
+
+    // Get ID or generate one
+    let id: string;
+    if (idIndex >= 0 && values[idIndex]) {
+      id = values[idIndex];
+    } else {
+      id = `P${autoId}`;
+      autoId++;
+    }
+
+    // Parse coordinates - handle both comma and dot as decimal separator
+    const parseCoord = (val: string): number => {
+      if (!val) return NaN;
+      // Replace comma with dot for decimal
+      return parseFloat(val.replace(',', '.'));
+    };
+
+    const x = parseCoord(values[xIndex]);
+    const y = parseCoord(values[yIndex]);
+    const cota = parseCoord(values[cotaIndex]);
+
+    if (isNaN(x) || isNaN(y) || isNaN(cota)) {
+      console.warn(`Pulando linha ${i + 1} com valores inválidos: ${line}`);
       continue;
     }
 
@@ -78,9 +204,13 @@ export function parseCSV(content: string, delimiter = ','): PontoTopografico[] {
   }
 
   if (pontos.length === 0) {
-    throw new Error('No valid points found in CSV');
+    throw new Error(
+      'Nenhum ponto válido encontrado no arquivo. ' +
+      'Verifique se o arquivo contém dados no formato: x, y, cota (com ou sem cabeçalho)'
+    );
   }
 
+  console.log(`Importados ${pontos.length} pontos do arquivo`);
   return pontos;
 }
 
@@ -145,12 +275,8 @@ export async function readTopographyFile(
 
   if (fileName.endsWith('.csv') || fileName.endsWith('.txt')) {
     const content = await file.text();
-    // Try comma first, then semicolon
-    try {
-      pontos = parseCSV(content, ',');
-    } catch {
-      pontos = parseCSV(content, ';');
-    }
+    // The parseCSV function now auto-detects delimiters
+    pontos = parseCSV(content);
   } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
     if (!xlsxLib) {
       throw new Error('XLSX library is required for Excel files');

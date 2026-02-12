@@ -198,43 +198,24 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
 
       if (file.name.toLowerCase().endsWith('.csv') || file.name.toLowerCase().endsWith('.txt')) {
         const content = await file.text();
-        try {
-          const newPontos = parseCSV(content, ',');
-          data = {
-            pontos: newPontos,
-            metadata: {
-              source: file.name,
-              totalPoints: newPontos.length,
-              bounds: {
-                minX: Math.min(...newPontos.map(p => p.x)),
-                maxX: Math.max(...newPontos.map(p => p.x)),
-                minY: Math.min(...newPontos.map(p => p.y)),
-                maxY: Math.max(...newPontos.map(p => p.y)),
-                minCota: Math.min(...newPontos.map(p => p.cota)),
-                maxCota: Math.max(...newPontos.map(p => p.cota))
-              },
-              importedAt: new Date().toISOString()
-            }
-          };
-        } catch {
-          const newPontos = parseCSV(content, ';');
-          data = {
-            pontos: newPontos,
-            metadata: {
-              source: file.name,
-              totalPoints: newPontos.length,
-              bounds: {
-                minX: Math.min(...newPontos.map(p => p.x)),
-                maxX: Math.max(...newPontos.map(p => p.x)),
-                minY: Math.min(...newPontos.map(p => p.y)),
-                maxY: Math.max(...newPontos.map(p => p.y)),
-                minCota: Math.min(...newPontos.map(p => p.cota)),
-                maxCota: Math.max(...newPontos.map(p => p.cota))
-              },
-              importedAt: new Date().toISOString()
-            }
-          };
-        }
+        // parseCSV now auto-detects delimiters and handles files without headers
+        const newPontos = parseCSV(content);
+        data = {
+          pontos: newPontos,
+          metadata: {
+            source: file.name,
+            totalPoints: newPontos.length,
+            bounds: {
+              minX: Math.min(...newPontos.map(p => p.x)),
+              maxX: Math.max(...newPontos.map(p => p.x)),
+              minY: Math.min(...newPontos.map(p => p.y)),
+              maxY: Math.max(...newPontos.map(p => p.y)),
+              minCota: Math.min(...newPontos.map(p => p.cota)),
+              maxCota: Math.max(...newPontos.map(p => p.cota))
+            },
+            importedAt: new Date().toISOString()
+          }
+        };
       } else {
         throw new Error(`Formato não suportado: ${file.name}. Use CSV ou TXT.`);
       }

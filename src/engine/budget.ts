@@ -537,3 +537,14 @@ export function exportBudgetToCSV(budget: BudgetSummary, delimiter = ';'): strin
 
 // Create default cost base instance
 export const defaultCostBase = new CostBase();
+
+/**
+ * Generate budget from trechos using default cost base.
+ * This is a convenience function for quick budget generation.
+ */
+export function generateBudgetFromTrechos(
+  trechos: Trecho[],
+  options: BudgetOptions = {}
+): BudgetSummary {
+  return calculateBudget(trechos, defaultCostBase, options);
+}
