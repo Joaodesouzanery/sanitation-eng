@@ -152,12 +152,148 @@ Botao: "Interpolar Cotas e Gerar PVs"
 
 ---
 
-## 1.8 Botoes de Exportacao
+## 1.8 Editor Visual de Mapa (IMPORTANTE!)
 
-- Exportar CSV (pontos)
-- Exportar CSV (trechos)
-- Exportar JSON
-- Carregar Dados de Exemplo
+**Toolbar do Mapa com ferramentas de edicao:**
+
+```
+Barra de ferramentas:
+[Gerar Trechos Auto] [Desenhar Trecho Manual] [Zoom+] [Zoom-] [Reset]
+[Desfazer] [Excluir Trecho] [Limpar Tudo] [Salvar] [Carregar]
+```
+
+**Funcionalidades:**
+
+1. **Gerar Trechos Automatico:**
+   - Conecta pontos automaticamente por proximidade ou sequencial
+   - Mostra preview antes de confirmar
+
+2. **Desenhar Trecho Manual:**
+   - Ativar modo de desenho (botao fica destacado)
+   - Clicar em ponto de origem
+   - Clicar em ponto de destino
+   - Linha conecta os dois pontos
+   - Mostrar distancia em tempo real
+
+3. **Zoom e Navegacao:**
+   - Zoom In (+)
+   - Zoom Out (-)
+   - Reset (voltar visao original)
+   - Fit Bounds (ajustar a todos os pontos)
+
+4. **Edicao de Trechos:**
+   - Desfazer (undo) - remove ultimo trecho criado
+   - Excluir Trecho - abre modal para selecionar qual trecho excluir
+   - Limpar Tudo - remove todos os trechos (pedir confirmacao)
+
+5. **Persistencia (localStorage):**
+   - Salvar - salva trechos no navegador
+   - Carregar - recupera trechos salvos anteriormente
+   - Aviso: "Trechos salvos com sucesso!" ou "Trechos carregados!"
+
+**Modal de Exclusao de Trecho:**
+```
+Titulo: "Excluir Trecho"
+Select com lista de trechos: "T01 (PV1 -> PV2) - 45m"
+Botoes: [Excluir] [Cancelar]
+```
+
+---
+
+## 1.9 Exportacao Completa (Multiplos Formatos)
+
+**Card de Exportacao:**
+```
+Titulo: "Exportacao"
+Texto: "Verifique o tracado antes de exportar."
+```
+
+**Botao Principal (destacado):**
+```
+[EXPORTAR TODOS OS FORMATOS (.ZIP)]
+- Gera arquivo ZIP com todos os formatos abaixo
+- Background branco, texto escuro, largura 100%
+```
+
+**Botoes Individuais:**
+```
+[Exportar SHP] - Verde (GIS/QGIS)
+[Exportar IFC] - Verde (BIM)
+[Exportar GeoJSON] - Roxo (GIS/Web)
+[Exportar CSV] - Laranja (Planilhas)
+[Exportar DXF] - Cinza (AutoCAD)
+[Exportar Excel] - Verde (XLSX)
+```
+
+**Formato do arquivo exportado:**
+- SHP: pontos.shp + trechos.shp (com .dbf, .shx, .prj)
+- GeoJSON: rede_completa.geojson
+- CSV: pontos.csv + trechos.csv
+- Excel: rede_completa.xlsx (com abas Pontos e Trechos)
+
+---
+
+## 1.10 Calculo de Custos Rapido
+
+**Botao na aba de Topografia:**
+```
+[Calcular Custos] - Azul
+```
+
+**Ao clicar, mostrar resumo:**
+```
+Card com titulo: "Estimativa de Custos"
+
+| Item | Quantidade | Unidade | Custo Estimado |
+| Escavacao | 450 | m3 | R$ 15.000 |
+| Tubulacao | 850 | m | R$ 42.500 |
+| Reaterro | 420 | m3 | R$ 8.400 |
+| Total | - | - | R$ 65.900 |
+
+Obs: "Valores estimados. Para orcamento detalhado, acesse a aba Orcamento."
+```
+
+---
+
+## 1.11 Header da Plataforma
+
+**Barra superior com:**
+```
+Logo: HydroNetwork (icone de gota)
+Subtitulo: "Plataforma completa de engenharia de saneamento"
+
+Botoes a direita:
+[? Tutorial] - Abre modal com instrucoes basicas
+[Verificar Plataforma] - Mostra status dos dados carregados
+```
+
+**Modal de Tutorial:**
+```
+Titulo: "Como usar a plataforma"
+
+Passos:
+1. Importe seus dados de topografia (CSV, DXF, SHP)
+2. Visualize e edite os trechos no mapa
+3. Configure o planejamento (equipes, produtividade)
+4. Gere o cronograma com Gantt e Curva S
+5. Acompanhe a execucao com RDOs
+6. Exporte relatorios e dados
+
+[Fechar]
+```
+
+**Modal de Verificar Plataforma:**
+```
+Titulo: "Status da Plataforma"
+
+| Modulo | Status |
+| Pontos carregados | 25 (verde) ou 0 (vermelho) |
+| Trechos criados | 18 (verde) ou 0 (vermelho) |
+| Cronograma gerado | Sim (verde) ou Nao (amarelo) |
+| RDOs registrados | 5 (verde) ou 0 (amarelo) |
+
+[Fechar]
+```
 
 ---
 
