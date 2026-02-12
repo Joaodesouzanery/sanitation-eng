@@ -1,24 +1,248 @@
-# Prompt Pontual para Lovable - Resolver Problemas Pendentes
+# Prompt para Lovable - Completar Plataforma HydroNetwork
 
-## Contexto
-A Lovable ja implementou a estrutura basica das paginas React (TopografiaPage, PlanejamentoPage, RDOPage, HydroNetworkPage). Este prompt e para resolver **apenas os problemas pendentes** de integracao e funcionamento.
+## CONTEXTO IMPORTANTE
+
+A plataforma HydroNetwork foi implementada de forma **incompleta**. A versão atual na Lovable tem apenas formularios basicos, mas faltam:
+- Graficos e visualizacoes (Gantt, Curva S, Histograma, Mapas)
+- Resultados apos gerar calculos
+- Muitas funcionalidades de cada modulo
+
+Este prompt lista EXATAMENTE o que falta em cada modulo.
 
 ---
 
-## PROBLEMA 1: Dependencias Externas Nao Carregadas
+## MODULO 1: TOPOGRAFIA - O QUE FALTA
 
-### O que esta errado:
-As paginas usam `declare const L: any;` e `declare const Chart: any;`, mas Leaflet e Chart.js NAO estao sendo carregados no projeto.
+### Situacao Atual:
+- Apenas area de upload de arquivo
 
-### O que fazer:
-1. Adicionar as dependencias ao `package.json`:
+### O QUE DEVE SER ADICIONADO:
+
+#### 1.1 Apos upload do arquivo, mostrar:
+
+**Cards de Resumo (6 cards em grid):**
+```
+| Total de Pontos | Total de Trechos | Comprimento Total |
+| Por Gravidade   | Elevatoria       | Declividade Media |
+```
+
+**Mapa Interativo com Leaflet:**
+- Mostrar pontos como CircleMarkers coloridos:
+  - Verde (#22c55e) = Ponto inicial
+  - Vermelho (#ef4444) = Ponto final
+  - Azul (#3b82f6) = Pontos intermediarios
+- Mostrar trechos como Polylines:
+  - Verde = Gravidade (declividade >= 0.5%)
+  - Amarelo/Laranja = Elevatoria (declividade < 0.5%)
+- Popup ao clicar com informacoes do ponto/trecho
+
+**Tabela de Dados:**
+- Colunas: Inicio | Fim | Comprimento | Declividade | Tipo | DN | Material
+- Com scroll se muitos registros
+- Badge colorido para tipo (Gravidade = verde, Elevatoria = laranja)
+
+**Botoes de Exportacao:**
+- Exportar CSV
+- Exportar JSON
+
+#### 1.2 Codigo para integrar:
+Usar os arquivos de `src/engine/`:
+```typescript
+import { parseCSV, createSampleTopography } from '../engine/reader';
+import { createTrechosFromTopography, summarizeNetwork } from '../engine/domain';
+```
+
+---
+
+## MODULO 2: PLANEJAMENTO - O QUE FALTA
+
+### Situacao Atual:
+- Apenas campos de configuracao (numero de equipes, data, etc.)
+- Botao "Gerar Cronograma" que nao mostra resultados visuais
+
+### O QUE DEVE SER ADICIONADO APOS CLICAR "GERAR CRONOGRAMA":
+
+#### 2.1 Cards de Resumo (4 cards):
+```
+| Dias de Obra (azul)  | Data de Inicio (verde) |
+| Data de Termino (laranja) | Custo Total Estimado (roxo) |
+```
+
+#### 2.2 Grafico de Gantt COMPLETO:
+```
+Estrutura:
+- Header com numeros dos dias (1, 2, 3, 4, 5...)
+- Uma linha por trecho
+- Cada celula mostra:
+  - Se tem trabalho: Gradiente colorido (amarelo->azul->verde) representando o ciclo
+    Escavacao (amarelo #f59e0b) | Assentamento (azul #3b82f6) | Reaterro (verde #22c55e)
+  - Se teste hidrostatico: Vermelho (#ef4444) com letra "T"
+  - Numero de metros no centro da celula
+- Celulas vazias = cinza claro com borda tracejada
+```
+
+**Legenda do Gantt:**
+- Gradiente colorido = Ciclo Completo (Escavacao -> Assentamento -> Reaterro)
+- Vermelho = Teste Hidrostatico
+- Tag: "Vala fechada no mesmo dia"
+
+#### 2.3 Curva S (Grafico de Linha com Chart.js):
+```
+- Eixo X: Dias (D1, D2, D3...)
+- Eixo Y: Progresso (0% a 100%)
+- Linha Azul: Fisico Planejado (%)
+- Linha Verde: Financeiro Planejado (%)
+- Area preenchida sob as linhas
+- Titulo: "Curva S - Avanco Fisico-Financeiro"
+```
+
+#### 2.4 Histograma de Recursos (Grafico de Barras com Chart.js):
+```
+- Eixo X: Dias/Semanas/Meses (selecionavel)
+- Eixo Y: Quantidade
+- Barras Azuis: Mao de Obra (pessoas)
+- Barras Roxas: Equipamentos (unidades)
+- Controles: Select para "Diario/Semanal/Mensal" e "Todos/Mao de Obra/Equipamentos/Custo"
+```
+
+**Estatisticas do Histograma (4 mini-cards):**
+```
+| Pico Mao de Obra | Media Diaria | Total HH | Equip. x Dias |
+```
+
+#### 2.5 Tabela de Plano Diario:
+```
+Colunas: Dia | Trecho | Atividade | Equipe | Metros | Mao de Obra | Custo/Dia
+- Mostrar primeiras 20 linhas
+- Mensagem "... e mais X registros" se houver mais
+```
+
+#### 2.6 Codigo para integrar:
+```typescript
+import {
+  generateFullSchedule,
+  generateCurveSData,
+  generateHistogramData
+} from '../engine/planning';
+```
+
+---
+
+## MODULO 3: RDO - O QUE FALTA
+
+### Situacao Atual:
+- Estrutura basica com abas
+
+### O QUE DEVE SER ADICIONADO:
+
+#### 3.1 Dashboard RDO (4 cards + 3 barras de progresso + 2 graficos):
+
+**Cards de Resumo:**
+```
+| Total Planejado (m) | Total Executado (m) | Restante (m) | Progresso (%) |
+```
+
+**Barras de Progresso por Sistema:**
+```
+- Agua (azul #60a5fa): X% - Xm / Xm
+- Esgoto (verde #22c55e): X% - Xm / Xm
+- Drenagem (laranja #f59e0b): X% - Xm / Xm
+```
+
+**Grafico 1 - Evolucao Semanal (Linha):**
+- Linha tracejada azul: Planejado
+- Linha solida verde com area: Executado
+
+**Grafico 2 - Status dos Trechos (Donut):**
+- Verde: Concluido
+- Laranja: Em Execucao
+- Vermelho: Nao Iniciado
+
+#### 3.2 Mapa do RDO (com Leaflet):
+```
+- Mostrar trechos coloridos por status:
+  - Verde (#22c55e) = Concluido (linha mais grossa)
+  - Laranja (#f59e0b) = Em Execucao
+  - Vermelho (#ef4444) = Nao Iniciado
+- Filtros: Sistema (Agua/Esgoto/Drenagem) e Status
+- Popup com informacoes do trecho e progresso
+- Barra de progresso no popup
+```
+
+#### 3.3 Codigo para integrar:
+```typescript
+import { RDOEngine, type RDO } from '../engine/rdo';
+import { RDODashboard } from '../engine/dashboard';
+```
+
+---
+
+## MODULO 4: ORCAMENTO - O QUE FALTA
+
+### Situacao Atual:
+- Estrutura basica
+
+### O QUE DEVE SER ADICIONADO:
+
+**Cards de Resumo:**
+```
+| Total Geral (R$) | Comprimento (m) | Custo/Metro (R$/m) |
+```
+
+**Tabela de Itens:**
+```
+Colunas: Item | Descricao | Un | Qtd | Preco Unit. | Total
+```
+
+**Codigo:**
+```typescript
+import { generateBudgetFromTrechos, type BudgetSummary } from '../engine/budget';
+```
+
+---
+
+## MODULO 5: EXECUCAO - O QUE FALTA
+
+### Situacao Atual:
+- Estrutura basica
+
+### O QUE DEVE SER ADICIONADO:
+
+**Cards:**
+```
+| Planejado (m) | Executado (m) | Progresso (%) |
+```
+
+**Barra de Progresso Geral:**
+- Mostrar percentual de execucao
+- Cor baseada no progresso (vermelho < 30%, amarelo 30-70%, verde > 70%)
+
+---
+
+## MODULO 6: RESULTADOS - O QUE FALTA
+
+### O QUE DEVE SER ADICIONADO:
+
+**Cards de Resumo Final:**
+```
+| Trechos | Comprimento | Dias de Obra | Custo Estimado |
+```
+
+**Botoes de Exportacao:**
+- Exportar Trechos (CSV)
+- Exportar Projeto Completo (JSON)
+
+---
+
+## DEPENDENCIAS NECESSARIAS
+
+Adicionar ao `package.json`:
 ```json
 {
   "dependencies": {
     "leaflet": "^1.9.4",
     "chart.js": "^4.4.0",
-    "react-leaflet": "^4.2.1",
-    "chartjs-plugin-annotation": "^3.0.1"
+    "react-leaflet": "^4.2.1"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.8"
@@ -26,190 +250,67 @@ As paginas usam `declare const L: any;` e `declare const Chart: any;`, mas Leafl
 }
 ```
 
-2. Criar um arquivo `src/lib/charts.ts` para inicializacao:
-```typescript
-import { Chart, registerables } from 'chart.js';
-Chart.register(...registerables);
-export { Chart };
-```
-
-3. Criar um arquivo `src/lib/leaflet.ts`:
-```typescript
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-// Fix para icones do Leaflet em React
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
-
-export { L };
-```
-
-4. Alterar os imports nas paginas:
-- Trocar `declare const L: any;` por `import { L } from '../lib/leaflet';`
-- Trocar `declare const Chart: any;` por `import { Chart } from '../lib/charts';`
-
----
-
-## PROBLEMA 2: Engine TypeScript Nao Copiado
-
-### O que esta errado:
-Os arquivos de `src/engine/` existem no repositorio mas podem nao ter sido copiados para o projeto Lovable.
-
-### O que fazer:
-Copiar TODOS os arquivos de `src/engine/` para o projeto Lovable:
-- `reader.ts` - Parse CSV/TXT
-- `domain.ts` - Criacao de trechos
-- `geometry.ts` - Coordenadas UTM
-- `planning.ts` - Cronograma, Curva S, Histograma
-- `budget.ts` - Orcamento
-- `rdo.ts` - RDO completo
-- `dashboard.ts` - EVM e metricas
-- `construction.ts` - Parametros construtivos
-- `materials.ts` - Catalogo de materiais
-- `peer-review.ts` - Validacao NBR
-- `index.ts` - Exports
-
----
-
-## PROBLEMA 3: Graficos Nao Renderizam
-
-### O que esta errado:
-Os graficos (Curva S, Histograma, Timeline) usam `document.getElementById()` que pode falhar com IDs duplicados ou timing issues.
-
-### O que fazer:
-Alterar para usar `useRef` corretamente:
-
-**PlanejamentoPage - Curva S:**
-```typescript
-// Antes (problematico):
-const canvas = document.getElementById('curve-s-canvas') as HTMLCanvasElement;
-
-// Depois (correto):
-const curveCanvasRef = useRef<HTMLCanvasElement>(null);
-// No JSX: <canvas ref={curveCanvasRef} />
-// No useEffect: if (!curveCanvasRef.current) return;
-const ctx = curveCanvasRef.current.getContext('2d');
-```
-
-**RDOPage - Graficos:**
-```typescript
-// Mesmo padrao - usar refs ao inves de getElementById
-const timelineCanvasRef = useRef<HTMLCanvasElement>(null);
-const statusCanvasRef = useRef<HTMLCanvasElement>(null);
-
-// No JSX:
-<canvas ref={timelineCanvasRef} style={{ width: '100%', height: '200px' }} />
-<canvas ref={statusCanvasRef} style={{ width: '100%', height: '200px' }} />
-```
-
----
-
-## PROBLEMA 4: Mapa Nao Aparece
-
-### O que esta errado:
-O mapa Leaflet precisa de CSS e o container precisa ter altura definida.
-
-### O que fazer:
-1. Adicionar import do CSS no arquivo principal:
+**IMPORTANTE:** Importar CSS do Leaflet:
 ```typescript
 import 'leaflet/dist/leaflet.css';
 ```
 
-2. Garantir que o container do mapa tenha altura fixa:
-```typescript
-<div
-  ref={mapContainerRef}
-  style={{
-    height: '500px',  // OBRIGATORIO ter altura fixa
-    width: '100%',
-    borderRadius: '8px'
-  }}
-/>
-```
+---
 
-3. Inicializar o mapa SOMENTE quando o ref estiver disponivel:
-```typescript
-useEffect(() => {
-  // Verificar se Leaflet esta disponivel E se o container existe
-  if (!mapContainerRef.current) return;
-  if (mapInstanceRef.current) return; // Ja inicializado
+## RESUMO DO QUE IMPLEMENTAR
 
-  const map = L.map(mapContainerRef.current).setView([-23.5505, -46.6333], 12);
-  // ...
-}, []); // Array vazio = executar uma vez
-```
+| Modulo | Falta |
+|--------|-------|
+| Topografia | Mapa interativo, Cards de resumo, Tabela de trechos |
+| Planejamento | Gantt com gradiente, Curva S, Histograma, Cards, Tabela diaria |
+| RDO | Dashboard com graficos, Mapa de progresso, Barras por sistema |
+| Orcamento | Cards, Tabela de itens |
+| Execucao | Cards, Barra de progresso |
+| Resultados | Cards finais, Botoes de exportacao |
 
 ---
 
-## PROBLEMA 5: Gantt Chart Incompleto
+## FLUXO DE DADOS
 
-### O que esta errado:
-O Gantt na pagina de Planejamento pode nao mostrar o gradiente colorido corretamente.
-
-### O que fazer:
-O CSS do gradiente para o ciclo completo (Escavacao -> Assentamento -> Reaterro) deve ser:
-```typescript
-style={{
-  background: 'linear-gradient(90deg, #f59e0b 0%, #f59e0b 33%, #3b82f6 33%, #3b82f6 66%, #22c55e 66%, #22c55e 100%)',
-  borderRadius: '4px',
-  height: '24px',
-  // ...
-}}
 ```
+1. TOPOGRAFIA
+   Usuario faz upload CSV/TXT
+   -> parseCSV() processa
+   -> createTrechosFromTopography() cria trechos
+   -> summarizeNetwork() gera resumo
+   -> Exibir: Cards + Mapa + Tabela
 
-Cores:
-- `#f59e0b` (amarelo) = Escavacao
-- `#3b82f6` (azul) = Assentamento
-- `#22c55e` (verde) = Reaterro
-- `#ef4444` (vermelho) = Teste Hidrostatico
+2. PLANEJAMENTO
+   Usuario configura equipes e clica "Gerar Cronograma"
+   -> generateFullSchedule() gera cronograma
+   -> generateCurveSData() gera dados da curva S
+   -> generateHistogramData() gera dados do histograma
+   -> Exibir: Cards + Gantt + Curva S + Histograma + Tabela
 
----
-
-## PROBLEMA 6: Types Faltando
-
-### O que fazer:
-Se houver erros de TypeScript, adicionar os types:
-
-```typescript
-// Em RDOPage.tsx, adicionar:
-type RDOStatus = 'rascunho' | 'enviado' | 'aprovado' | 'rejeitado';
-
-// Corrigir a linha 349:
-const handleSaveRDO = (status: RDOStatus = 'rascunho') => {
+3. RDO
+   Usuario cria RDOs
+   -> Salvar em localStorage
+   -> calculateDashboardMetrics() calcula metricas
+   -> Exibir: Dashboard + Graficos + Mapa
 ```
 
 ---
 
-## RESUMO DAS ACOES
+## ESTILO VISUAL
 
-1. **Instalar dependencias**: `npm install leaflet chart.js react-leaflet @types/leaflet`
-2. **Criar lib/charts.ts e lib/leaflet.ts**
-3. **Atualizar imports nas paginas**
-4. **Copiar arquivos de src/engine/ se nao existirem**
-5. **Trocar getElementById por useRef nos graficos**
-6. **Adicionar CSS do Leaflet**
-7. **Garantir altura fixa no container do mapa**
-8. **Corrigir type RDOStatus**
+Manter o estilo atual com:
+- Background claro (#f8fafc)
+- Cards brancos com sombra suave
+- Cores de destaque: Azul (#3b82f6), Verde (#22c55e), Laranja (#f59e0b), Roxo (#8b5cf6)
+- Border radius de 12px nos cards
+- Fontes: Inter ou sistema
 
 ---
 
-## TESTE RAPIDO
+## PRIORIDADE DE IMPLEMENTACAO
 
-Apos as correcoes, testar:
-1. Upload de CSV na aba Topografia - deve mostrar mapa e tabela
-2. Gerar Cronograma na aba Planejamento - deve mostrar Gantt, Curva S e Histograma
-3. Criar RDO - deve mostrar Dashboard com graficos
-4. Todos os graficos devem renderizar corretamente
-
----
-
-## Importante
-- NAO reescrever as paginas do zero
-- APENAS corrigir os problemas listados
-- Os arquivos de engine ja estao completos e funcionais
-- Focar em fazer as bibliotecas Leaflet e Chart.js funcionarem
+1. **ALTA**: Mapa na Topografia (Leaflet)
+2. **ALTA**: Gantt + Curva S + Histograma no Planejamento (Chart.js)
+3. **MEDIA**: Dashboard do RDO com graficos
+4. **MEDIA**: Mapa do RDO
+5. **BAIXA**: Cards e tabelas nos outros modulos
