@@ -236,7 +236,45 @@ Dropdown com:
 
 ---
 
-## 4.2 Toolbox - Associar Dados
+## 4.2 Mapa Interativo dos Trechos (IMPORTANTE!)
+
+**Apos carregar dados, mostrar mapa com os trechos importados:**
+
+```
+Card com titulo: "Visualizacao da Rede"
+Subtitulo: "Trechos carregados para planejamento"
+```
+
+**Mapa Leaflet mostrando:**
+- Todos os trechos importados da topografia
+- Pontos (PVs) como CircleMarkers
+- Trechos como Polylines coloridas por tipo:
+  - Verde = Gravidade
+  - Laranja = Elevatoria
+  - Azul = Agua (se houver)
+
+**Interatividade:**
+- Popup ao clicar no trecho com informacoes:
+  - ID do trecho
+  - Comprimento
+  - Diametro
+  - Profundidade estimada
+- Highlight ao passar o mouse
+- Zoom automatico para ajustar aos trechos
+
+**Controles do mapa:**
+- Botao "Ajustar Visualizacao" (fit bounds)
+- Toggle para mostrar/ocultar pontos
+- Toggle para mostrar/ocultar labels
+
+**Resumo abaixo do mapa:**
+```
+"Carregados: X trechos | Y metros totais | Z pontos"
+```
+
+---
+
+## 4.3 Toolbox - Associar Dados
 
 **Collapsible/Accordion:**
 ```
@@ -277,7 +315,7 @@ Botao: "Executar Associacao"
 
 ---
 
-## 4.3 Configuracao de Equipes
+## 4.4 Configuracao de Equipes
 
 ```
 Numero de Equipes: [Input 1-10]
@@ -297,7 +335,7 @@ Profundidade Maxima para Escavacao Manual: [1.25m]
 
 ---
 
-## 4.4 Parametros de Produtividade
+## 4.5 Parametros de Produtividade
 
 ```
 Metros por Dia (Base): [12] m/dia
@@ -321,7 +359,7 @@ Para ter menos linhas no Gantt e dias mais corridos:
 
 ---
 
-## 4.5 Periodo de Execucao
+## 4.6 Periodo de Execucao
 
 ```
 Data de Inicio: [Date picker]
@@ -338,7 +376,7 @@ Dias uteis calculados: XX dias [Botao Recalcular]
 
 ---
 
-## 4.6 Gestao de Feriados
+## 4.7 Gestao de Feriados
 
 ```
 Adicionar Feriado:
@@ -354,7 +392,7 @@ Tabela de feriados:
 
 ---
 
-## 4.7 Tabela de Produtividade
+## 4.8 Tabela de Produtividade
 
 ```
 Fonte: SINAPI/SEINFRA/TCPO
@@ -371,7 +409,7 @@ Fonte: SINAPI/SEINFRA/TCPO
 
 ---
 
-## 4.8 Regras Tecnicas (Alertas)
+## 4.9 Regras Tecnicas (Alertas)
 
 ```
 Verificacoes automaticas (nao modificam os dados):
@@ -388,9 +426,9 @@ Lista de alertas com icones:
 
 ---
 
-## 4.9 RESULTADOS DO PLANEJAMENTO (apos clicar "Gerar Cronograma")
+## 4.10 RESULTADOS DO PLANEJAMENTO (apos clicar "Gerar Cronograma")
 
-### 4.9.1 Cards de Resumo (4 cards)
+### 4.10.1 Cards de Resumo (4 cards)
 
 ```
 | Dias Uteis         | Data Inicio         | Data Termino        | Custo Total         |
@@ -398,7 +436,7 @@ Lista de alertas com icones:
 | "45"               | "12/02/2026"        | "15/04/2026"        | "R$ 125.000,00"     |
 ```
 
-### 4.9.2 Grafico de Gantt COMPLETO
+### 4.10.2 Grafico de Gantt COMPLETO
 
 **Estrutura:**
 ```
@@ -431,7 +469,7 @@ Cada linha:
 Tag: "Regra: Vala fechada no mesmo dia (Same-Day Completion)"
 ```
 
-### 4.9.3 Curva S (Grafico de Linha - Chart.js)
+### 4.10.3 Curva S (Grafico de Linha - Chart.js)
 
 ```
 Eixo X: Dias (D1, D2, D3, D4, D5...)
@@ -453,7 +491,7 @@ Legenda:
 - Verde = Financeiro Previsto
 ```
 
-### 4.9.4 Histograma de Recursos (Grafico de Barras - Chart.js)
+### 4.10.4 Histograma de Recursos (Grafico de Barras - Chart.js)
 
 **Controles:**
 ```
@@ -486,7 +524,7 @@ Linha Laranja Tracejada: Media
 [Linha Laranja Tracejada] Media
 ```
 
-### 4.9.5 Tabela de Plano Diario Detalhado
+### 4.10.5 Tabela de Plano Diario Detalhado
 
 ```
 | Dia | Trecho | Atividade | Equipes | Producao | Mao de Obra | Equipamentos | Custo Dia (R$) |
@@ -499,7 +537,7 @@ Linha Laranja Tracejada: Media
 
 ---
 
-## 4.10 Botoes de Acao
+## 4.11 Botoes de Acao
 
 ```
 [Gerar Planejamento] - Azul primario
