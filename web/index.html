@@ -119,6 +119,27 @@
         }
         .nav-btn:hover { background: var(--gold-light); }
 
+        .nav-btn-secondary {
+            padding: 10px 24px;
+            background: transparent;
+            border: 2px solid var(--gold);
+            color: var(--gold);
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .nav-btn-secondary:hover {
+            background: var(--gold);
+            color: var(--primary-dark);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
         /* ==================== HERO ==================== */
         .hero {
             position: relative;
@@ -1067,7 +1088,10 @@
                 <a href="#mapa" class="nav-link">Mapa Interativo</a>
                 <a href="#modulos" class="nav-link">Módulos</a>
                 <a href="#problemas" class="nav-link">Soluções</a>
-                <a href="engine_rede.html" class="nav-btn">ACESSAR PLATAFORMA</a>
+                <div class="nav-buttons">
+                    <a href="engine_rede.html" class="nav-btn-secondary">CONSTRUDATA - OBRA</a>
+                    <a href="hydronetwork.html" class="nav-btn">CONSTRUDATA - HYDRO</a>
+                </div>
             </nav>
         </div>
     </header>
@@ -1099,8 +1123,11 @@
                     Gantt interativo e RDO digital em um único ambiente.
                 </p>
                 <div>
-                    <a href="engine_rede.html" class="hero-btn">Acessar Agora</a>
-                    <a href="#modulos" class="hero-btn hero-btn-outline">Ver Módulos</a>
+                    <a href="engine_rede.html" class="hero-btn hero-btn-outline">ConstruData - Obra</a>
+                    <a href="hydronetwork.html" class="hero-btn">ConstruData - Hydro</a>
+                </div>
+                <div style="margin-top: 10px;">
+                    <a href="#modulos" class="hero-btn hero-btn-outline" style="border-color: rgba(255,255,255,0.4); color: rgba(255,255,255,0.8);">Ver Todos os Módulos</a>
                 </div>
                 <div class="hero-features">
                     <div class="hero-feature">
@@ -1719,7 +1746,10 @@
                 Acesse agora a plataforma completa. Sem cadastro, sem cartão de crédito, sem compromisso.
                 Comece a usar em segundos.
             </p>
-            <a href="engine_rede.html" class="cta-btn">Acessar Plataforma Agora</a>
+            <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                <a href="engine_rede.html" class="cta-btn" style="background: transparent; border: 2px solid var(--primary-blue);">ConstruData - Obra</a>
+                <a href="hydronetwork.html" class="cta-btn">ConstruData - Hydro</a>
+            </div>
         </div>
     </section>
 
