@@ -3151,6 +3151,92 @@ PV02,359290.456,7352780.123,1.82</pre>
                     </div>
                 </div>
 
+                <!-- ABC Chart (Pareto) -->
+                <div class="card" style="margin-top: 20px;">
+                    <h2><span class="icon">📊</span> Curva ABC (Pareto)</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Classifica os itens de custo por representatividade: A (80%), B (15%), C (5%).
+                    </p>
+
+                    <!-- Controles do ABC -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <select id="abc-view-mode" style="padding: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);" onchange="renderABCChart()">
+                            <option value="cost">Por Custo (R$)</option>
+                            <option value="quantity">Por Quantidade</option>
+                            <option value="duration">Por Duração (dias)</option>
+                        </select>
+                        <select id="abc-group-mode" style="padding: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);" onchange="renderABCChart()">
+                            <option value="by-service">Por Tipo de Serviço</option>
+                            <option value="by-trecho">Por Trecho</option>
+                        </select>
+                    </div>
+
+                    <!-- Canvas do Gráfico ABC -->
+                    <div style="position: relative;">
+                        <canvas id="abc-canvas" width="900" height="400" style="width: 100%; background: var(--bg-secondary); border-radius: 8px; cursor: crosshair;"></canvas>
+                        <div id="abc-tooltip" style="display: none; position: absolute; background: rgba(30, 41, 59, 0.95); border: 1px solid var(--accent-purple); border-radius: 6px; padding: 10px; font-size: 0.85rem; pointer-events: none; z-index: 100; min-width: 180px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                            <div id="abc-tooltip-content"></div>
+                        </div>
+                    </div>
+
+                    <!-- Resumo ABC -->
+                    <div id="abc-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 15px;">
+                        <div style="padding: 15px; background: linear-gradient(135deg, #ef4444, #dc2626); border-radius: 8px; text-align: center; color: white;">
+                            <div style="font-size: 0.75rem; opacity: 0.85; margin-bottom: 4px;">Classe A (80% do custo)</div>
+                            <div style="font-size: 1.4rem; font-weight: bold;" id="abc-class-a-count">-</div>
+                            <div style="font-size: 0.8rem; opacity: 0.85;" id="abc-class-a-value">-</div>
+                        </div>
+                        <div style="padding: 15px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 8px; text-align: center; color: white;">
+                            <div style="font-size: 0.75rem; opacity: 0.85; margin-bottom: 4px;">Classe B (15% do custo)</div>
+                            <div style="font-size: 1.4rem; font-weight: bold;" id="abc-class-b-count">-</div>
+                            <div style="font-size: 0.8rem; opacity: 0.85;" id="abc-class-b-value">-</div>
+                        </div>
+                        <div style="padding: 15px; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 8px; text-align: center; color: white;">
+                            <div style="font-size: 0.75rem; opacity: 0.85; margin-bottom: 4px;">Classe C (5% do custo)</div>
+                            <div style="font-size: 1.4rem; font-weight: bold;" id="abc-class-c-count">-</div>
+                            <div style="font-size: 0.8rem; opacity: 0.85;" id="abc-class-c-value">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Tabela ABC detalhada -->
+                    <details style="margin-top: 15px;">
+                        <summary style="cursor: pointer; color: var(--accent-purple); font-weight: bold; padding: 8px;">
+                            Ver Tabela ABC Detalhada
+                        </summary>
+                        <div style="max-height: 300px; overflow: auto; margin-top: 10px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                <thead style="position: sticky; top: 0; background: var(--bg-card);">
+                                    <tr style="border-bottom: 2px solid var(--border-color);">
+                                        <th style="padding: 8px; text-align: center;">#</th>
+                                        <th style="padding: 8px; text-align: left;">Item</th>
+                                        <th style="padding: 8px; text-align: right;">Valor (R$)</th>
+                                        <th style="padding: 8px; text-align: right;">% Individual</th>
+                                        <th style="padding: 8px; text-align: right;">% Acumulado</th>
+                                        <th style="padding: 8px; text-align: center;">Classe</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="abc-table-tbody"></tbody>
+                            </table>
+                        </div>
+                    </details>
+
+                    <!-- Legenda -->
+                    <div style="display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; justify-content: center; padding: 10px; background: var(--bg-primary); border-radius: 6px;">
+                        <span style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                            <span style="width: 16px; height: 16px; background: #ef4444; border-radius: 3px;"></span> Classe A (prioridade alta)
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                            <span style="width: 16px; height: 16px; background: #f59e0b; border-radius: 3px;"></span> Classe B (prioridade m&eacute;dia)
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                            <span style="width: 16px; height: 16px; background: #22c55e; border-radius: 3px;"></span> Classe C (prioridade baixa)
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem;">
+                            <span style="width: 16px; height: 3px; background: var(--accent-purple);"></span> Curva Acumulada (%)
+                        </span>
+                    </div>
+                </div>
+
                 <!-- Daily Plan Table -->
                 <div class="card" style="margin-top: 20px;">
                     <h2><span class="icon">📋</span> Plano Diário Detalhado</h2>
@@ -14923,6 +15009,9 @@ DATA;
             // Render Histogram
             renderHistogram(dailyPlan, totalDays);
 
+            // Render ABC Chart (Pareto)
+            renderABCChart(schedule, dailyPlan);
+
             // Render Daily Plan Table
             renderDailyPlanTable(dailyPlan);
         }
@@ -15527,6 +15616,271 @@ DATA;
                 // This is a simplified recalculation
                 console.log(`Produção atualizada: índice ${index}, novo valor: ${production}/dia`);
             }
+        }
+
+        // ============================================
+        // ABC CHART (PARETO CURVE) - PLANNING MODULE
+        // ============================================
+        function renderABCChart(scheduleParam, dailyPlanParam) {
+            const schedule = scheduleParam || planningData.schedule;
+            const dailyPlan = dailyPlanParam || planningData.dailyPlan;
+            if (!schedule || schedule.length === 0) return;
+
+            const canvas = document.getElementById('abc-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            const viewMode = document.getElementById('abc-view-mode')?.value || 'cost';
+            const groupMode = document.getElementById('abc-group-mode')?.value || 'by-service';
+
+            // Aggregate data based on grouping mode
+            const aggregated = {};
+            const teamConfig = getTeamConfig();
+            const laborCount = (teamConfig.encarregado || 1) + (teamConfig.oficiais || 2) +
+                              (teamConfig.ajudantes || 4) + (teamConfig.operador || 1);
+            const laborCostDay = laborCount * 180;
+            const equipCostDay = (teamConfig.hasRetro ? 450 : 0) + (teamConfig.hasCompactor ? 120 : 0) +
+                                (teamConfig.hasTruck ? 350 : 0) + (teamConfig.hasPump ? 200 : 0);
+            const dailyCost = laborCostDay + equipCostDay;
+
+            schedule.forEach(item => {
+                const key = groupMode === 'by-service' ? item.activity : item.trecho_id;
+                if (!key) return;
+                if (!aggregated[key]) {
+                    aggregated[key] = { name: key, cost: 0, quantity: 0, duration: 0 };
+                }
+                aggregated[key].duration += (item.duration || 1);
+                aggregated[key].quantity += (item.quantidade || 0);
+                aggregated[key].cost += (item.duration || 1) * dailyCost;
+            });
+
+            // Convert to array and sort descending
+            let items = Object.values(aggregated);
+            const valueKey = viewMode === 'cost' ? 'cost' : viewMode === 'quantity' ? 'quantity' : 'duration';
+            items.sort((a, b) => b[valueKey] - a[valueKey]);
+
+            const total = items.reduce((sum, it) => sum + it[valueKey], 0);
+            if (total === 0) return;
+
+            // Calculate percentages and classify
+            let cumulative = 0;
+            items.forEach((item, idx) => {
+                item.percentage = (item[valueKey] / total) * 100;
+                cumulative += item.percentage;
+                item.cumPercentage = cumulative;
+                item.rank = idx + 1;
+                if (cumulative <= 80) item.classe = 'A';
+                else if (cumulative <= 95) item.classe = 'B';
+                else item.classe = 'C';
+            });
+
+            // Update summary cards
+            const classA = items.filter(i => i.classe === 'A');
+            const classB = items.filter(i => i.classe === 'B');
+            const classC = items.filter(i => i.classe === 'C');
+            const valA = classA.reduce((s, i) => s + i[valueKey], 0);
+            const valB = classB.reduce((s, i) => s + i[valueKey], 0);
+            const valC = classC.reduce((s, i) => s + i[valueKey], 0);
+
+            const el = (id) => document.getElementById(id);
+            el('abc-class-a-count').textContent = `${classA.length} itens`;
+            el('abc-class-a-value').textContent = viewMode === 'cost' ? `R$ ${valA.toLocaleString('pt-BR')}` : `${valA.toFixed(1)}`;
+            el('abc-class-b-count').textContent = `${classB.length} itens`;
+            el('abc-class-b-value').textContent = viewMode === 'cost' ? `R$ ${valB.toLocaleString('pt-BR')}` : `${valB.toFixed(1)}`;
+            el('abc-class-c-count').textContent = `${classC.length} itens`;
+            el('abc-class-c-value').textContent = viewMode === 'cost' ? `R$ ${valC.toLocaleString('pt-BR')}` : `${valC.toFixed(1)}`;
+
+            // Update table
+            const tbody = document.getElementById('abc-table-tbody');
+            if (tbody) {
+                tbody.innerHTML = items.map(item => {
+                    const classBg = item.classe === 'A' ? '#fecaca' : item.classe === 'B' ? '#fef3c7' : '#dcfce7';
+                    const classColor = item.classe === 'A' ? '#dc2626' : item.classe === 'B' ? '#d97706' : '#16a34a';
+                    const valDisplay = viewMode === 'cost' ? `R$ ${item[valueKey].toLocaleString('pt-BR')}` : item[valueKey].toFixed(1);
+                    return `<tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 6px 8px; text-align: center;">${item.rank}</td>
+                        <td style="padding: 6px 8px;">${item.name}</td>
+                        <td style="padding: 6px 8px; text-align: right;">${valDisplay}</td>
+                        <td style="padding: 6px 8px; text-align: right;">${item.percentage.toFixed(1)}%</td>
+                        <td style="padding: 6px 8px; text-align: right;">${item.cumPercentage.toFixed(1)}%</td>
+                        <td style="padding: 6px 8px; text-align: center;"><span style="background: ${classBg}; color: ${classColor}; padding: 2px 10px; border-radius: 10px; font-weight: bold; font-size: 0.8rem;">${item.classe}</span></td>
+                    </tr>`;
+                }).join('');
+            }
+
+            // Draw Chart
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvas.offsetWidth * dpr;
+            canvas.height = 400 * dpr;
+            ctx.scale(dpr, dpr);
+            const W = canvas.offsetWidth;
+            const H = 400;
+            ctx.clearRect(0, 0, W, H);
+
+            const pad = { top: 30, right: 60, bottom: 80, left: 70 };
+            const chartW = W - pad.left - pad.right;
+            const chartH = H - pad.top - pad.bottom;
+            const barW = Math.max(12, Math.min(50, (chartW / items.length) - 4));
+            const gap = (chartW - barW * items.length) / (items.length + 1);
+            const maxVal = items.length > 0 ? items[0][valueKey] : 1;
+
+            // Background
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-secondary').trim() || '#1e293b';
+            ctx.fillRect(0, 0, W, H);
+
+            // Grid lines
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = pad.top + (chartH * i / 5);
+                ctx.beginPath();
+                ctx.moveTo(pad.left, y);
+                ctx.lineTo(W - pad.right, y);
+                ctx.stroke();
+            }
+
+            // Y-axis labels (values)
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '11px system-ui';
+            ctx.textAlign = 'right';
+            for (let i = 0; i <= 5; i++) {
+                const val = maxVal * (5 - i) / 5;
+                const y = pad.top + (chartH * i / 5);
+                const label = viewMode === 'cost' ? `R$${(val/1000).toFixed(0)}k` : val.toFixed(0);
+                ctx.fillText(label, pad.left - 8, y + 4);
+            }
+
+            // Right Y-axis labels (percentage)
+            ctx.textAlign = 'left';
+            for (let i = 0; i <= 5; i++) {
+                const pct = (5 - i) * 20;
+                const y = pad.top + (chartH * i / 5);
+                ctx.fillText(`${pct}%`, W - pad.right + 8, y + 4);
+            }
+
+            // Draw bars
+            const barColors = { A: '#ef4444', B: '#f59e0b', C: '#22c55e' };
+            items.forEach((item, idx) => {
+                const x = pad.left + gap + idx * (barW + gap);
+                const barH = (item[valueKey] / maxVal) * chartH;
+                const y = pad.top + chartH - barH;
+
+                // Bar with gradient
+                const grad = ctx.createLinearGradient(x, y, x, pad.top + chartH);
+                const baseColor = barColors[item.classe];
+                grad.addColorStop(0, baseColor);
+                grad.addColorStop(1, baseColor + '80');
+                ctx.fillStyle = grad;
+
+                // Rounded top bar
+                const r = Math.min(4, barW / 2);
+                ctx.beginPath();
+                ctx.moveTo(x + r, y);
+                ctx.lineTo(x + barW - r, y);
+                ctx.quadraticCurveTo(x + barW, y, x + barW, y + r);
+                ctx.lineTo(x + barW, pad.top + chartH);
+                ctx.lineTo(x, pad.top + chartH);
+                ctx.lineTo(x, y + r);
+                ctx.quadraticCurveTo(x, y, x + r, y);
+                ctx.fill();
+
+                // X-axis labels
+                ctx.save();
+                ctx.translate(x + barW / 2, pad.top + chartH + 8);
+                ctx.rotate(-Math.PI / 4);
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '10px system-ui';
+                ctx.textAlign = 'right';
+                const label = item.name.length > 15 ? item.name.substring(0, 14) + '...' : item.name;
+                ctx.fillText(label, 0, 0);
+                ctx.restore();
+            });
+
+            // Draw cumulative line (Pareto curve)
+            if (items.length > 1) {
+                ctx.beginPath();
+                ctx.strokeStyle = '#a855f7';
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([]);
+
+                items.forEach((item, idx) => {
+                    const x = pad.left + gap + idx * (barW + gap) + barW / 2;
+                    const y = pad.top + chartH - (item.cumPercentage / 100) * chartH;
+                    if (idx === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                // Dots on the line
+                items.forEach((item, idx) => {
+                    const x = pad.left + gap + idx * (barW + gap) + barW / 2;
+                    const y = pad.top + chartH - (item.cumPercentage / 100) * chartH;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#a855f7';
+                    ctx.fill();
+                    ctx.strokeStyle = '#1e293b';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                });
+
+                // 80% reference line
+                ctx.setLineDash([6, 4]);
+                ctx.strokeStyle = '#ef444480';
+                ctx.lineWidth = 1.5;
+                const y80 = pad.top + chartH - 0.8 * chartH;
+                ctx.beginPath();
+                ctx.moveTo(pad.left, y80);
+                ctx.lineTo(W - pad.right, y80);
+                ctx.stroke();
+                ctx.fillStyle = '#ef4444';
+                ctx.font = 'bold 11px system-ui';
+                ctx.textAlign = 'left';
+                ctx.fillText('80%', pad.left + 4, y80 - 6);
+
+                // 95% reference line
+                ctx.strokeStyle = '#f59e0b80';
+                const y95 = pad.top + chartH - 0.95 * chartH;
+                ctx.beginPath();
+                ctx.moveTo(pad.left, y95);
+                ctx.lineTo(W - pad.right, y95);
+                ctx.stroke();
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillText('95%', pad.left + 4, y95 - 6);
+                ctx.setLineDash([]);
+            }
+
+            // Tooltip handling
+            canvas.onmousemove = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                const tooltip = document.getElementById('abc-tooltip');
+                const content = document.getElementById('abc-tooltip-content');
+
+                let found = false;
+                items.forEach((item, idx) => {
+                    const x = pad.left + gap + idx * (barW + gap);
+                    if (mx >= x && mx <= x + barW && my >= pad.top && my <= pad.top + chartH) {
+                        const valDisplay = viewMode === 'cost' ? `R$ ${item[valueKey].toLocaleString('pt-BR')}` : item[valueKey].toFixed(1);
+                        content.innerHTML = `
+                            <div style="font-weight: bold; color: ${barColors[item.classe]}; margin-bottom: 4px;">Classe ${item.classe}</div>
+                            <div style="color: white;">${item.name}</div>
+                            <div style="color: #cbd5e1; margin-top: 4px;">Valor: ${valDisplay}</div>
+                            <div style="color: #cbd5e1;">Individual: ${item.percentage.toFixed(1)}%</div>
+                            <div style="color: #a855f7;">Acumulado: ${item.cumPercentage.toFixed(1)}%</div>
+                        `;
+                        tooltip.style.display = 'block';
+                        tooltip.style.left = Math.min(mx + 12, W - 200) + 'px';
+                        tooltip.style.top = (my - 10) + 'px';
+                        found = true;
+                    }
+                });
+                if (!found) tooltip.style.display = 'none';
+            };
+            canvas.onmouseleave = () => {
+                document.getElementById('abc-tooltip').style.display = 'none';
+            };
         }
 
         function exportPlanningToExcel() {
@@ -23407,6 +23761,11 @@ Dados exportados:
                     <div class="tutorial-nav-item" data-section="qgis" onclick="showTutorialSection('qgis')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">🗺️ QGIS</div>
                     <div class="tutorial-nav-item" data-section="peerreview" onclick="showTutorialSection('peerreview')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">👥 Revisão por Pares</div>
                     <div class="tutorial-nav-item" data-section="rdo" onclick="showTutorialSection('rdo')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">📋 RDO</div>
+                    <div style="border-top: 2px solid #e2e8f0; margin: 12px 0; padding-top: 8px;">
+                        <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding: 0 18px; margin-bottom: 8px;">Deploy & Stack</div>
+                    </div>
+                    <div class="tutorial-nav-item" data-section="architecture" onclick="showTutorialSection('architecture')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">🏗️ Arquitetura</div>
+                    <div class="tutorial-nav-item" data-section="claudecode" onclick="showTutorialSection('claudecode')" style="padding: 14px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; color: #64748b;">🤖 Claude Code</div>
                 </nav>
 
                 <!-- Content Area -->
@@ -23772,6 +24131,266 @@ Dados exportados:
                             </p>
                         </div>
                     </div>
+
+                    <!-- ARCHITECTURE GUIDE SECTION -->
+                    <div id="tutorial-architecture" class="tutorial-section" style="display: none;">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">🏗️ Arquitetura: Lovable + Supabase + Railway</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px;">
+                            Guia completo para transformar o HydroNetwork em uma plataforma SaaS profissional
+                            usando a stack moderna: Lovable (Frontend) + Supabase (Backend) + Railway/Render (Deploy).
+                        </p>
+
+                        <!-- Stack Overview -->
+                        <div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); padding: 24px; border-radius: 16px; margin-bottom: 24px; border-left: 4px solid #3b82f6;">
+                            <h4 style="color: #1e40af; margin: 0 0 16px 0;">🧩 Vis&atilde;o Geral da Stack</h4>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                                <div style="background: white; padding: 16px; border-radius: 10px; border: 2px solid #e0e7ff;">
+                                    <div style="font-size: 1.5rem; margin-bottom: 8px;">💜 Lovable</div>
+                                    <div style="font-weight: 600; color: #4f46e5;">Frontend / UI</div>
+                                    <p style="color: #64748b; font-size: 0.85rem; margin: 8px 0 0;">Gera o frontend React/Next.js com IA. Ideal para telas de login, dashboard, landing page e formulários.</p>
+                                </div>
+                                <div style="background: white; padding: 16px; border-radius: 10px; border: 2px solid #bbf7d0;">
+                                    <div style="font-size: 1.5rem; margin-bottom: 8px;">🟢 Supabase</div>
+                                    <div style="font-weight: 600; color: #16a34a;">Backend / Banco</div>
+                                    <p style="color: #64748b; font-size: 0.85rem; margin: 8px 0 0;">PostgreSQL + Auth + Storage + Realtime. Armazena projetos, usu&aacute;rios e dados da rede.</p>
+                                </div>
+                                <div style="background: white; padding: 16px; border-radius: 10px; border: 2px solid #fde68a;">
+                                    <div style="font-size: 1.5rem; margin-bottom: 8px;">🚂 Railway / Render</div>
+                                    <div style="font-weight: 600; color: #d97706;">Deploy / Hosting</div>
+                                    <p style="color: #64748b; font-size: 0.85rem; margin: 8px 0 0;">Hospeda a aplica&ccedil;&atilde;o e APIs Python (motor de c&aacute;lculo). Deploy autom&aacute;tico via GitHub.</p>
+                                </div>
+                                <div style="background: white; padding: 16px; border-radius: 10px; border: 2px solid #e2e8f0;">
+                                    <div style="font-size: 1.5rem; margin-bottom: 8px;">🐙 GitHub + VS Code</div>
+                                    <div style="font-weight: 600; color: #1e293b;">Reposit&oacute;rio / Dev</div>
+                                    <p style="color: #64748b; font-size: 0.85rem; margin: 8px 0 0;">C&oacute;digo versionado. VS Code como editor. CI/CD autom&aacute;tico com GitHub Actions.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- What goes where -->
+                        <h4 style="color: #0f172a; font-size: 1.25rem; margin-bottom: 16px;">📦 O que vai em cada lugar?</h4>
+
+                        <!-- LOVABLE -->
+                        <div style="background: #faf5ff; padding: 20px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #a855f7;">
+                            <h5 style="color: #7c3aed; margin: 0 0 12px 0;">💜 LOVABLE (Frontend)</h5>
+                            <ul style="color: #6b21a8; font-size: 0.9rem; line-height: 2; padding-left: 20px; margin: 0;">
+                                <li><strong>Landing Page</strong> - P&aacute;gina de apresenta&ccedil;&atilde;o comercial do HydroNetwork</li>
+                                <li><strong>Login / Cadastro</strong> - Tela de autentica&ccedil;&atilde;o (conecta com Supabase Auth)</li>
+                                <li><strong>Dashboard</strong> - Painel do usu&aacute;rio com lista de projetos</li>
+                                <li><strong>Formul&aacute;rios</strong> - Configura&ccedil;&otilde;es de conta, planos, assinatura</li>
+                                <li><strong>Hub de Not&iacute;cias</strong> - Blog/novidades da plataforma</li>
+                                <li><strong>Responsividade</strong> - Layout mobile-first autom&aacute;tico</li>
+                            </ul>
+                            <div style="margin-top: 12px; padding: 10px; background: #f3e8ff; border-radius: 6px;">
+                                <code style="font-size: 0.8rem; color: #7c3aed;">Prompt Lovable: "Crie uma landing page SaaS para engenharia de saneamento com hero section, features, pricing e CTA. Use cores azul e verde. Conecte autentica&ccedil;&atilde;o com Supabase."</code>
+                            </div>
+                        </div>
+
+                        <!-- SUPABASE -->
+                        <div style="background: #f0fdf4; padding: 20px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #22c55e;">
+                            <h5 style="color: #166534; margin: 0 0 12px 0;">🟢 SUPABASE (Backend + Banco)</h5>
+                            <ul style="color: #15803d; font-size: 0.9rem; line-height: 2; padding-left: 20px; margin: 0;">
+                                <li><strong>Tabela: projects</strong> - id, user_id, name, description, created_at, data_json</li>
+                                <li><strong>Tabela: networks</strong> - id, project_id, nodes_json, links_json, type (esgoto/agua/drenagem)</li>
+                                <li><strong>Tabela: calculations</strong> - id, network_id, results_json, created_at</li>
+                                <li><strong>Tabela: planning</strong> - id, project_id, schedule_json, gantt_json</li>
+                                <li><strong>Tabela: rdo_entries</strong> - id, project_id, date, weather, progress_json, photos</li>
+                                <li><strong>Auth</strong> - Login com email/senha ou Google OAuth</li>
+                                <li><strong>Storage</strong> - Fotos do RDO, arquivos CAD/GIS importados</li>
+                                <li><strong>Row Level Security</strong> - Cada usu&aacute;rio s&oacute; v&ecirc; seus pr&oacute;prios projetos</li>
+                            </ul>
+                            <div style="margin-top: 12px; padding: 10px; background: #dcfce7; border-radius: 6px;">
+                                <code style="font-size: 0.8rem; color: #166534;">-- SQL Supabase:<br>
+CREATE TABLE projects (<br>
+&nbsp;&nbsp;id UUID DEFAULT gen_random_uuid() PRIMARY KEY,<br>
+&nbsp;&nbsp;user_id UUID REFERENCES auth.users NOT NULL,<br>
+&nbsp;&nbsp;name TEXT NOT NULL,<br>
+&nbsp;&nbsp;data_json JSONB,<br>
+&nbsp;&nbsp;created_at TIMESTAMPTZ DEFAULT now()<br>
+);</code>
+                            </div>
+                        </div>
+
+                        <!-- RAILWAY / RENDER -->
+                        <div style="background: #fffbeb; padding: 20px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #f59e0b;">
+                            <h5 style="color: #92400e; margin: 0 0 12px 0;">🚂 RAILWAY / RENDER (Deploy + APIs)</h5>
+                            <ul style="color: #a16207; font-size: 0.9rem; line-height: 2; padding-left: 20px; margin: 0;">
+                                <li><strong>API Python (FastAPI)</strong> - Motor de c&aacute;lculo hidr&aacute;ulico (Manning, EPANET, SWMM)</li>
+                                <li><strong>engine_rede.html</strong> - Servido como arquivo est&aacute;tico ou integrado ao frontend</li>
+                                <li><strong>Worker de C&aacute;lculo</strong> - Processar dimensionamentos pesados em background</li>
+                                <li><strong>Exporta&ccedil;&otilde;es</strong> - Gerar PDFs, .inp, .xlsx no servidor</li>
+                                <li><strong>Deploy Autom&aacute;tico</strong> - Push no GitHub → deploy autom&aacute;tico no Railway</li>
+                            </ul>
+                            <div style="margin-top: 12px; padding: 10px; background: #fef3c7; border-radius: 6px;">
+                                <code style="font-size: 0.8rem; color: #92400e;">
+# Estrutura do projeto:<br>
+sanitation-eng/<br>
+├── web/engine_rede.html &nbsp;&nbsp;# Motor principal (atual)<br>
+├── api/<br>
+│&nbsp;&nbsp;├── main.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# FastAPI endpoints<br>
+│&nbsp;&nbsp;├── engine.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# C&aacute;lculos hidr&aacute;ulicos<br>
+│&nbsp;&nbsp;└── requirements.txt<br>
+├── frontend/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Lovable (React/Next.js)<br>
+│&nbsp;&nbsp;├── src/pages/<br>
+│&nbsp;&nbsp;└── src/components/<br>
+├── railway.json &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Config Railway<br>
+└── .github/workflows/ &nbsp;&nbsp;&nbsp;&nbsp;# CI/CD
+                                </code>
+                            </div>
+                        </div>
+
+                        <!-- GITHUB + VS CODE -->
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #334155;">
+                            <h5 style="color: #1e293b; margin: 0 0 12px 0;">🐙 GITHUB + VS CODE (Desenvolvimento)</h5>
+                            <ul style="color: #475569; font-size: 0.9rem; line-height: 2; padding-left: 20px; margin: 0;">
+                                <li><strong>Reposit&oacute;rio</strong> - github.com/Joaodesouzanery/sanitation-eng</li>
+                                <li><strong>Branch main</strong> - C&oacute;digo est&aacute;vel em produ&ccedil;&atilde;o</li>
+                                <li><strong>Branch develop</strong> - Desenvolvimento de novas features</li>
+                                <li><strong>VS Code</strong> - Editor principal com extensões: ESLint, Prettier, Python, GitLens</li>
+                                <li><strong>GitHub Actions</strong> - Testes autom&aacute;ticos + deploy ao fazer push</li>
+                            </ul>
+                            <div style="margin-top: 12px; padding: 10px; background: #f1f5f9; border-radius: 6px;">
+                                <code style="font-size: 0.8rem; color: #334155;">
+# Workflow de desenvolvimento:<br>
+git checkout -b feature/nova-funcionalidade<br>
+# ... desenvolver com Claude Code ...<br>
+git add . && git commit -m "feat: nova funcionalidade"<br>
+git push origin feature/nova-funcionalidade<br>
+# Criar Pull Request no GitHub<br>
+# Merge → Deploy autom&aacute;tico no Railway
+                                </code>
+                            </div>
+                        </div>
+
+                        <!-- Passo a passo -->
+                        <div style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); padding: 24px; border-radius: 16px; margin-bottom: 20px; border-left: 4px solid #22c55e;">
+                            <h4 style="color: #166534; margin: 0 0 16px 0;">🚀 Passo a Passo para Configurar</h4>
+                            <ol style="color: #15803d; line-height: 2.2; padding-left: 20px; margin: 0;">
+                                <li><strong>Supabase:</strong> Crie conta em <code>supabase.com</code> → Novo Projeto → Copie URL + Anon Key</li>
+                                <li><strong>Crie as tabelas</strong> no SQL Editor do Supabase (projects, networks, calculations)</li>
+                                <li><strong>Lovable:</strong> Acesse <code>lovable.dev</code> → Novo projeto → Descreva a landing page</li>
+                                <li><strong>Conecte Lovable ao Supabase:</strong> Settings → Integrations → Supabase → Cole as keys</li>
+                                <li><strong>Exporte o c&oacute;digo</strong> do Lovable para o GitHub (bot&atilde;o Export to GitHub)</li>
+                                <li><strong>Railway:</strong> Crie conta em <code>railway.app</code> → New Project → Deploy from GitHub</li>
+                                <li><strong>Configure vari&aacute;veis</strong> no Railway: SUPABASE_URL, SUPABASE_KEY</li>
+                                <li><strong>VS Code:</strong> Clone o repo, instale Claude Code, e continue desenvolvendo!</li>
+                            </ol>
+                        </div>
+
+                        <div style="background: #fef3c7; padding: 20px; border-radius: 12px; border-left: 4px solid #f59e0b;">
+                            <h4 style="color: #92400e; margin: 0 0 8px 0;">💡 Dica: Custo Estimado</h4>
+                            <p style="color: #a16207; margin: 0; line-height: 1.7;">
+                                <strong>Supabase Free Tier:</strong> 500MB banco + 1GB storage + 50k auth users (R$ 0/m&ecirc;s)<br>
+                                <strong>Railway Starter:</strong> $5/m&ecirc;s com trial gr&aacute;tis de $5<br>
+                                <strong>Lovable:</strong> Plano gratuito para prototipagem, $20/m&ecirc;s para projetos completos<br>
+                                <strong>Total inicial:</strong> R$ 0 a R$ 150/m&ecirc;s dependendo do uso
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- CLAUDE CODE GUIDE SECTION -->
+                    <div id="tutorial-claudecode" class="tutorial-section" style="display: none;">
+                        <h3 style="color: #0f172a; font-size: 1.75rem; margin-bottom: 16px;">🤖 Claude Code - Seu Copiloto de Desenvolvimento</h3>
+                        <p style="color: #64748b; line-height: 1.8; margin-bottom: 24px;">
+                            O Claude Code &eacute; uma ferramenta de IA que programa junto com voc&ecirc; direto no terminal/VS Code.
+                            Ele l&ecirc; seu c&oacute;digo, entende o contexto e faz altera&ccedil;&otilde;es diretamente nos arquivos.
+                        </p>
+
+                        <!-- O que é -->
+                        <div style="background: linear-gradient(135deg, #faf5ff, #f3e8ff); padding: 24px; border-radius: 16px; margin-bottom: 24px; border-left: 4px solid #a855f7;">
+                            <h4 style="color: #7c3aed; margin: 0 0 16px 0;">💡 O que o Claude Code faz?</h4>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                                <div style="background: white; padding: 14px; border-radius: 8px; border: 1px solid #e9d5ff;">
+                                    <strong style="color: #7c3aed;">📝 Escreve c&oacute;digo</strong>
+                                    <p style="margin: 6px 0 0; color: #6b21a8; font-size: 0.85rem;">Cria fun&ccedil;&otilde;es, componentes, APIs e p&aacute;ginas completas</p>
+                                </div>
+                                <div style="background: white; padding: 14px; border-radius: 8px; border: 1px solid #e9d5ff;">
+                                    <strong style="color: #7c3aed;">🔧 Corrige bugs</strong>
+                                    <p style="margin: 6px 0 0; color: #6b21a8; font-size: 0.85rem;">Analisa erros e aplica corre&ccedil;&otilde;es direto nos arquivos</p>
+                                </div>
+                                <div style="background: white; padding: 14px; border-radius: 8px; border: 1px solid #e9d5ff;">
+                                    <strong style="color: #7c3aed;">📂 Navega o projeto</strong>
+                                    <p style="margin: 6px 0 0; color: #6b21a8; font-size: 0.85rem;">L&ecirc; arquivos, busca por padr&otilde;es e entende a estrutura</p>
+                                </div>
+                                <div style="background: white; padding: 14px; border-radius: 8px; border: 1px solid #e9d5ff;">
+                                    <strong style="color: #7c3aed;">🚀 Faz deploy</strong>
+                                    <p style="margin: 6px 0 0; color: #6b21a8; font-size: 0.85rem;">Git commit, push, cria PRs e gerencia branches</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Como instalar -->
+                        <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4 style="color: #0f172a; margin: 0 0 16px 0;">⚡ Como Instalar o Claude Code</h4>
+                            <ol style="color: #475569; line-height: 2.5; padding-left: 20px; margin: 0;">
+                                <li>
+                                    <strong>Instale o Node.js</strong> (vers&atilde;o 18+): <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 4px;">nodejs.org</code>
+                                </li>
+                                <li>
+                                    <strong>Instale o Claude Code:</strong><br>
+                                    <code style="background: #1e293b; color: #22c55e; padding: 8px 12px; border-radius: 6px; display: inline-block; margin-top: 4px;">npm install -g @anthropic-ai/claude-code</code>
+                                </li>
+                                <li>
+                                    <strong>Navegue at&eacute; seu projeto:</strong><br>
+                                    <code style="background: #1e293b; color: #22c55e; padding: 8px 12px; border-radius: 6px; display: inline-block; margin-top: 4px;">cd "E:\VS CODE PROJETO IRIS\sanitation-eng"</code>
+                                </li>
+                                <li>
+                                    <strong>Inicie o Claude Code:</strong><br>
+                                    <code style="background: #1e293b; color: #22c55e; padding: 8px 12px; border-radius: 6px; display: inline-block; margin-top: 4px;">claude</code>
+                                </li>
+                                <li>
+                                    <strong>Fa&ccedil;a login</strong> com sua conta Anthropic e pronto!
+                                </li>
+                            </ol>
+                        </div>
+
+                        <!-- Exemplos de uso -->
+                        <div style="background: #f0fdf4; padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4 style="color: #166534; margin: 0 0 16px 0;">🎯 Exemplos de Comandos para o HydroNetwork</h4>
+                            <div style="display: grid; gap: 10px;">
+                                <div style="background: #1e293b; padding: 12px 16px; border-radius: 8px;">
+                                    <code style="color: #94a3b8; font-size: 0.8rem;">Voc&ecirc;:</code><br>
+                                    <code style="color: #22c55e; font-size: 0.85rem;">"Adicione um gr&aacute;fico ABC na aba de Planejamento"</code>
+                                </div>
+                                <div style="background: #1e293b; padding: 12px 16px; border-radius: 8px;">
+                                    <code style="color: #94a3b8; font-size: 0.8rem;">Voc&ecirc;:</code><br>
+                                    <code style="color: #22c55e; font-size: 0.85rem;">"Corrija o c&aacute;lculo de custo na se&ccedil;&atilde;o de Quantitativos"</code>
+                                </div>
+                                <div style="background: #1e293b; padding: 12px 16px; border-radius: 8px;">
+                                    <code style="color: #94a3b8; font-size: 0.8rem;">Voc&ecirc;:</code><br>
+                                    <code style="color: #22c55e; font-size: 0.85rem;">"Crie uma API FastAPI para os c&aacute;lculos de Manning"</code>
+                                </div>
+                                <div style="background: #1e293b; padding: 12px 16px; border-radius: 8px;">
+                                    <code style="color: #94a3b8; font-size: 0.8rem;">Voc&ecirc;:</code><br>
+                                    <code style="color: #22c55e; font-size: 0.85rem;">"Fa&ccedil;a commit e push das altera&ccedil;&otilde;es"</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Workflow com Claude Code -->
+                        <div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); padding: 24px; border-radius: 16px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+                            <h4 style="color: #1e40af; margin: 0 0 16px 0;">🔄 Workflow Completo: Claude Code + Stack</h4>
+                            <ol style="color: #1e3a5a; line-height: 2.2; padding-left: 20px; margin: 0;">
+                                <li><strong>Abra o terminal</strong> no VS Code (Ctrl + `)</li>
+                                <li><strong>Digite</strong> <code style="background: #dbeafe; padding: 2px 6px; border-radius: 4px;">claude</code> para iniciar</li>
+                                <li><strong>Descreva</strong> o que quer fazer em portugu&ecirc;s mesmo</li>
+                                <li><strong>Claude l&ecirc;</strong> seus arquivos e faz as altera&ccedil;&otilde;es</li>
+                                <li><strong>Revise</strong> as mudan&ccedil;as no VS Code</li>
+                                <li><strong>Pe&ccedil;a</strong> para commitar: "Fa&ccedil;a commit e push"</li>
+                                <li><strong>Railway</strong> detecta o push e faz deploy autom&aacute;tico</li>
+                            </ol>
+                        </div>
+
+                        <div style="background: #ecfdf5; padding: 20px; border-radius: 12px; border-left: 4px solid #10b981;">
+                            <h4 style="color: #166534; margin: 0 0 8px 0;">🏆 Dica de Ouro</h4>
+                            <p style="color: #15803d; margin: 0; line-height: 1.7;">
+                                Use o Claude Code no terminal para o <strong>engine_rede.html</strong> (c&oacute;digo pesado, l&oacute;gica de c&aacute;lculo)
+                                e o <strong>Lovable</strong> para as telas bonitas (landing page, dashboard, login).
+                                Os dois se complementam perfeitamente!
+                            </p>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
