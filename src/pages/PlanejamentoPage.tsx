@@ -11,12 +11,14 @@ import {
   calculateDailyMeters,
   generateCurveSData,
   generateHistogramData,
+  generateABCData,
   type FullSchedule,
   type ScheduleItem,
   type TeamConfig,
   type TrechoInput,
   type CurveSPoint,
-  type HistogramDay
+  type HistogramDay,
+  type ABCData
 } from '../engine/planning';
 
 // Chart.js type declaration
@@ -36,6 +38,8 @@ export const PlanejamentoPage: React.FC<PlanejamentoPageProps> = ({
   const [schedule, setSchedule] = useState<FullSchedule | null>(null);
   const [curveS, setCurveS] = useState<CurveSPoint[]>([]);
   const [histogram, setHistogram] = useState<HistogramDay[]>([]);
+  const [abcData, setAbcData] = useState<ABCData | null>(null);
+  const [abcMode, setAbcMode] = useState<'cost' | 'meters'>('cost');
 
   // Team configuration
   const [numTeams, setNumTeams] = useState(2);
@@ -61,8 +65,10 @@ export const PlanejamentoPage: React.FC<PlanejamentoPageProps> = ({
   // Refs for charts
   const scurveCanvasRef = useRef<HTMLCanvasElement>(null);
   const histogramCanvasRef = useRef<HTMLCanvasElement>(null);
+  const abcCanvasRef = useRef<HTMLCanvasElement>(null);
   const scurveChartRef = useRef<any>(null);
   const histogramChartRef = useRef<any>(null);
+  const abcChartRef = useRef<any>(null);
 
   // Generate schedule
   const generateScheduleHandler = useCallback(() => {
@@ -83,10 +89,14 @@ export const PlanejamentoPage: React.FC<PlanejamentoPageProps> = ({
     const histogramData = generateHistogramData(result.dailyPlan, result.totalDays);
     setHistogram(histogramData);
 
+    // Generate ABC data
+    const abcDataResult = generateABCData(result.trechos, abcMode);
+    setAbcData(abcDataResult);
+
     if (onScheduleGenerated) {
       onScheduleGenerated(result);
     }
-  }, [trechos, numTeams, teamConfig, startDate, onScheduleGenerated]);
+  }, [trechos, numTeams, teamConfig, startDate, onScheduleGenerated, abcMode]);
 
   // Load demo data
   const loadDemoData = () => {
@@ -237,6 +247,111 @@ export const PlanejamentoPage: React.FC<PlanejamentoPageProps> = ({
       }
     });
   }, [histogram, histogramView, histogramResource]);
+
+  // Render ABC chart
+  useEffect(() => {
+    if (!abcCanvasRef.current || !abcData || abcData.items.length === 0 || typeof Chart === 'undefined') return;
+
+    if (abcChartRef.current) {
+      abcChartRef.current.destroy();
+    }
+
+    const ctx = abcCanvasRef.current.getContext('2d');
+    if (!ctx) return;
+
+    // Colors for A, B, C classifications
+    const getBarColor = (classification: 'A' | 'B' | 'C') => {
+      switch (classification) {
+        case 'A': return '#ef4444'; // Red - Critical
+        case 'B': return '#f59e0b'; // Orange - Medium
+        case 'C': return '#22c55e'; // Green - Low
+      }
+    };
+
+    abcChartRef.current = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: abcData.items.map(i => i.label),
+        datasets: [
+          {
+            label: abcMode === 'cost' ? 'Custo (R$)' : 'Metros',
+            data: abcData.items.map(i => i.value),
+            backgroundColor: abcData.items.map(i => getBarColor(i.classification)),
+            borderRadius: 4,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Acumulado (%)',
+            data: abcData.items.map(i => i.cumulativePercentage),
+            type: 'line',
+            borderColor: '#3b82f6',
+            backgroundColor: 'transparent',
+            borderWidth: 3,
+            pointRadius: 4,
+            pointBackgroundColor: '#3b82f6',
+            tension: 0.3,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top' as const },
+          title: {
+            display: true,
+            text: `Curva ABC - ${abcMode === 'cost' ? 'Custo' : 'Metragem'} por Trecho`
+          },
+          tooltip: {
+            callbacks: {
+              afterLabel: (context: any) => {
+                if (context.datasetIndex === 0) {
+                  const item = abcData.items[context.dataIndex];
+                  return [
+                    `Classe: ${item.classification}`,
+                    `${item.percentage.toFixed(1)}% do total`,
+                    `Acumulado: ${item.cumulativePercentage.toFixed(1)}%`
+                  ];
+                }
+                return [];
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            type: 'linear',
+            position: 'left',
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: abcMode === 'cost' ? 'Custo (R$)' : 'Metros'
+            }
+          },
+          y1: {
+            type: 'linear',
+            position: 'right',
+            beginAtZero: true,
+            max: 100,
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: 'Acumulado (%)' }
+          },
+          x: {
+            title: { display: true, text: 'Trechos' }
+          }
+        }
+      }
+    });
+  }, [abcData, abcMode]);
+
+  // Update ABC data when mode changes
+  useEffect(() => {
+    if (schedule) {
+      const newAbcData = generateABCData(schedule.trechos, abcMode);
+      setAbcData(newAbcData);
+    }
+  }, [abcMode, schedule]);
 
   // Calculate statistics
   const stats = schedule ? {
@@ -783,6 +898,150 @@ export const PlanejamentoPage: React.FC<PlanejamentoPageProps> = ({
               </div>
             </div>
           </div>
+
+          {/* ABC Chart - Full Width */}
+          {abcData && abcData.items.length > 0 && (
+            <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', padding: '20px', marginTop: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+                <h2 style={{ color: '#94a3b8', margin: 0 }}>📊 Curva ABC (Pareto)</h2>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <select
+                    value={abcMode}
+                    onChange={(e) => setAbcMode(e.target.value as 'cost' | 'meters')}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      backgroundColor: '#0f172a',
+                      border: '1px solid #334155',
+                      color: '#e2e8f0',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    <option value="cost">Por Custo</option>
+                    <option value="meters">Por Metragem</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* ABC Summary Cards */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '15px',
+                marginBottom: '20px'
+              }}>
+                <div style={{
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid #ef4444',
+                  borderRadius: '8px',
+                  padding: '15px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontWeight: 'bold',
+                      fontSize: '0.85rem'
+                    }}>Classe A</span>
+                    <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Crítico</span>
+                  </div>
+                  <p style={{ margin: '4px 0', color: '#e2e8f0' }}>
+                    <strong>{abcData.classA.count}</strong> trechos ({((abcData.classA.count / abcData.items.length) * 100).toFixed(0)}%)
+                  </p>
+                  <p style={{ margin: '4px 0', color: '#ef4444', fontWeight: 'bold' }}>
+                    {abcData.classA.percentage.toFixed(1)}% do total
+                  </p>
+                  <p style={{ margin: '4px 0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                    {abcMode === 'cost'
+                      ? `R$ ${abcData.classA.value.toLocaleString('pt-BR')}`
+                      : `${abcData.classA.value.toFixed(0)} metros`}
+                  </p>
+                </div>
+
+                <div style={{
+                  backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '8px',
+                  padding: '15px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{
+                      backgroundColor: '#f59e0b',
+                      color: 'white',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontWeight: 'bold',
+                      fontSize: '0.85rem'
+                    }}>Classe B</span>
+                    <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Moderado</span>
+                  </div>
+                  <p style={{ margin: '4px 0', color: '#e2e8f0' }}>
+                    <strong>{abcData.classB.count}</strong> trechos ({((abcData.classB.count / abcData.items.length) * 100).toFixed(0)}%)
+                  </p>
+                  <p style={{ margin: '4px 0', color: '#f59e0b', fontWeight: 'bold' }}>
+                    {abcData.classB.percentage.toFixed(1)}% do total
+                  </p>
+                  <p style={{ margin: '4px 0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                    {abcMode === 'cost'
+                      ? `R$ ${abcData.classB.value.toLocaleString('pt-BR')}`
+                      : `${abcData.classB.value.toFixed(0)} metros`}
+                  </p>
+                </div>
+
+                <div style={{
+                  backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                  border: '1px solid #22c55e',
+                  borderRadius: '8px',
+                  padding: '15px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{
+                      backgroundColor: '#22c55e',
+                      color: 'white',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontWeight: 'bold',
+                      fontSize: '0.85rem'
+                    }}>Classe C</span>
+                    <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Baixo</span>
+                  </div>
+                  <p style={{ margin: '4px 0', color: '#e2e8f0' }}>
+                    <strong>{abcData.classC.count}</strong> trechos ({((abcData.classC.count / abcData.items.length) * 100).toFixed(0)}%)
+                  </p>
+                  <p style={{ margin: '4px 0', color: '#22c55e', fontWeight: 'bold' }}>
+                    {abcData.classC.percentage.toFixed(1)}% do total
+                  </p>
+                  <p style={{ margin: '4px 0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                    {abcMode === 'cost'
+                      ? `R$ ${abcData.classC.value.toLocaleString('pt-BR')}`
+                      : `${abcData.classC.value.toFixed(0)} metros`}
+                  </p>
+                </div>
+              </div>
+
+              {/* ABC Chart */}
+              <div style={{ height: '350px' }}>
+                <canvas ref={abcCanvasRef} />
+              </div>
+
+              {/* ABC Explanation */}
+              <div style={{
+                marginTop: '15px',
+                padding: '12px',
+                backgroundColor: '#0f172a',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                color: '#94a3b8'
+              }}>
+                <strong>Interpretação:</strong> A Curva ABC classifica os trechos por importância relativa.
+                <span style={{ color: '#ef4444' }}> Classe A</span> (até 80% acumulado): trechos críticos que exigem maior atenção e controle.
+                <span style={{ color: '#f59e0b' }}> Classe B</span> (80-95%): importância moderada.
+                <span style={{ color: '#22c55e' }}> Classe C</span> (95-100%): menor impacto individual, gestão simplificada.
+              </div>
+            </div>
+          )}
 
           {/* Daily Plan Table */}
           <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', padding: '20px', marginTop: '20px' }}>

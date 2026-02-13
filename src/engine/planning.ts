@@ -128,6 +128,23 @@ export interface HistogramDay {
   cost: number;
 }
 
+export interface ABCItem {
+  id: string;
+  label: string;
+  value: number;
+  percentage: number;
+  cumulativePercentage: number;
+  classification: 'A' | 'B' | 'C';
+}
+
+export interface ABCData {
+  items: ABCItem[];
+  totalValue: number;
+  classA: { count: number; value: number; percentage: number };
+  classB: { count: number; value: number; percentage: number };
+  classC: { count: number; value: number; percentage: number };
+}
+
 export interface FullSchedule {
   startDate: Date;
   endDate: Date;
@@ -632,4 +649,78 @@ export function generateHistogramData(
   }
 
   return data;
+}
+
+/**
+ * Generate ABC (Pareto) curve data.
+ * Classifies items into A (80% of value), B (15% of value), C (5% of value).
+ *
+ * @param trechos - Array of TrechoSchedule with cost information
+ * @param mode - 'cost' for cost-based ABC, 'meters' for length-based ABC
+ */
+export function generateABCData(
+  trechos: TrechoSchedule[],
+  mode: 'cost' | 'meters' = 'cost'
+): ABCData {
+  // Extract items with their values
+  const items = trechos.map(t => ({
+    id: t.trechoId,
+    label: t.trechoId,
+    value: mode === 'cost' ? t.custoTotal : t.comprimentoTotal
+  }));
+
+  // Sort by value descending
+  items.sort((a, b) => b.value - a.value);
+
+  const totalValue = items.reduce((sum, item) => sum + item.value, 0);
+
+  // Calculate percentages and classifications
+  let cumulative = 0;
+  const classifiedItems: ABCItem[] = items.map(item => {
+    const percentage = totalValue > 0 ? (item.value / totalValue) * 100 : 0;
+    cumulative += percentage;
+
+    let classification: 'A' | 'B' | 'C';
+    if (cumulative <= 80) {
+      classification = 'A';
+    } else if (cumulative <= 95) {
+      classification = 'B';
+    } else {
+      classification = 'C';
+    }
+
+    return {
+      id: item.id,
+      label: item.label,
+      value: item.value,
+      percentage,
+      cumulativePercentage: Math.min(100, cumulative),
+      classification
+    };
+  });
+
+  // Calculate class summaries
+  const classA = classifiedItems.filter(i => i.classification === 'A');
+  const classB = classifiedItems.filter(i => i.classification === 'B');
+  const classC = classifiedItems.filter(i => i.classification === 'C');
+
+  return {
+    items: classifiedItems,
+    totalValue,
+    classA: {
+      count: classA.length,
+      value: classA.reduce((sum, i) => sum + i.value, 0),
+      percentage: classA.reduce((sum, i) => sum + i.percentage, 0)
+    },
+    classB: {
+      count: classB.length,
+      value: classB.reduce((sum, i) => sum + i.value, 0),
+      percentage: classB.reduce((sum, i) => sum + i.percentage, 0)
+    },
+    classC: {
+      count: classC.length,
+      value: classC.reduce((sum, i) => sum + i.value, 0),
+      percentage: classC.reduce((sum, i) => sum + i.percentage, 0)
+    }
+  };
 }
