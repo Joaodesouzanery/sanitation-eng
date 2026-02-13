@@ -191,7 +191,8 @@ export function createTeamConfig(overrides?: Partial<TeamConfig>): TeamConfig {
 }
 
 export function getTotalWorkers(team: TeamConfig): number {
-  return team.encarregado + team.oficiais + team.ajudantes + team.operadorMaquinas;
+  const operador = team.operadorMaquinas ?? team.operador ?? 1;
+  return (team.encarregado || 0) + (team.oficiais || 0) + (team.ajudantes || 0) + operador;
 }
 
 export function getDailyLaborCost(team: TeamConfig, avgCostPerWorker = 180): number {
@@ -200,10 +201,11 @@ export function getDailyLaborCost(team: TeamConfig, avgCostPerWorker = 180): num
 
 export function getDailyEquipmentCost(team: TeamConfig): number {
   let cost = 0;
-  if (team.hasRetroescavadeira) cost += 450;
-  if (team.hasCompactador) cost += 120;
-  if (team.hasCaminhao) cost += 350;
-  if (team.hasBomba) cost += 200;
+  // Suporta ambos os nomes de campos (hasRetro/hasRetroescavadeira, etc.)
+  if (team.hasRetroescavadeira ?? team.hasRetro) cost += 450;
+  if (team.hasCompactador ?? team.hasCompactor) cost += 120;
+  if (team.hasCaminhao ?? team.hasTruck) cost += 350;
+  if (team.hasBomba ?? team.hasPump) cost += 200;
   return cost;
 }
 
@@ -235,14 +237,18 @@ export function calculateDailyMeters(
     baseMetros *= 0.9;
   }
 
-  // Ajuste por equipamentos
-  if (!team.hasRetroescavadeira) {
+  // Ajuste por equipamentos (suporta ambos os nomes de campos)
+  const hasRetro = team.hasRetroescavadeira ?? team.hasRetro ?? false;
+  const hasCompact = team.hasCompactador ?? team.hasCompactor ?? false;
+  const hasBomba = team.hasBomba ?? team.hasPump ?? false;
+
+  if (!hasRetro) {
     baseMetros *= 0.4; // Escavacao manual e muito lenta
   }
-  if (!team.hasCompactador) {
+  if (!hasCompact) {
     baseMetros *= 0.8;
   }
-  if (team.hasBomba) {
+  if (hasBomba) {
     baseMetros *= 1.1; // Rebaixamento ajuda
   }
 
@@ -302,7 +308,8 @@ export function generateTrechoSchedule(
     if (profundidade > 1.25) {
       activities.push(ActivityType.ESCORAMENTO);
     }
-    if (teamConfig.hasBomba) {
+    const hasBombaActivity = teamConfig.hasBomba ?? teamConfig.hasPump ?? false;
+    if (hasBombaActivity) {
       activities.push(ActivityType.BOMBEAMENTO);
     }
     activities.push(ActivityType.REATERRO, ActivityType.BASE);
