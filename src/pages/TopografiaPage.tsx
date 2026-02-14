@@ -32,6 +32,98 @@ interface MapMarker {
   cota: number;
 }
 
+// =============================================================================
+// COORDINATE TRANSFORMATION UTILITIES
+// =============================================================================
+
+/**
+ * Convert UTM coordinates to Lat/Lon (EPSG:31983 -> WGS84)
+ * Simplified formula for display purposes
+ */
+function utmToLatLon(x: number, y: number, zone: number = 23): { lat: number; lng: number } {
+  // Constants for UTM Zone 23S (SIRGAS 2000)
+  const k0 = 0.9996;
+  const a = 6378137.0;  // WGS84 semi-major axis
+  const e = 0.0818191908426;  // WGS84 eccentricity
+  const e1sq = 0.006739496742;
+
+  // Remove false easting and northing
+  const x0 = x - 500000;
+  const y0 = y - 10000000;  // Southern hemisphere
+
+  // Central meridian for zone 23
+  const lon0 = -45;  // degrees
+
+  // Footprint latitude
+  const M = y0 / k0;
+  const mu = M / (a * (1 - e * e / 4 - 3 * e * e * e * e / 64));
+
+  const e1 = (1 - Math.sqrt(1 - e * e)) / (1 + Math.sqrt(1 - e * e));
+
+  const J1 = (3 * e1 / 2 - 27 * e1 * e1 * e1 / 32);
+  const J2 = (21 * e1 * e1 / 16 - 55 * e1 * e1 * e1 * e1 / 32);
+  const J3 = (151 * e1 * e1 * e1 / 96);
+  const J4 = (1097 * e1 * e1 * e1 * e1 / 512);
+
+  const fp = mu + J1 * Math.sin(2 * mu) + J2 * Math.sin(4 * mu) + J3 * Math.sin(6 * mu) + J4 * Math.sin(8 * mu);
+
+  const C1 = e1sq * Math.cos(fp) * Math.cos(fp);
+  const T1 = Math.tan(fp) * Math.tan(fp);
+  const R1 = a * (1 - e * e) / Math.pow(1 - e * e * Math.sin(fp) * Math.sin(fp), 1.5);
+  const N1 = a / Math.sqrt(1 - e * e * Math.sin(fp) * Math.sin(fp));
+  const D = x0 / (N1 * k0);
+
+  const Q1 = N1 * Math.tan(fp) / R1;
+  const Q2 = D * D / 2;
+  const Q3 = (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * e1sq) * D * D * D * D / 24;
+  const Q4 = (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 3 * C1 * C1 - 252 * e1sq) * D * D * D * D * D * D / 720;
+
+  const lat = (fp - Q1 * (Q2 - Q3 + Q4)) * 180 / Math.PI;
+
+  const Q5 = D;
+  const Q6 = (1 + 2 * T1 + C1) * D * D * D / 6;
+  const Q7 = (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * e1sq + 24 * T1 * T1) * D * D * D * D * D / 120;
+
+  const lng = lon0 + ((Q5 - Q6 + Q7) / Math.cos(fp)) * 180 / Math.PI;
+
+  return { lat, lng };
+}
+
+/**
+ * Detect if coordinates are likely UTM (large values) or LatLon (small values)
+ */
+function isUTMCoordinate(x: number, y: number): boolean {
+  // UTM coordinates are typically > 100000 for X and > 1000000 for Y in southern Brazil
+  return Math.abs(x) > 10000 || Math.abs(y) > 10000;
+}
+
+/**
+ * Auto-detect and convert coordinates to LatLon for map display
+ */
+function toMapCoordinates(x: number, y: number, referencePoint?: { x: number; y: number }): { lat: number; lng: number } {
+  if (isUTMCoordinate(x, y)) {
+    return utmToLatLon(x, y, 23);
+  }
+
+  // Already in lat/lon or relative coordinates
+  if (referencePoint && isUTMCoordinate(referencePoint.x, referencePoint.y)) {
+    // Relative coordinates based on reference point
+    const refLatLon = utmToLatLon(referencePoint.x, referencePoint.y, 23);
+    const deltaLat = (y - referencePoint.y) / 111320;  // approx meters to degrees
+    const deltaLng = (x - referencePoint.x) / (111320 * Math.cos(refLatLon.lat * Math.PI / 180));
+    return {
+      lat: refLatLon.lat + deltaLat,
+      lng: refLatLon.lng + deltaLng
+    };
+  }
+
+  // Assume small values are offsets from Sao Paulo
+  return {
+    lat: -23.5505 + (y / 111320),
+    lng: -46.6333 + (x / 111320)
+  };
+}
+
 interface TopografiaPageProps {
   onDataLoaded?: (pontos: PontoTopografico[], trechos: Trecho[]) => void;
 }
@@ -56,23 +148,91 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
   const markersLayerRef = useRef<any>(null);
   const segmentsLayerRef = useRef<any>(null);
 
-  // Initialize map
+  // Initialize map with multiple base layers and controls
   useEffect(() => {
     if (typeof L === 'undefined' || !mapContainerRef.current || mapInstanceRef.current) {
       return;
     }
 
-    // Create map centered on São Paulo
-    mapInstanceRef.current = L.map(mapContainerRef.current).setView([-23.5505, -46.6333], 12);
+    // Create map centered on Sao Paulo
+    mapInstanceRef.current = L.map(mapContainerRef.current, {
+      center: [-23.5505, -46.6333],
+      zoom: 14,
+      zoomControl: true,
+      attributionControl: true
+    });
 
-    // Add tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(mapInstanceRef.current);
+    // Base layers
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19
+    });
 
-    // Create layer groups
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; Esri',
+      maxZoom: 19
+    });
+
+    const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenTopoMap',
+      maxZoom: 17
+    });
+
+    const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; CartoDB',
+      maxZoom: 19
+    });
+
+    // Add default layer
+    osmLayer.addTo(mapInstanceRef.current);
+
+    // Create layer groups for markers and segments
     markersLayerRef.current = L.layerGroup().addTo(mapInstanceRef.current);
     segmentsLayerRef.current = L.layerGroup().addTo(mapInstanceRef.current);
+
+    // Base layers control
+    const baseLayers = {
+      'OpenStreetMap': osmLayer,
+      'Satelite': satelliteLayer,
+      'Topografico': topoLayer,
+      'Claro': cartoLight
+    };
+
+    // Overlay layers control
+    const overlays = {
+      'Pontos': markersLayerRef.current,
+      'Trechos': segmentsLayerRef.current
+    };
+
+    // Add layer control
+    L.control.layers(baseLayers, overlays, {
+      collapsed: true,
+      position: 'topright'
+    }).addTo(mapInstanceRef.current);
+
+    // Add scale control
+    L.control.scale({
+      metric: true,
+      imperial: false,
+      position: 'bottomleft'
+    }).addTo(mapInstanceRef.current);
+
+    // Add coordinate display on mouse move
+    const coordDisplay = L.control({ position: 'bottomright' });
+    coordDisplay.onAdd = function() {
+      const div = L.DomUtil.create('div', 'coord-display');
+      div.style.cssText = 'background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 4px; font-family: monospace; font-size: 12px;';
+      div.innerHTML = 'Lat: -- Lng: --';
+      return div;
+    };
+    coordDisplay.addTo(mapInstanceRef.current);
+
+    mapInstanceRef.current.on('mousemove', (e: any) => {
+      const container = document.querySelector('.coord-display');
+      if (container) {
+        container.innerHTML = `Lat: ${e.latlng.lat.toFixed(6)} Lng: ${e.latlng.lng.toFixed(6)}`;
+      }
+    });
 
     return () => {
       if (mapInstanceRef.current) {
@@ -95,69 +255,148 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
     if (pontos.length === 0) return;
 
     const bounds: [number, number][] = [];
+    const referencePoint = pontos.length > 0 ? { x: pontos[0].x, y: pontos[0].y } : undefined;
 
-    // Add markers for each point
+    // Add markers for each point with proper coordinate transformation
     pontos.forEach((ponto, idx) => {
-      // Convert UTM-like coordinates to approximate lat/lng for display
-      // In production, use proper coordinate transformation
-      const lat = -23.5 - (ponto.y - pontos[0].y) / 111000;
-      const lng = -46.6 + (ponto.x - pontos[0].x) / 111000;
+      const coords = toMapCoordinates(ponto.x, ponto.y, referencePoint);
+      const { lat, lng } = coords;
 
       bounds.push([lat, lng]);
 
+      // Determine marker color and icon
+      let markerColor = '#3b82f6';  // Default blue
+      let markerLabel = 'PI';  // Ponto Intermediario
+      if (idx === 0) {
+        markerColor = '#22c55e';  // Green for start
+        markerLabel = 'M';  // Montante
+      } else if (idx === pontos.length - 1) {
+        markerColor = '#ef4444';  // Red for end
+        markerLabel = 'J';  // Jusante
+      }
+
+      // Create draggable marker
       const marker = L.circleMarker([lat, lng], {
-        radius: 8,
-        fillColor: idx === 0 ? '#22c55e' : idx === pontos.length - 1 ? '#ef4444' : '#3b82f6',
+        radius: 10,
+        fillColor: markerColor,
         fillOpacity: 0.9,
-        color: '#fff',
-        weight: 2
+        color: '#ffffff',
+        weight: 3
       });
 
-      marker.bindPopup(`
-        <div style="min-width: 150px;">
-          <h4 style="margin: 0 0 8px; color: #333;">${ponto.id}</h4>
-          <p style="margin: 4px 0;"><strong>X:</strong> ${ponto.x.toFixed(3)}</p>
-          <p style="margin: 4px 0;"><strong>Y:</strong> ${ponto.y.toFixed(3)}</p>
-          <p style="margin: 4px 0;"><strong>Cota:</strong> ${ponto.cota.toFixed(3)}m</p>
+      // Enhanced popup with more information
+      const popupContent = `
+        <div style="min-width: 180px; font-family: system-ui, sans-serif;">
+          <div style="background: ${markerColor}; color: white; padding: 8px 12px; margin: -13px -19px 10px; border-radius: 4px 4px 0 0;">
+            <strong style="font-size: 14px;">${ponto.id}</strong>
+            <span style="float: right; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px; font-size: 11px;">${markerLabel}</span>
+          </div>
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+            <tr><td style="padding: 4px 0; color: #666;">X (UTM)</td><td style="text-align: right; font-weight: 500;">${ponto.x.toFixed(3)}</td></tr>
+            <tr><td style="padding: 4px 0; color: #666;">Y (UTM)</td><td style="text-align: right; font-weight: 500;">${ponto.y.toFixed(3)}</td></tr>
+            <tr style="border-top: 1px solid #eee;"><td style="padding: 4px 0; color: #666;">Cota</td><td style="text-align: right; font-weight: 600; color: ${markerColor};">${ponto.cota.toFixed(3)} m</td></tr>
+            <tr><td style="padding: 4px 0; color: #666;">Latitude</td><td style="text-align: right; font-size: 11px;">${lat.toFixed(6)}</td></tr>
+            <tr><td style="padding: 4px 0; color: #666;">Longitude</td><td style="text-align: right; font-size: 11px;">${lng.toFixed(6)}</td></tr>
+          </table>
         </div>
-      `);
+      `;
 
-      marker.bindTooltip(ponto.id, { permanent: false, direction: 'top' });
+      marker.bindPopup(popupContent, { maxWidth: 300 });
+      marker.bindTooltip(`<strong>${ponto.id}</strong><br/>Cota: ${ponto.cota.toFixed(2)}m`, {
+        permanent: false,
+        direction: 'top',
+        offset: [0, -10]
+      });
+
+      // Highlight on hover
+      marker.on('mouseover', function() {
+        this.setStyle({ weight: 4, radius: 12 });
+      });
+      marker.on('mouseout', function() {
+        this.setStyle({ weight: 3, radius: 10 });
+      });
+
       markersLayerRef.current.addLayer(marker);
     });
 
-    // Add polylines for segments
-    trechos.forEach((trecho) => {
-      const startLat = -23.5 - (trecho.yInicio - pontos[0].y) / 111000;
-      const startLng = -46.6 + (trecho.xInicio - pontos[0].x) / 111000;
-      const endLat = -23.5 - (trecho.yFim - pontos[0].y) / 111000;
-      const endLng = -46.6 + (trecho.xFim - pontos[0].x) / 111000;
+    // Add polylines for segments with proper coordinate transformation
+    trechos.forEach((trecho, idx) => {
+      const startCoords = toMapCoordinates(trecho.xInicio, trecho.yInicio, referencePoint);
+      const endCoords = toMapCoordinates(trecho.xFim, trecho.yFim, referencePoint);
 
-      const color = trecho.tipoRede === 'Esgoto por Gravidade' ? '#22c55e' : '#f59e0b';
+      // Color coding by network type
+      let lineColor = '#22c55e';  // Green for gravity
+      let lineStyle = [];
+      if (trecho.tipoRede === 'Esgoto por Recalque' || trecho.tipoRede === 'Elevatoria') {
+        lineColor = '#f59e0b';  // Orange for pumped
+        lineStyle = [5, 5];  // Dashed line
+      } else if (trecho.declividade < 0) {
+        lineColor = '#ef4444';  // Red for adverse slope
+      }
 
-      const polyline = L.polyline([[startLat, startLng], [endLat, endLng]], {
-        color: color,
-        weight: 4,
-        opacity: 0.8
+      const polyline = L.polyline(
+        [[startCoords.lat, startCoords.lng], [endCoords.lat, endCoords.lng]],
+        {
+          color: lineColor,
+          weight: 5,
+          opacity: 0.85,
+          dashArray: lineStyle.length > 0 ? lineStyle.join(',') : undefined
+        }
+      );
+
+      // Enhanced popup for segments
+      const declividadePercent = (trecho.declividade * 100).toFixed(3);
+      const declividadeStatus = Math.abs(trecho.declividade * 100) < 0.5 ? 'ALERTA: Declividade muito baixa' :
+                                trecho.declividade < 0 ? 'ALERTA: Declividade adversa!' : 'OK';
+      const statusColor = declividadeStatus.includes('ALERTA') ? '#ef4444' : '#22c55e';
+
+      const segmentPopup = `
+        <div style="min-width: 220px; font-family: system-ui, sans-serif;">
+          <div style="background: ${lineColor}; color: white; padding: 8px 12px; margin: -13px -19px 10px; border-radius: 4px 4px 0 0;">
+            <strong style="font-size: 14px;">Trecho ${idx + 1}</strong>
+            <span style="float: right; font-size: 12px;">${trecho.idInicio} → ${trecho.idFim}</span>
+          </div>
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+            <tr><td style="padding: 4px 0; color: #666;">Comprimento</td><td style="text-align: right; font-weight: 600;">${trecho.comprimento.toFixed(2)} m</td></tr>
+            <tr><td style="padding: 4px 0; color: #666;">Declividade</td><td style="text-align: right; font-weight: 500; color: ${statusColor};">${declividadePercent}%</td></tr>
+            <tr><td style="padding: 4px 0; color: #666;">Diametro</td><td style="text-align: right;">DN ${trecho.diametroMm}</td></tr>
+            <tr><td style="padding: 4px 0; color: #666;">Material</td><td style="text-align: right;">${trecho.material}</td></tr>
+            <tr style="border-top: 1px solid #eee;"><td style="padding: 4px 0; color: #666;">Tipo</td><td style="text-align: right;">${trecho.tipoRede}</td></tr>
+          </table>
+          <div style="margin-top: 8px; padding: 6px; background: ${statusColor}15; border-radius: 4px; font-size: 11px; color: ${statusColor};">
+            ${declividadeStatus}
+          </div>
+        </div>
+      `;
+
+      polyline.bindPopup(segmentPopup, { maxWidth: 350 });
+      polyline.bindTooltip(`L=${trecho.comprimento.toFixed(1)}m | i=${declividadePercent}%`, {
+        permanent: false,
+        direction: 'center'
       });
 
-      polyline.bindPopup(`
-        <div style="min-width: 200px;">
-          <h4 style="margin: 0 0 8px; color: #333;">${trecho.idInicio} → ${trecho.idFim}</h4>
-          <p style="margin: 4px 0;"><strong>Comprimento:</strong> ${trecho.comprimento.toFixed(2)}m</p>
-          <p style="margin: 4px 0;"><strong>Declividade:</strong> ${(trecho.declividade * 100).toFixed(3)}%</p>
-          <p style="margin: 4px 0;"><strong>Tipo:</strong> ${trecho.tipoRede}</p>
-          <p style="margin: 4px 0;"><strong>Diâmetro:</strong> DN${trecho.diametroMm}</p>
-          <p style="margin: 4px 0;"><strong>Material:</strong> ${trecho.material}</p>
-        </div>
-      `);
+      // Highlight on hover
+      polyline.on('mouseover', function() {
+        this.setStyle({ weight: 7, opacity: 1 });
+        this.bringToFront();
+      });
+      polyline.on('mouseout', function() {
+        this.setStyle({ weight: 5, opacity: 0.85 });
+      });
 
       segmentsLayerRef.current.addLayer(polyline);
     });
 
-    // Fit bounds
+    // Fit bounds with padding
     if (bounds.length > 0) {
-      mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
+      try {
+        mapInstanceRef.current.fitBounds(bounds, {
+          padding: [50, 50],
+          maxZoom: 18
+        });
+      } catch (e) {
+        console.warn('Could not fit bounds:', e);
+      }
     }
   }, [pontos, trechos]);
 
@@ -514,27 +753,50 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '15px', marginBottom: '10px', flexWrap: 'wrap' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>
-            <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#22c55e' }}></span>
-            Ponto Inicial
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>
-            <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#ef4444' }}></span>
-            Ponto Final
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>
-            <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#3b82f6' }}></span>
-            Pontos Intermediários
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>
-            <span style={{ width: '20px', height: '4px', backgroundColor: '#22c55e' }}></span>
-            Gravidade
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>
-            <span style={{ width: '20px', height: '4px', backgroundColor: '#f59e0b' }}></span>
-            Elevatória
-          </span>
+        <div style={{
+          display: 'flex',
+          gap: '20px',
+          marginBottom: '10px',
+          flexWrap: 'wrap',
+          padding: '10px',
+          backgroundColor: '#0f172a',
+          borderRadius: '8px'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>PONTOS</span>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#22c55e', border: '2px solid white' }}></span>
+                Montante (M)
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#ef4444', border: '2px solid white' }}></span>
+                Jusante (J)
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#3b82f6', border: '2px solid white' }}></span>
+                Intermediario (PI)
+              </span>
+            </div>
+          </div>
+          <div style={{ width: '1px', backgroundColor: '#334155' }}></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>TRECHOS</span>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>
+                <span style={{ width: '20px', height: '4px', backgroundColor: '#22c55e', borderRadius: '2px' }}></span>
+                Gravidade
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>
+                <span style={{ width: '20px', height: '4px', backgroundColor: '#f59e0b', borderRadius: '2px', backgroundImage: 'repeating-linear-gradient(90deg, #f59e0b 0, #f59e0b 4px, transparent 4px, transparent 8px)' }}></span>
+                Elevatoria
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', color: '#94a3b8' }}>
+                <span style={{ width: '20px', height: '4px', backgroundColor: '#ef4444', borderRadius: '2px' }}></span>
+                Decl. Adversa
+              </span>
+            </div>
+          </div>
         </div>
 
         <div

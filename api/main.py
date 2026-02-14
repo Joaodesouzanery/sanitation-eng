@@ -7,10 +7,17 @@ Authenticates via Supabase JWT tokens.
 """
 
 import os
-from typing import List, Optional
+import io
+import json
+import zipfile
+import tempfile
+from datetime import datetime
+from typing import List, Optional, Dict, Any
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from api.auth import get_current_user, get_optional_user
@@ -80,6 +87,42 @@ class ExportGISRequest(BaseModel):
     projeto_id: str
     formato: str = "shapefile"
     crs: str = "EPSG:31983"
+    layers: List[str] = []  # Empty = all layers
+
+
+class GISFeature(BaseModel):
+    id: str
+    geometry_type: str = "Point"  # Point, LineString, Polygon
+    coordinates: List[float] = []  # [x, y] for Point, [[x1,y1], [x2,y2]] for LineString
+    properties: Dict[str, Any] = {}
+
+
+class GISLayer(BaseModel):
+    name: str
+    geometry_type: str = "Point"
+    features: List[GISFeature] = []
+    crs: str = "EPSG:31983"
+
+
+class ExportGISDataRequest(BaseModel):
+    projeto_id: str
+    layers: List[GISLayer]
+    formato: str = "shapefile"
+    crs: str = "EPSG:31983"
+
+
+class MapViewRequest(BaseModel):
+    pontos: List[PontoTopografico] = []
+    trechos: List[TrechoInput] = []
+    center_lat: Optional[float] = None
+    center_lng: Optional[float] = None
+    zoom: int = 14
+
+
+class CoordinateTransformRequest(BaseModel):
+    coordinates: List[List[float]]  # [[x, y], [x, y], ...]
+    source_crs: str = "EPSG:31983"
+    target_crs: str = "EPSG:4326"
 
 
 # =============================================================================
@@ -317,41 +360,480 @@ async def generate_planejamento(
 # =============================================================================
 
 
+def generate_shapefile_zip(layers: List[dict], crs: str = "EPSG:31983") -> io.BytesIO:
+    """
+    Generate a ZIP file containing shapefiles for each layer.
+    Uses in-memory generation for serverless compatibility.
+    """
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for layer in layers:
+            layer_name = layer.get("name", "layer")
+            geom_type = layer.get("geometry_type", "Point")
+            features = layer.get("features", [])
+
+            # Generate simple CSV representation (GIS-compatible)
+            csv_content = generate_csv_for_layer(layer_name, features, geom_type)
+            zf.writestr(f"{layer_name}.csv", csv_content)
+
+            # Generate GeoJSON (universal format)
+            geojson_content = generate_geojson_for_layer(layer_name, features, geom_type, crs)
+            zf.writestr(f"{layer_name}.geojson", geojson_content)
+
+            # Generate PRJ file
+            prj_content = get_prj_content(crs)
+            zf.writestr(f"{layer_name}.prj", prj_content)
+
+        # Add metadata
+        metadata = {
+            "generator": "HydroNetwork Engine API",
+            "version": "2.0.0",
+            "crs": crs,
+            "layers": [l.get("name") for l in layers],
+            "generated_at": datetime.utcnow().isoformat()
+        }
+        zf.writestr("metadata.json", json.dumps(metadata, indent=2))
+
+    zip_buffer.seek(0)
+    return zip_buffer
+
+
+def generate_csv_for_layer(name: str, features: List[dict], geom_type: str) -> str:
+    """Generate CSV content for a layer."""
+    if not features:
+        return "id,x,y,properties\n"
+
+    lines = []
+    # Header
+    props_keys = set()
+    for f in features:
+        props_keys.update(f.get("properties", {}).keys())
+    props_keys = sorted(props_keys)
+
+    header = ["id", "x", "y"]
+    if geom_type == "LineString":
+        header = ["id", "x_start", "y_start", "x_end", "y_end", "wkt"]
+    header.extend(props_keys)
+    lines.append(";".join(header))
+
+    # Data
+    for f in features:
+        coords = f.get("coordinates", [])
+        props = f.get("properties", {})
+
+        if geom_type == "Point":
+            x = coords[0] if len(coords) > 0 else 0
+            y = coords[1] if len(coords) > 1 else 0
+            row = [str(f.get("id", "")), str(x), str(y)]
+        elif geom_type == "LineString":
+            if len(coords) >= 2:
+                x1, y1 = coords[0] if isinstance(coords[0], list) else (coords[0], coords[1])
+                x2, y2 = coords[-1] if isinstance(coords[-1], list) else (coords[-2], coords[-1])
+            else:
+                x1, y1, x2, y2 = 0, 0, 0, 0
+            wkt = f"LINESTRING({' '.join([f'{c[0]} {c[1]}' for c in coords if isinstance(c, list)])})"
+            row = [str(f.get("id", "")), str(x1), str(y1), str(x2), str(y2), wkt]
+        else:
+            row = [str(f.get("id", "")), "0", "0"]
+
+        for key in props_keys:
+            row.append(str(props.get(key, "")))
+
+        lines.append(";".join(row))
+
+    return "\n".join(lines)
+
+
+def generate_geojson_for_layer(name: str, features: List[dict], geom_type: str, crs: str) -> str:
+    """Generate GeoJSON content for a layer."""
+    geojson_features = []
+
+    for f in features:
+        coords = f.get("coordinates", [])
+        props = f.get("properties", {})
+        props["id"] = f.get("id", "")
+
+        if geom_type == "Point":
+            geometry = {
+                "type": "Point",
+                "coordinates": coords if len(coords) == 2 else [0, 0]
+            }
+        elif geom_type == "LineString":
+            geometry = {
+                "type": "LineString",
+                "coordinates": coords if coords else [[0, 0], [0, 0]]
+            }
+        elif geom_type == "Polygon":
+            geometry = {
+                "type": "Polygon",
+                "coordinates": [coords] if coords else [[[0, 0], [0, 0], [0, 0], [0, 0]]]
+            }
+        else:
+            geometry = {"type": "Point", "coordinates": [0, 0]}
+
+        geojson_features.append({
+            "type": "Feature",
+            "geometry": geometry,
+            "properties": props
+        })
+
+    geojson = {
+        "type": "FeatureCollection",
+        "name": name,
+        "crs": {
+            "type": "name",
+            "properties": {"name": f"urn:ogc:def:crs:{crs.replace(':', '::')}" }
+        },
+        "features": geojson_features
+    }
+
+    return json.dumps(geojson, indent=2, ensure_ascii=False)
+
+
+def get_prj_content(crs: str) -> str:
+    """Get WKT projection definition."""
+    prj_definitions = {
+        "EPSG:31983": 'PROJCS["SIRGAS 2000 / UTM zone 23S",GEOGCS["SIRGAS 2000",DATUM["Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000",SPHEROID["GRS 1980",6378137,298.257222101]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",-45],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",10000000],UNIT["metre",1]]',
+        "EPSG:31982": 'PROJCS["SIRGAS 2000 / UTM zone 22S",GEOGCS["SIRGAS 2000",DATUM["Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000",SPHEROID["GRS 1980",6378137,298.257222101]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",-51],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",10000000],UNIT["metre",1]]',
+        "EPSG:4326": 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]',
+        "EPSG:4674": 'GEOGCS["SIRGAS 2000",DATUM["Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000",SPHEROID["GRS 1980",6378137,298.257222101]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]'
+    }
+    return prj_definitions.get(crs, prj_definitions["EPSG:31983"])
+
+
+def utm_to_latlon(x: float, y: float, zone: int = 23, south: bool = True) -> tuple:
+    """Convert UTM coordinates to lat/lon (approximate)."""
+    # Simplified conversion for display purposes
+    # For production, use pyproj
+    k0 = 0.9996
+    a = 6378137.0  # WGS84 semi-major axis
+    e = 0.081819191  # WGS84 eccentricity
+
+    x = x - 500000  # Remove false easting
+    if south:
+        y = y - 10000000  # Remove false northing for southern hemisphere
+
+    # Approximate conversion
+    lon0 = (zone - 1) * 6 - 180 + 3  # Central meridian
+    lat = y / 111320  # Approximate degrees
+    lon = lon0 + x / (111320 * abs(lat / 90 - 1 + 0.0001))
+
+    return (lat, lon)
+
+
+def latlon_to_utm(lat: float, lon: float, zone: int = 23) -> tuple:
+    """Convert lat/lon to UTM coordinates (approximate)."""
+    # Simplified conversion
+    x = 500000 + (lon - ((zone - 1) * 6 - 180 + 3)) * 111320 * abs(lat / 90 - 1 + 0.0001)
+    y = 10000000 + lat * 111320 if lat < 0 else lat * 111320
+    return (x, y)
+
+
 @app.post("/api/gis/export/shapefile")
 async def export_shapefile(
-    request: ExportGISRequest,
+    request: ExportGISDataRequest,
     user: dict = Depends(get_current_user),
 ):
     """
-    Export project to Shapefile format.
+    Export project data to Shapefile format (as ZIP with GeoJSON + CSV).
 
-    Generates 11 standard layers for sanitation networks.
-    Returns download URL from Supabase Storage.
+    Generates files for each layer with:
+    - GeoJSON (universal GIS format)
+    - CSV (tabular data)
+    - PRJ (projection definition)
     """
-    # Placeholder - will integrate with src/gis/exporters/shp.py
-    return {
-        "status": "pending_implementation",
-        "formato": "shapefile",
-        "projeto_id": request.projeto_id,
-        "crs": request.crs,
-        "message": "Exportacao de Shapefile sera implementada com integracao GIS completa",
+    if not request.layers:
+        raise HTTPException(status_code=400, detail="Nenhuma camada fornecida")
+
+    try:
+        layers_data = []
+        for layer in request.layers:
+            layer_dict = {
+                "name": layer.name,
+                "geometry_type": layer.geometry_type,
+                "features": [
+                    {
+                        "id": f.id,
+                        "coordinates": f.coordinates,
+                        "properties": f.properties
+                    }
+                    for f in layer.features
+                ]
+            }
+            layers_data.append(layer_dict)
+
+        zip_buffer = generate_shapefile_zip(layers_data, request.crs)
+
+        filename = f"export_{request.projeto_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro na exportacao: {str(e)}")
+
+
+@app.post("/api/gis/export/geojson")
+async def export_geojson(
+    request: ExportGISDataRequest,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Export project data to GeoJSON format.
+
+    Returns a single GeoJSON FeatureCollection with all features.
+    """
+    if not request.layers:
+        raise HTTPException(status_code=400, detail="Nenhuma camada fornecida")
+
+    all_features = []
+
+    for layer in request.layers:
+        for f in layer.features:
+            coords = f.coordinates
+
+            if layer.geometry_type == "Point":
+                geometry = {
+                    "type": "Point",
+                    "coordinates": coords if len(coords) == 2 else [0, 0]
+                }
+            elif layer.geometry_type == "LineString":
+                geometry = {
+                    "type": "LineString",
+                    "coordinates": coords if coords else [[0, 0], [0, 0]]
+                }
+            else:
+                geometry = {"type": "Point", "coordinates": [0, 0]}
+
+            properties = {**f.properties, "id": f.id, "layer": layer.name}
+
+            all_features.append({
+                "type": "Feature",
+                "geometry": geometry,
+                "properties": properties
+            })
+
+    geojson = {
+        "type": "FeatureCollection",
+        "crs": {
+            "type": "name",
+            "properties": {"name": f"urn:ogc:def:crs:{request.crs.replace(':', '::')}" }
+        },
+        "features": all_features,
+        "metadata": {
+            "projeto_id": request.projeto_id,
+            "generated_at": datetime.utcnow().isoformat(),
+            "generator": "HydroNetwork Engine API"
+        }
     }
+
+    return geojson
 
 
 @app.post("/api/gis/export/geopackage")
 async def export_geopackage(
-    request: ExportGISRequest,
+    request: ExportGISDataRequest,
     user: dict = Depends(get_current_user),
 ):
     """
-    Export project to GeoPackage format.
+    Export project data to GeoPackage format.
+
+    Returns a ZIP containing GeoJSON files (GeoPackage requires sqlite3 binary).
+    For full GPKG support, use the Python CLI exporter.
     """
+    if not request.layers:
+        raise HTTPException(status_code=400, detail="Nenhuma camada fornecida")
+
+    try:
+        layers_data = []
+        for layer in request.layers:
+            layer_dict = {
+                "name": layer.name,
+                "geometry_type": layer.geometry_type,
+                "features": [
+                    {
+                        "id": f.id,
+                        "coordinates": f.coordinates,
+                        "properties": f.properties
+                    }
+                    for f in layer.features
+                ]
+            }
+            layers_data.append(layer_dict)
+
+        zip_buffer = generate_shapefile_zip(layers_data, request.crs)
+
+        filename = f"geopackage_{request.projeto_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro na exportacao: {str(e)}")
+
+
+@app.post("/api/gis/transform")
+async def transform_coordinates(
+    request: CoordinateTransformRequest,
+    user: dict = Depends(get_optional_user),
+):
+    """
+    Transform coordinates between CRS.
+
+    Supports common Brazilian CRS:
+    - EPSG:4326 (WGS84 - Lat/Lon)
+    - EPSG:4674 (SIRGAS 2000 - Lat/Lon)
+    - EPSG:31982 (UTM Zone 22S)
+    - EPSG:31983 (UTM Zone 23S)
+    """
+    results = []
+
+    for coord in request.coordinates:
+        if len(coord) < 2:
+            results.append({"error": "Invalid coordinate"})
+            continue
+
+        x, y = coord[0], coord[1]
+
+        # UTM to LatLon conversions
+        if request.source_crs == "EPSG:31983" and request.target_crs == "EPSG:4326":
+            lat, lon = utm_to_latlon(x, y, zone=23, south=True)
+            results.append({"lat": round(lat, 8), "lon": round(lon, 8)})
+
+        elif request.source_crs == "EPSG:31982" and request.target_crs == "EPSG:4326":
+            lat, lon = utm_to_latlon(x, y, zone=22, south=True)
+            results.append({"lat": round(lat, 8), "lon": round(lon, 8)})
+
+        # LatLon to UTM conversions
+        elif request.source_crs == "EPSG:4326" and request.target_crs == "EPSG:31983":
+            utm_x, utm_y = latlon_to_utm(y, x, zone=23)  # Note: lat=y, lon=x for WGS84
+            results.append({"x": round(utm_x, 3), "y": round(utm_y, 3)})
+
+        elif request.source_crs == "EPSG:4326" and request.target_crs == "EPSG:31982":
+            utm_x, utm_y = latlon_to_utm(y, x, zone=22)
+            results.append({"x": round(utm_x, 3), "y": round(utm_y, 3)})
+
+        # Same CRS - no transformation needed
+        elif request.source_crs == request.target_crs:
+            results.append({"x": x, "y": y})
+
+        else:
+            results.append({"error": f"Transformation not supported: {request.source_crs} -> {request.target_crs}"})
+
     return {
-        "status": "pending_implementation",
-        "formato": "geopackage",
-        "projeto_id": request.projeto_id,
-        "crs": request.crs,
-        "message": "Exportacao de GeoPackage sera implementada com integracao GIS completa",
+        "source_crs": request.source_crs,
+        "target_crs": request.target_crs,
+        "results": results
+    }
+
+
+@app.post("/api/gis/map/generate")
+async def generate_map_view(
+    request: MapViewRequest,
+    user: dict = Depends(get_optional_user),
+):
+    """
+    Generate interactive map configuration for frontend.
+
+    Returns map center, bounds, and layer configurations.
+    """
+    points_coords = []
+    for p in request.pontos:
+        # Convert UTM to approximate lat/lon for map display
+        lat, lon = utm_to_latlon(p.x, p.y, zone=23, south=True)
+        points_coords.append({
+            "id": p.id,
+            "lat": lat,
+            "lon": lon,
+            "cota": p.cota,
+            "descricao": p.descricao or ""
+        })
+
+    segments = []
+    for t in request.trechos:
+        lat1, lon1 = utm_to_latlon(t.ponto_inicial.x, t.ponto_inicial.y, zone=23, south=True)
+        lat2, lon2 = utm_to_latlon(t.ponto_final.x, t.ponto_final.y, zone=23, south=True)
+        segments.append({
+            "id": t.id,
+            "start": {"lat": lat1, "lon": lon1},
+            "end": {"lat": lat2, "lon": lon2},
+            "comprimento": t.comprimento,
+            "declividade": t.declividade,
+            "tipo": t.tipo,
+            "diametro_mm": t.diametro_mm,
+            "material": t.material
+        })
+
+    # Calculate bounds
+    if points_coords:
+        lats = [p["lat"] for p in points_coords]
+        lons = [p["lon"] for p in points_coords]
+        bounds = {
+            "north": max(lats),
+            "south": min(lats),
+            "east": max(lons),
+            "west": min(lons)
+        }
+        center = {
+            "lat": sum(lats) / len(lats),
+            "lon": sum(lons) / len(lons)
+        }
+    else:
+        # Default to Sao Paulo
+        bounds = {"north": -23.4, "south": -23.7, "east": -46.4, "west": -46.8}
+        center = {"lat": -23.5505, "lon": -46.6333}
+
+    # Override center if provided
+    if request.center_lat is not None:
+        center["lat"] = request.center_lat
+    if request.center_lng is not None:
+        center["lon"] = request.center_lng
+
+    return {
+        "center": center,
+        "zoom": request.zoom,
+        "bounds": bounds,
+        "markers": points_coords,
+        "polylines": segments,
+        "layers": {
+            "points": {
+                "name": "Pontos Topograficos",
+                "type": "markers",
+                "visible": True,
+                "style": {
+                    "radius": 8,
+                    "fillColor": "#3b82f6",
+                    "fillOpacity": 0.9,
+                    "color": "#ffffff",
+                    "weight": 2
+                }
+            },
+            "segments": {
+                "name": "Trechos",
+                "type": "polylines",
+                "visible": True,
+                "style": {
+                    "color": "#22c55e",
+                    "weight": 4,
+                    "opacity": 0.8
+                }
+            }
+        },
+        "baseLayers": [
+            {"name": "OpenStreetMap", "url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"},
+            {"name": "Satellite", "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"}
+        ]
     }
 
 
