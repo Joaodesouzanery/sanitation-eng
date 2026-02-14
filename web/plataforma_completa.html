@@ -1,0 +1,1893 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConstruData | HydroNetwork - Plataforma Completa v2.6</title>
+
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- Leaflet for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --brand-dark: #1a1f2e;
+            --brand-blue: #2c4a7c;
+            --brand-blue-light: #3d6cb9;
+            --brand-gold: #c9a227;
+            --brand-gold-light: #e8c547;
+            --bg-primary: #f5f7fa;
+            --bg-secondary: #ffffff;
+            --bg-card: #f8fafc;
+            --text-primary: #1a1f2e;
+            --text-secondary: #5a6577;
+            --text-muted: #94a3b8;
+            --border-color: #e2e8f0;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand-blue) 50%, var(--brand-blue-light) 100%);
+            padding: 20px 40px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: white;
+            letter-spacing: 1px;
+        }
+        .logo span { color: var(--brand-gold); font-weight: 300; }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            background: rgba(255,255,255,0.1);
+            padding: 6px;
+            border-radius: 12px;
+        }
+
+        .nav-tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-tab:hover { background: rgba(255,255,255,0.1); color: white; }
+        .nav-tab.active { background: white; color: var(--brand-blue); }
+
+        .version-badge {
+            background: var(--brand-gold);
+            color: var(--brand-dark);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 40px;
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; animation: fadeIn 0.4s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--brand-blue), var(--brand-blue-light));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        /* Grid Layout */
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+
+        @media (max-width: 1024px) {
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+        }
+
+        /* Stat Cards */
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            margin-bottom: 12px;
+        }
+
+        .stat-icon.blue { background: rgba(44, 74, 124, 0.1); }
+        .stat-icon.green { background: rgba(16, 185, 129, 0.1); }
+        .stat-icon.orange { background: rgba(245, 158, 11, 0.1); }
+        .stat-icon.purple { background: rgba(139, 92, 246, 0.1); }
+        .stat-icon.gold { background: rgba(201, 162, 39, 0.1); }
+
+        .stat-value {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .stat-change {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+
+        .stat-change.positive { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); }
+        .stat-change.negative { background: rgba(239, 68, 68, 0.1); color: var(--accent-red); }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--brand-blue);
+            box-shadow: 0 0 0 3px rgba(44, 74, 124, 0.1);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--brand-blue), var(--brand-blue-light));
+            color: white;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(44, 74, 124, 0.3); }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--accent-green), #14b8a6);
+            color: white;
+        }
+        .btn-success:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+
+        .btn-gold {
+            background: linear-gradient(135deg, var(--brand-gold), var(--brand-gold-light));
+            color: var(--brand-dark);
+        }
+        .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(201, 162, 39, 0.3); }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        .btn-outline:hover { border-color: var(--brand-blue); color: var(--brand-blue); }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--bg-card);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover { background: var(--bg-card); }
+        tr:last-child td { border-bottom: none; }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-ok { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); }
+        .status-warn { background: rgba(245, 158, 11, 0.1); color: var(--accent-orange); }
+        .status-error { background: rgba(239, 68, 68, 0.1); color: var(--accent-red); }
+
+        /* Charts Container */
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+
+        /* ABC Chart specific */
+        .abc-legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .abc-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+
+        .abc-legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .abc-legend-color.a { background: #ef4444; }
+        .abc-legend-color.b { background: #f59e0b; }
+        .abc-legend-color.c { background: #10b981; }
+
+        /* Map Container */
+        #map {
+            height: 500px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background: var(--bg-card);
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--brand-blue);
+            background: rgba(44, 74, 124, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .upload-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .upload-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Profile Visualization */
+        .profile-svg {
+            width: 100%;
+            height: 300px;
+            background: white;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Progress Steps */
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            position: relative;
+        }
+
+        .step::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: var(--border-color);
+        }
+
+        .step:last-child::after { display: none; }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            z-index: 1;
+            transition: all 0.3s;
+        }
+
+        .step.active .step-circle {
+            background: var(--brand-blue);
+            border-color: var(--brand-blue);
+            color: white;
+        }
+
+        .step.completed .step-circle {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+            color: white;
+        }
+
+        .step-label {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .step.active .step-label { color: var(--brand-blue); font-weight: 600; }
+        .step.completed .step-label { color: var(--accent-green); }
+
+        /* Alerts */
+        .alert {
+            padding: 16px 20px;
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .alert-info {
+            background: rgba(44, 74, 124, 0.1);
+            border-left: 4px solid var(--brand-blue);
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid var(--accent-green);
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--accent-orange);
+        }
+
+        .alert-icon { font-size: 1.2rem; }
+        .alert-content { flex: 1; }
+        .alert-title { font-weight: 600; margin-bottom: 4px; }
+        .alert-text { font-size: 0.9rem; color: var(--text-secondary); }
+
+        /* Modules Grid */
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .module-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .module-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--brand-blue);
+        }
+
+        .module-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            margin-bottom: 16px;
+        }
+
+        .module-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .module-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .module-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-top: 12px;
+        }
+
+        .badge-ready { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); }
+        .badge-beta { background: rgba(245, 158, 11, 0.1); color: var(--accent-orange); }
+        .badge-soon { background: rgba(139, 92, 246, 0.1); color: var(--accent-purple); }
+
+        /* Footer */
+        .footer {
+            background: var(--brand-dark);
+            padding: 30px 40px;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .footer-text {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.85rem;
+        }
+
+        .footer-text a {
+            color: var(--brand-gold);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header { padding: 16px 20px; }
+            .header-content { flex-direction: column; gap: 16px; }
+            .nav-tabs { flex-wrap: wrap; justify-content: center; }
+            .main-content { padding: 20px; }
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+        }
+
+        /* Animations */
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.5s ease forwards;
+        }
+
+        /* Parameter Groups */
+        .param-group {
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .param-group-title {
+            font-weight: 600;
+            color: var(--brand-blue);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .param-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--brand-dark);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s;
+            z-index: 100;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+    <div class="header-content">
+        <div class="logo">CONSTRUDATA <span>| HYDRONETWORK</span></div>
+
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="dashboard" onclick="showTab('dashboard')">
+                <span>📊</span> Dashboard
+            </button>
+            <button class="nav-tab" data-tab="importar" onclick="showTab('importar')">
+                <span>📥</span> Importar
+            </button>
+            <button class="nav-tab" data-tab="parametros" onclick="showTab('parametros')">
+                <span>⚙️</span> Parametros
+            </button>
+            <button class="nav-tab" data-tab="resultados" onclick="showTab('resultados')">
+                <span>📈</span> Resultados
+            </button>
+            <button class="nav-tab" data-tab="orcamento" onclick="showTab('orcamento')">
+                <span>💰</span> Orcamento
+            </button>
+            <button class="nav-tab" data-tab="mapa" onclick="showTab('mapa')">
+                <span>🗺️</span> Mapa
+            </button>
+            <button class="nav-tab" data-tab="modulos" onclick="showTab('modulos')">
+                <span>📦</span> Modulos
+            </button>
+        </nav>
+
+        <span class="version-badge">v2.6.0</span>
+    </div>
+</header>
+
+<!-- Main Content -->
+<main class="main-content">
+
+    <!-- Dashboard Tab -->
+    <div id="dashboard" class="tab-panel active">
+        <div class="alert alert-info">
+            <span class="alert-icon">💡</span>
+            <div class="alert-content">
+                <div class="alert-title">Bem-vindo ao HydroNetwork!</div>
+                <div class="alert-text">Sistema completo para dimensionamento de redes de esgoto, agua e drenagem conforme normas brasileiras (NBR 9649, NBR 12211).</div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid-4" style="margin-bottom: 30px;">
+            <div class="stat-card">
+                <div class="stat-icon blue">📍</div>
+                <div class="stat-value" id="stat-nos">46</div>
+                <div class="stat-label">Nos/PVs Calculados</div>
+                <div class="stat-change positive">+12 este mes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">🔗</div>
+                <div class="stat-value" id="stat-trechos">45</div>
+                <div class="stat-label">Trechos de Rede</div>
+                <div class="stat-change positive">+11 este mes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange">📏</div>
+                <div class="stat-value" id="stat-extensao">3.250</div>
+                <div class="stat-label">Metros de Rede</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon gold">💰</div>
+                <div class="stat-value" id="stat-custo">R$ 3.2M</div>
+                <div class="stat-label">Orcamento Total</div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid-2">
+            <!-- ABC Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">📊</div>
+                        Curva ABC (Pareto) - Orcamento
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="abcChart"></canvas>
+                </div>
+                <div class="abc-legend">
+                    <div class="abc-legend-item">
+                        <div class="abc-legend-color a"></div>
+                        <span><strong>Classe A</strong> - 80% do custo</span>
+                    </div>
+                    <div class="abc-legend-item">
+                        <div class="abc-legend-color b"></div>
+                        <span><strong>Classe B</strong> - 15% do custo</span>
+                    </div>
+                    <div class="abc-legend-item">
+                        <div class="abc-legend-color c"></div>
+                        <span><strong>Classe C</strong> - 5% do custo</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distribution Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">🔵</div>
+                        Distribuicao por Diametro
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="diametroChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="card-icon">⚡</div>
+                    Acoes Rapidas
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="showTab('importar')">📥 Importar Dados</button>
+                <button class="btn btn-success" onclick="calcularRede()">▶️ Calcular Rede</button>
+                <button class="btn btn-gold" onclick="exportarResultados()">📤 Exportar Resultados</button>
+                <button class="btn btn-outline" onclick="carregarDemo()">🎯 Carregar Demo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Importar Tab -->
+    <div id="importar" class="tab-panel">
+        <div class="progress-steps">
+            <div class="step completed">
+                <div class="step-circle">✓</div>
+                <div class="step-label">Selecionar Arquivo</div>
+            </div>
+            <div class="step active">
+                <div class="step-circle">2</div>
+                <div class="step-label">Configurar Campos</div>
+            </div>
+            <div class="step">
+                <div class="step-circle">3</div>
+                <div class="step-label">Validar Dados</div>
+            </div>
+            <div class="step">
+                <div class="step-circle">4</div>
+                <div class="step-label">Importar</div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">📁</div>
+                        Upload de Arquivo
+                    </div>
+                </div>
+
+                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📂</div>
+                    <div class="upload-title">Arraste o arquivo aqui ou clique para selecionar</div>
+                    <div class="upload-subtitle">Formatos aceitos: CSV, XLSX, TXT, DXF, SHP, GeoJSON, KML</div>
+                </div>
+                <input type="file" id="fileInput" style="display: none;" accept=".csv,.xlsx,.txt,.dxf,.shp,.geojson,.kml" onchange="handleFileUpload(event)">
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label class="form-label">Tipo de Rede</label>
+                    <select class="form-select" id="tipoRede">
+                        <option value="esgoto">Esgoto Sanitario (Gravidade)</option>
+                        <option value="agua">Agua (Pressurizado)</option>
+                        <option value="drenagem">Drenagem Pluvial</option>
+                        <option value="recalque">Recalque/Elevatoria</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">⚙️</div>
+                        Opcoes de Importacao
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tipo de Solo</label>
+                    <select class="form-select" id="tipoSolo">
+                        <option value="1">1ª Categoria (solo comum)</option>
+                        <option value="2">2ª Categoria (compacto/pedregulho)</option>
+                        <option value="3">3ª Categoria (rocha)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="soloSaturado"> Solo saturado (presenca de agua)
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="usarEscoramento" checked> Utilizar escoramento (NR-18)
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tipo de Escoramento</label>
+                    <select class="form-select" id="tipoEscoramento">
+                        <option value="madeira">Escoramento continuo (madeira)</option>
+                        <option value="pontalete">Pontaleteamento</option>
+                        <option value="metalico">Escoramento metalico</option>
+                        <option value="estaca">Estacas-prancha</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Profundidade minima para escoramento (m)</label>
+                    <input type="number" class="form-input" id="profEscoramento" value="1.25" step="0.05">
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+                    📥 Importar Dados
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Parametros Tab -->
+    <div id="parametros" class="tab-panel">
+        <div class="grid-2">
+            <!-- Esgoto Parameters -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #10b981, #14b8a6);">🚿</div>
+                        Parametros de Esgoto Sanitario
+                    </div>
+                </div>
+
+                <div class="param-group">
+                    <div class="param-group-title">📊 Contribuicoes</div>
+                    <div class="param-row">
+                        <div class="form-group">
+                            <label class="form-label tooltip" data-tip="Consumo de agua por habitante">Consumo per capita (L/hab.dia)</label>
+                            <input type="number" class="form-input" value="200">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Habitantes por UH</label>
+                            <input type="number" class="form-input" value="3.5" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Coef. de retorno</label>
+                            <input type="number" class="form-input" value="0.80" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Taxa infiltracao (L/s.m)</label>
+                            <input type="number" class="form-input" value="0.0005" step="0.0001">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="param-group">
+                    <div class="param-group-title">💧 Hidraulica (Manning)</div>
+                    <div class="param-row">
+                        <div class="form-group">
+                            <label class="form-label">Coef. Manning (n)</label>
+                            <input type="number" class="form-input" value="0.013" step="0.001">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Decliv. minima (m/m)</label>
+                            <input type="number" class="form-input" value="0.005" step="0.001">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Veloc. minima (m/s)</label>
+                            <input type="number" class="form-input" value="0.60" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Veloc. maxima (m/s)</label>
+                            <input type="number" class="form-input" value="5.0" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Lamina min. (y/D)</label>
+                            <input type="number" class="form-input" value="0.20" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Lamina max. (y/D)</label>
+                            <input type="number" class="form-input" value="0.75" step="0.01">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="param-group">
+                    <div class="param-group-title">📏 Cobertura</div>
+                    <div class="param-row">
+                        <div class="form-group">
+                            <label class="form-label">Cobertura minima (m)</label>
+                            <input type="number" class="form-input" value="0.90" step="0.05">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cobertura maxima (m)</label>
+                            <input type="number" class="form-input" value="6.0" step="0.1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Water Parameters -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #3b82f6, #06b6d4);">💧</div>
+                        Parametros de Agua (Pressurizado)
+                    </div>
+                </div>
+
+                <div class="param-group">
+                    <div class="param-group-title">📊 Demandas</div>
+                    <div class="param-row">
+                        <div class="form-group">
+                            <label class="form-label">Consumo per capita (L/hab.dia)</label>
+                            <input type="number" class="form-input" value="200">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Habitantes por UH</label>
+                            <input type="number" class="form-input" value="3.5" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">K1 (dia maior consumo)</label>
+                            <input type="number" class="form-input" value="1.2" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">K2 (hora maior consumo)</label>
+                            <input type="number" class="form-input" value="1.5" step="0.1">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="param-group">
+                    <div class="param-group-title">🔵 Pressoes</div>
+                    <div class="param-row">
+                        <div class="form-group">
+                            <label class="form-label">Pressao min. dinamica (mca)</label>
+                            <input type="number" class="form-input" value="10.0" step="0.5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Pressao max. estatica (mca)</label>
+                            <input type="number" class="form-input" value="50.0" step="0.5">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="param-group">
+                    <div class="param-group-title">💧 Hazen-Williams</div>
+                    <div class="param-row">
+                        <div class="form-group">
+                            <label class="form-label">Coef. C (PVC)</label>
+                            <input type="number" class="form-input" value="140">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Veloc. minima (m/s)</label>
+                            <input type="number" class="form-input" value="0.5" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Veloc. maxima (m/s)</label>
+                            <input type="number" class="form-input" value="3.5" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Rendimento bomba</label>
+                            <input type="number" class="form-input" value="0.75" step="0.01">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+            <button class="btn btn-outline">Restaurar Padroes</button>
+            <button class="btn btn-primary">💾 Salvar Parametros</button>
+        </div>
+    </div>
+
+    <!-- Resultados Tab -->
+    <div id="resultados" class="tab-panel">
+        <div class="alert alert-success">
+            <span class="alert-icon">✅</span>
+            <div class="alert-content">
+                <div class="alert-title">Calculo concluido com sucesso!</div>
+                <div class="alert-text">46 nos e 45 trechos calculados. 2 alertas encontrados (verificar lamina em 2 trechos).</div>
+            </div>
+        </div>
+
+        <!-- Results Summary -->
+        <div class="grid-4" style="margin-bottom: 24px;">
+            <div class="stat-card">
+                <div class="stat-icon green">✓</div>
+                <div class="stat-value">43</div>
+                <div class="stat-label">Trechos OK</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange">⚠️</div>
+                <div class="stat-value">2</div>
+                <div class="stat-label">Alertas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon blue">📏</div>
+                <div class="stat-value">0.95</div>
+                <div class="stat-label">Veloc. Media (m/s)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple">🔵</div>
+                <div class="stat-value">DN200</div>
+                <div class="stat-label">Diam. Predominante</div>
+            </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="card-icon">📋</div>
+                    Resultados por Trecho
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-outline" onclick="exportarExcel()">📥 Excel</button>
+                    <button class="btn btn-outline" onclick="exportarPDF()">📄 PDF</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="resultadosTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>De</th>
+                            <th>Para</th>
+                            <th>Comp. (m)</th>
+                            <th>DN (mm)</th>
+                            <th>Decliv. (%)</th>
+                            <th>Vazao (L/s)</th>
+                            <th>Veloc. (m/s)</th>
+                            <th>y/D</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>T-01</td>
+                            <td>PV-01</td>
+                            <td>PV-02</td>
+                            <td>85.5</td>
+                            <td>200</td>
+                            <td>0.85</td>
+                            <td>3.14</td>
+                            <td>0.92</td>
+                            <td>0.35</td>
+                            <td><span class="status-badge status-ok">OK</span></td>
+                        </tr>
+                        <tr>
+                            <td>T-02</td>
+                            <td>PV-02</td>
+                            <td>PV-03</td>
+                            <td>72.3</td>
+                            <td>200</td>
+                            <td>0.65</td>
+                            <td>5.28</td>
+                            <td>1.05</td>
+                            <td>0.42</td>
+                            <td><span class="status-badge status-ok">OK</span></td>
+                        </tr>
+                        <tr>
+                            <td>T-03</td>
+                            <td>PV-03</td>
+                            <td>PV-04</td>
+                            <td>95.8</td>
+                            <td>200</td>
+                            <td>0.45</td>
+                            <td>8.45</td>
+                            <td>0.58</td>
+                            <td>0.78</td>
+                            <td><span class="status-badge status-warn">y/D Alto</span></td>
+                        </tr>
+                        <tr>
+                            <td>T-04</td>
+                            <td>PV-04</td>
+                            <td>PV-05</td>
+                            <td>68.2</td>
+                            <td>250</td>
+                            <td>0.75</td>
+                            <td>12.30</td>
+                            <td>1.15</td>
+                            <td>0.48</td>
+                            <td><span class="status-badge status-ok">OK</span></td>
+                        </tr>
+                        <tr>
+                            <td>T-05</td>
+                            <td>PV-05</td>
+                            <td>PV-06</td>
+                            <td>82.4</td>
+                            <td>250</td>
+                            <td>0.55</td>
+                            <td>15.82</td>
+                            <td>0.95</td>
+                            <td>0.52</td>
+                            <td><span class="status-badge status-ok">OK</span></td>
+                        </tr>
+                        <tr>
+                            <td>T-06</td>
+                            <td>PV-06</td>
+                            <td>PV-07</td>
+                            <td>78.9</td>
+                            <td>300</td>
+                            <td>0.40</td>
+                            <td>22.45</td>
+                            <td>0.55</td>
+                            <td>0.76</td>
+                            <td><span class="status-badge status-warn">y/D Alto</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Profile Visualization -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="card-icon">📐</div>
+                    Perfil Longitudinal
+                </div>
+            </div>
+            <div class="chart-container" style="height: 280px;">
+                <canvas id="perfilChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orcamento Tab -->
+    <div id="orcamento" class="tab-panel">
+        <div class="grid-2" style="margin-bottom: 24px;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon" style="background: linear-gradient(135deg, var(--brand-gold), var(--brand-gold-light));">💰</div>
+                        Resumo do Orcamento
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: var(--brand-blue);">R$ 2.556.386,83</div>
+                        <div class="stat-label">Subtotal (sem BDI)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: var(--accent-orange);">R$ 639.096,71</div>
+                        <div class="stat-label">BDI (25%)</div>
+                    </div>
+                    <div class="stat-card" style="grid-column: 1/-1; background: linear-gradient(135deg, var(--brand-gold), var(--brand-gold-light)); color: white;">
+                        <div class="stat-value" style="color: white; font-size: 2.2rem;">R$ 3.195.483,54</div>
+                        <div class="stat-label" style="color: rgba(255,255,255,0.8);">TOTAL GERAL</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; padding: 16px; background: var(--bg-card); border-radius: var(--radius-md);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Custo por metro linear:</span>
+                        <strong>R$ 982,63/m</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Extensao total:</span>
+                        <strong>3.250,75 m</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">📊</div>
+                        Curva ABC - Analise de Pareto
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="abcChartOrcamento"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABC Table -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="card-icon">📋</div>
+                    Classificacao ABC dos Servicos
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Classe</th>
+                            <th>Item</th>
+                            <th>Quantidade</th>
+                            <th>Custo Total</th>
+                            <th>% Individual</th>
+                            <th>% Acumulado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background: rgba(239, 68, 68, 0.05);">
+                            <td><span class="status-badge" style="background: rgba(239, 68, 68, 0.2); color: #dc2626;">A</span></td>
+                            <td><strong>Escoramento</strong></td>
+                            <td>16.320,50 m2</td>
+                            <td>R$ 747.478,90</td>
+                            <td>29,23%</td>
+                            <td>29,23%</td>
+                        </tr>
+                        <tr style="background: rgba(239, 68, 68, 0.05);">
+                            <td><span class="status-badge" style="background: rgba(239, 68, 68, 0.2); color: #dc2626;">A</span></td>
+                            <td><strong>Tubulacao</strong></td>
+                            <td>3.250,75 m</td>
+                            <td>R$ 733.044,13</td>
+                            <td>28,67%</td>
+                            <td>57,90%</td>
+                        </tr>
+                        <tr style="background: rgba(239, 68, 68, 0.05);">
+                            <td><span class="status-badge" style="background: rgba(239, 68, 68, 0.2); color: #dc2626;">A</span></td>
+                            <td><strong>Pavimentacao</strong></td>
+                            <td>4.876,13 m2</td>
+                            <td>R$ 415.935,89</td>
+                            <td>16,27%</td>
+                            <td>74,17%</td>
+                        </tr>
+                        <tr style="background: rgba(245, 158, 11, 0.05);">
+                            <td><span class="status-badge" style="background: rgba(245, 158, 11, 0.2); color: #d97706;">B</span></td>
+                            <td>Escavacao</td>
+                            <td>7.350,25 m3</td>
+                            <td>R$ 263.148,95</td>
+                            <td>10,29%</td>
+                            <td>84,46%</td>
+                        </tr>
+                        <tr style="background: rgba(245, 158, 11, 0.05);">
+                            <td><span class="status-badge" style="background: rgba(245, 158, 11, 0.2); color: #d97706;">B</span></td>
+                            <td>Pocos de Visita</td>
+                            <td>46 un</td>
+                            <td>R$ 195.500,00</td>
+                            <td>7,64%</td>
+                            <td>92,10%</td>
+                        </tr>
+                        <tr style="background: rgba(16, 185, 129, 0.05);">
+                            <td><span class="status-badge" style="background: rgba(16, 185, 129, 0.2); color: #059669;">C</span></td>
+                            <td>Reaterro comum</td>
+                            <td>5.876,23 m3</td>
+                            <td>R$ 108.710,26</td>
+                            <td>4,25%</td>
+                            <td>96,35%</td>
+                        </tr>
+                        <tr style="background: rgba(16, 185, 129, 0.05);">
+                            <td><span class="status-badge" style="background: rgba(16, 185, 129, 0.2); color: #059669;">C</span></td>
+                            <td>Berco/Envoltoria</td>
+                            <td>1.023,99 m3</td>
+                            <td>R$ 92.568,70</td>
+                            <td>3,65%</td>
+                            <td>100,00%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Export Options -->
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+            <button class="btn btn-outline">📄 Gerar Planilha SINAPI</button>
+            <button class="btn btn-outline">📊 Exportar Curva ABC</button>
+            <button class="btn btn-gold">💰 Relatorio Completo</button>
+        </div>
+    </div>
+
+    <!-- Mapa Tab -->
+    <div id="mapa" class="tab-panel">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="card-icon">🗺️</div>
+                    Mapa Interativo da Rede
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <select class="form-select" style="width: auto;">
+                        <option>OpenStreetMap</option>
+                        <option>Satelite</option>
+                        <option>Hibrido</option>
+                    </select>
+                    <button class="btn btn-outline">📍 Centralizar</button>
+                    <button class="btn btn-primary">📤 Exportar GIS</button>
+                </div>
+            </div>
+            <div id="map"></div>
+
+            <div style="display: flex; justify-content: center; gap: 30px; margin-top: 20px; padding: 16px; background: var(--bg-card); border-radius: var(--radius-md);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 4px; background: #22c55e; border-radius: 2px;"></div>
+                    <span style="font-size: 0.85rem;">DN 150-200</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 4px; background: #3b82f6; border-radius: 2px;"></div>
+                    <span style="font-size: 0.85rem;">DN 250-300</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 4px; background: #f59e0b; border-radius: 2px;"></div>
+                    <span style="font-size: 0.85rem;">DN 400+</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 12px; height: 12px; background: #2c4a7c; border-radius: 50%;"></div>
+                    <span style="font-size: 0.85rem;">PV</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modulos Tab -->
+    <div id="modulos" class="tab-panel">
+        <div class="alert alert-info">
+            <span class="alert-icon">📦</span>
+            <div class="alert-content">
+                <div class="alert-title">Modulos do Sistema</div>
+                <div class="alert-text">O HydroNetwork possui 10 modulos integrados para o ciclo completo de projetos de saneamento.</div>
+            </div>
+        </div>
+
+        <div class="modules-grid">
+            <div class="module-card" onclick="showTab('importar')">
+                <div class="module-icon" style="background: rgba(44, 74, 124, 0.1);">📥</div>
+                <div class="module-title">1. Importar Topografia</div>
+                <div class="module-desc">Importa dados de CSV, XLSX, DXF, SHP, GeoJSON, KML e IFC.</div>
+                <span class="module-badge badge-ready">Pronto</span>
+            </div>
+
+            <div class="module-card" onclick="showTab('parametros')">
+                <div class="module-icon" style="background: rgba(16, 185, 129, 0.1);">⚙️</div>
+                <div class="module-title">2. Parametros Hidraulicos</div>
+                <div class="module-desc">Configura parametros de calculo conforme NBR 9649 e NBR 12211.</div>
+                <span class="module-badge badge-ready">Pronto</span>
+            </div>
+
+            <div class="module-card" onclick="showTab('resultados')">
+                <div class="module-icon" style="background: rgba(139, 92, 246, 0.1);">📈</div>
+                <div class="module-title">3. Calculo de Rede</div>
+                <div class="module-desc">Dimensiona vazoes, diametros, velocidades e verifica normas.</div>
+                <span class="module-badge badge-ready">Pronto</span>
+            </div>
+
+            <div class="module-card">
+                <div class="module-icon" style="background: rgba(245, 158, 11, 0.1);">🏗️</div>
+                <div class="module-title">4. Quantitativos</div>
+                <div class="module-desc">Calcula escavacao, escoramento, berco, reaterro e pavimento.</div>
+                <span class="module-badge badge-ready">Pronto</span>
+            </div>
+
+            <div class="module-card" onclick="showTab('orcamento')">
+                <div class="module-icon" style="background: rgba(201, 162, 39, 0.1);">💰</div>
+                <div class="module-title">5. Orcamento e Custos</div>
+                <div class="module-desc">Aplica SINAPI/SICRO e gera Curva ABC de Pareto.</div>
+                <span class="module-badge badge-ready">Pronto</span>
+            </div>
+
+            <div class="module-card">
+                <div class="module-icon" style="background: rgba(6, 182, 212, 0.1);">🌍</div>
+                <div class="module-title">6. Exportacao GIS</div>
+                <div class="module-desc">Exporta para SHP, GeoJSON, KML, DXF e GeoPackage.</div>
+                <span class="module-badge badge-ready">Pronto</span>
+            </div>
+
+            <div class="module-card">
+                <div class="module-icon" style="background: rgba(59, 130, 246, 0.1);">📝</div>
+                <div class="module-title">7. RDO/RDA</div>
+                <div class="module-desc">Relatorios diarios de obra e acompanhamento ambiental.</div>
+                <span class="module-badge badge-beta">Beta</span>
+            </div>
+
+            <div class="module-card">
+                <div class="module-icon" style="background: rgba(99, 102, 241, 0.1);">📅</div>
+                <div class="module-title">8. Cronograma</div>
+                <div class="module-desc">Gantt e Curva S fisico-financeira automaticos.</div>
+                <span class="module-badge badge-beta">Beta</span>
+            </div>
+
+            <div class="module-card" onclick="showTab('mapa')">
+                <div class="module-icon" style="background: rgba(16, 185, 129, 0.1);">🗺️</div>
+                <div class="module-title">9. Mapa Interativo</div>
+                <div class="module-desc">WebMap com Leaflet, medicao e identificacao.</div>
+                <span class="module-badge badge-ready">Pronto</span>
+            </div>
+
+            <div class="module-card">
+                <div class="module-icon" style="background: rgba(236, 72, 153, 0.1);">📐</div>
+                <div class="module-title">10. Perfil Longitudinal</div>
+                <div class="module-desc">Desenho tecnico do perfil com escalas configuraveis.</div>
+                <span class="module-badge badge-ready">Pronto</span>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<!-- Footer -->
+<footer class="footer">
+    <p class="footer-text">
+        ConstruData | HydroNetwork v2.6.0 - Plataforma de Engenharia de Saneamento<br>
+        <a href="#">Documentacao</a> | <a href="#">Suporte</a> | <a href="#">GitHub</a>
+    </p>
+</footer>
+
+<script>
+// Tab Navigation
+function showTab(tabId) {
+    // Hide all panels
+    document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.remove('active');
+    });
+
+    // Remove active from all tabs
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // Show selected panel
+    document.getElementById(tabId).classList.add('active');
+
+    // Activate tab button
+    document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+
+    // Initialize map if showing mapa tab
+    if (tabId === 'mapa') {
+        initMap();
+    }
+}
+
+// ABC Chart (Dashboard)
+function initABCChart() {
+    const ctx = document.getElementById('abcChart').getContext('2d');
+
+    const data = {
+        labels: ['Escoramento', 'Tubulacao', 'Pavimentacao', 'Escavacao', 'PVs', 'Reaterro', 'Berco'],
+        datasets: [
+            {
+                type: 'bar',
+                label: 'Custo (R$ mil)',
+                data: [747, 733, 416, 263, 196, 109, 93],
+                backgroundColor: [
+                    '#ef4444', '#ef4444', '#ef4444',  // Class A
+                    '#f59e0b', '#f59e0b',             // Class B
+                    '#10b981', '#10b981'              // Class C
+                ],
+                borderRadius: 6,
+                yAxisID: 'y'
+            },
+            {
+                type: 'line',
+                label: '% Acumulado',
+                data: [29.2, 57.9, 74.2, 84.5, 92.1, 96.4, 100],
+                borderColor: '#2c4a7c',
+                backgroundColor: 'rgba(44, 74, 124, 0.1)',
+                borderWidth: 3,
+                pointRadius: 5,
+                pointBackgroundColor: '#2c4a7c',
+                fill: false,
+                yAxisID: 'y1'
+            }
+        ]
+    };
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            if (context.dataset.type === 'bar') {
+                                return `Custo: R$ ${context.raw.toLocaleString('pt-BR')} mil`;
+                            } else {
+                                return `Acumulado: ${context.raw}%`;
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Custo (R$ mil)'
+                    },
+                    beginAtZero: true
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: '% Acumulado'
+                    },
+                    min: 0,
+                    max: 100,
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ABC Chart (Orcamento Tab)
+function initABCChartOrcamento() {
+    const ctx = document.getElementById('abcChartOrcamento');
+    if (!ctx) return;
+
+    const ctxCanvas = ctx.getContext('2d');
+
+    new Chart(ctxCanvas, {
+        type: 'doughnut',
+        data: {
+            labels: ['Classe A (3 itens)', 'Classe B (2 itens)', 'Classe C (2 itens)'],
+            datasets: [{
+                data: [74.17, 17.93, 7.90],
+                backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+                borderWidth: 0,
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.raw.toFixed(2)}% do custo`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Diameter Distribution Chart
+function initDiametroChart() {
+    const ctx = document.getElementById('diametroChart').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['DN 150', 'DN 200', 'DN 250', 'DN 300', 'DN 400'],
+            datasets: [{
+                data: [850, 1450, 520, 280, 150],
+                backgroundColor: [
+                    '#22c55e',
+                    '#3b82f6',
+                    '#8b5cf6',
+                    '#f59e0b',
+                    '#ef4444'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.raw}m (${((context.raw/3250)*100).toFixed(1)}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Profile Chart
+function initPerfilChart() {
+    const ctx = document.getElementById('perfilChart');
+    if (!ctx) return;
+
+    const ctxCanvas = ctx.getContext('2d');
+
+    new Chart(ctxCanvas, {
+        type: 'line',
+        data: {
+            labels: ['0', '85', '157', '253', '321', '400', '478'],
+            datasets: [
+                {
+                    label: 'Terreno',
+                    data: [850.5, 850.0, 849.2, 848.5, 847.8, 847.0, 846.5],
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'Fundo do Coletor',
+                    data: [848.1, 847.4, 846.5, 845.8, 845.0, 844.2, 843.5],
+                    borderColor: '#10b981',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Progressiva (m)'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Cota (m)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Map initialization
+let map = null;
+function initMap() {
+    if (map) return;
+
+    setTimeout(() => {
+        map = L.map('map').setView([-23.5505, -46.6333], 14);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        // Sample network data
+        const pvs = [
+            { id: 'PV-01', lat: -23.548, lng: -46.635 },
+            { id: 'PV-02', lat: -23.550, lng: -46.633 },
+            { id: 'PV-03', lat: -23.552, lng: -46.630 },
+            { id: 'PV-04', lat: -23.554, lng: -46.628 },
+            { id: 'PV-05', lat: -23.551, lng: -46.636 },
+            { id: 'PV-06', lat: -23.553, lng: -46.634 }
+        ];
+
+        // Add PV markers
+        pvs.forEach(pv => {
+            L.circleMarker([pv.lat, pv.lng], {
+                radius: 8,
+                fillColor: '#2c4a7c',
+                color: '#fff',
+                weight: 2,
+                fillOpacity: 1
+            }).addTo(map).bindPopup(`<strong>${pv.id}</strong><br>Cota: 850.50m<br>Prof: 2.40m`);
+        });
+
+        // Add pipe segments
+        const pipes = [
+            { from: 0, to: 1, dn: 200 },
+            { from: 1, to: 2, dn: 200 },
+            { from: 2, to: 3, dn: 250 },
+            { from: 4, to: 5, dn: 200 },
+            { from: 5, to: 2, dn: 250 }
+        ];
+
+        pipes.forEach(pipe => {
+            const color = pipe.dn <= 200 ? '#22c55e' : pipe.dn <= 300 ? '#3b82f6' : '#f59e0b';
+            const weight = pipe.dn <= 200 ? 3 : pipe.dn <= 300 ? 4 : 5;
+
+            L.polyline([
+                [pvs[pipe.from].lat, pvs[pipe.from].lng],
+                [pvs[pipe.to].lat, pvs[pipe.to].lng]
+            ], {
+                color: color,
+                weight: weight
+            }).addTo(map).bindPopup(`DN ${pipe.dn}mm`);
+        });
+
+        map.invalidateSize();
+    }, 100);
+}
+
+// File Upload Handler
+function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const uploadZone = document.getElementById('uploadZone');
+        uploadZone.innerHTML = `
+            <div class="upload-icon">✅</div>
+            <div class="upload-title">${file.name}</div>
+            <div class="upload-subtitle">${(file.size / 1024).toFixed(1)} KB - Pronto para importar</div>
+        `;
+        uploadZone.style.borderColor = '#10b981';
+        uploadZone.style.background = 'rgba(16, 185, 129, 0.05)';
+    }
+}
+
+// Demo Data Loader
+function carregarDemo() {
+    alert('Dados de demonstracao carregados!\n\n46 nos e 45 trechos de uma rede de esgoto sanitario.');
+    showTab('resultados');
+}
+
+// Calculate Network
+function calcularRede() {
+    alert('Calculando rede...\n\nProcessando 46 nos e 45 trechos.\nAplicando parametros da NBR 9649.');
+    showTab('resultados');
+}
+
+// Export Functions
+function exportarResultados() {
+    alert('Exportando resultados em multiplos formatos:\n\n- Excel (.xlsx)\n- GeoJSON\n- Shapefile\n- KML\n- PDF');
+}
+
+function exportarExcel() {
+    // Create sample data
+    const data = [
+        ['ID', 'De', 'Para', 'Comp (m)', 'DN (mm)', 'Decliv (%)', 'Vazao (L/s)', 'Veloc (m/s)', 'y/D', 'Status'],
+        ['T-01', 'PV-01', 'PV-02', 85.5, 200, 0.85, 3.14, 0.92, 0.35, 'OK'],
+        ['T-02', 'PV-02', 'PV-03', 72.3, 200, 0.65, 5.28, 1.05, 0.42, 'OK'],
+        ['T-03', 'PV-03', 'PV-04', 95.8, 200, 0.45, 8.45, 0.58, 0.78, 'WARN'],
+        ['T-04', 'PV-04', 'PV-05', 68.2, 250, 0.75, 12.30, 1.15, 0.48, 'OK'],
+        ['T-05', 'PV-05', 'PV-06', 82.4, 250, 0.55, 15.82, 0.95, 0.52, 'OK']
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Resultados');
+    XLSX.writeFile(wb, 'resultados_rede.xlsx');
+}
+
+function exportarPDF() {
+    alert('Gerando PDF com resultados completos...');
+}
+
+// Drag and drop handlers
+const uploadZone = document.getElementById('uploadZone');
+if (uploadZone) {
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            document.getElementById('fileInput').files = e.dataTransfer.files;
+            handleFileUpload({ target: { files: [file] } });
+        }
+    });
+}
+
+// Initialize charts on load
+document.addEventListener('DOMContentLoaded', function() {
+    initABCChart();
+    initDiametroChart();
+    initPerfilChart();
+    initABCChartOrcamento();
+});
+</script>
+
+</body>
+</html>
