@@ -32,6 +32,7 @@ ezdxf==1.4.0                  # CAD DXF file parsing
 # =============================================================================
 fastapi==0.115.7              # Modern web framework
 uvicorn==0.34.0               # ASGI server with SSL support
+httpx==0.28.1                 # Async HTTP client for Supabase auth validation
 starlette==0.45.3             # ASGI framework (FastAPI dependency)
 python-multipart==0.0.20      # Form data parsing for file uploads
 itsdangerous==2.2.0           # Secure token signing

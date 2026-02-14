@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: hydronetwork-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    region: oregon
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
