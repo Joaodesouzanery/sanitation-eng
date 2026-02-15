@@ -20,7 +20,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from api.auth import get_current_user, get_optional_user
+from api.auth import get_current_user, get_current_user_or_demo, get_optional_user
+from api.demo import (
+    PLAN_LIMITS,
+    PlanTier,
+    add_demo_watermark,
+    enforce_feature,
+    enforce_limit,
+    get_limit,
+    get_plan_comparison,
+    get_user_plan,
+)
 
 app = FastAPI(
     title="HydroNetwork Engine API",
@@ -155,14 +165,17 @@ async def root():
 @app.post("/api/topografia/process")
 async def process_topografia(
     request: ProcessTopografiaRequest,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(get_current_user_or_demo),
 ):
     """
     Process topographic points and generate network sections.
 
     Receives a list of survey points, calculates distances,
     slopes, and automatically creates trechos (pipe sections).
+
+    Demo limits: max 10 pontos.
     """
+    plan = get_user_plan(user)
     pontos = request.pontos
 
     if len(pontos) < 2:
@@ -170,6 +183,8 @@ async def process_topografia(
             status_code=400,
             detail="Minimo 2 pontos topograficos necessarios",
         )
+
+    enforce_limit(plan, "topografia_max_pontos", len(pontos))
 
     trechos = []
     if request.auto_trechos:
@@ -206,11 +221,13 @@ async def process_topografia(
         "desnivel_total": round(max(cotas) - min(cotas), 4),
     }
 
-    return {
+    result = {
         "pontos": [p.model_dump() for p in pontos],
         "trechos": trechos,
         "estatisticas": estatisticas,
     }
+
+    return add_demo_watermark(result, plan)
 
 
 # =============================================================================
@@ -221,14 +238,19 @@ async def process_topografia(
 @app.post("/api/orcamento/calculate")
 async def calculate_orcamento(
     request: OrcamentoRequest,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(get_current_user_or_demo),
 ):
     """
     Calculate budget based on network sections.
 
     Uses cost tables (SINAPI/SICRO) to estimate excavation,
     pipe installation, manholes, and backfill costs.
+
+    Demo limits: max 5 trechos, custo total oculto.
     """
+    plan = get_user_plan(user)
+    enforce_limit(plan, "orcamento_max_trechos", len(request.trechos))
+
     resultados = []
     custo_total = 0
 
@@ -265,15 +287,26 @@ async def calculate_orcamento(
             "custo_total": round(custo_trecho, 2),
         })
 
-    return {
+    show_total = get_user_plan(user) == PlanTier.PRO or \
+        PLAN_LIMITS[plan].get("orcamento_mostra_custo_total", False)
+
+    result = {
         "trechos": resultados,
-        "custo_total": round(custo_total, 2),
-        "custo_por_metro": round(custo_total / sum(t.comprimento for t in request.trechos), 2) if request.trechos else 0,
+        "custo_total": round(custo_total, 2) if show_total else None,
+        "custo_por_metro": round(custo_total / sum(t.comprimento for t in request.trechos), 2) if (request.trechos and show_total) else None,
         "resumo": {
             "extensao_total_m": round(sum(t.comprimento for t in request.trechos), 2),
             "total_trechos": len(request.trechos),
         },
     }
+
+    if not show_total:
+        result["_custo_total_bloqueado"] = (
+            "Custo total disponivel apenas no plano PRO. "
+            "Custos por trecho estao visiveis acima."
+        )
+
+    return add_demo_watermark(result, plan)
 
 
 # =============================================================================
@@ -284,16 +317,22 @@ async def calculate_orcamento(
 @app.post("/api/planejamento/generate")
 async def generate_planejamento(
     request: PlanejamentoRequest,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(get_current_user_or_demo),
 ):
     """
     Generate construction schedule with Same-Day Completion Rule.
 
     Groups pipe sections into daily work packages, ensuring no
     open trench is left overnight (safety requirement).
+
+    Demo limits: max 5 trechos, sem Curva S.
     """
+    plan = get_user_plan(user)
+
     if not request.trechos:
         raise HTTPException(status_code=400, detail="Nenhum trecho fornecido")
+
+    enforce_limit(plan, "planejamento_max_trechos", len(request.trechos))
 
     metros_por_dia = request.metros_por_dia
     dias = []
@@ -337,22 +376,31 @@ async def generate_planejamento(
 
     extensao_total = sum(t.comprimento for t in request.trechos)
 
-    # Curva S data
+    # Curva S data (PRO only)
+    include_curva_s = PLAN_LIMITS[plan].get("planejamento_curva_s", False)
     curva_s = []
-    for dia in dias:
-        percentual = (dia["metros_acumulados"] / extensao_total * 100) if extensao_total > 0 else 0
-        curva_s.append({
-            "dia": dia["dia"],
-            "percentual_acumulado": round(percentual, 2),
-        })
+    if include_curva_s:
+        for dia in dias:
+            percentual = (dia["metros_acumulados"] / extensao_total * 100) if extensao_total > 0 else 0
+            curva_s.append({
+                "dia": dia["dia"],
+                "percentual_acumulado": round(percentual, 2),
+            })
 
-    return {
+    result = {
         "dias": dias,
         "total_dias": dia_atual,
         "extensao_total_m": round(extensao_total, 2),
         "metros_por_dia_real": round(extensao_total / dia_atual, 2) if dia_atual > 0 else 0,
-        "curva_s": curva_s,
+        "curva_s": curva_s if include_curva_s else None,
     }
+
+    if not include_curva_s:
+        result["_curva_s_bloqueada"] = (
+            "Curva S (Earned Value) disponivel apenas no plano PRO."
+        )
+
+    return add_demo_watermark(result, plan)
 
 
 # =============================================================================
@@ -533,7 +581,7 @@ def latlon_to_utm(lat: float, lon: float, zone: int = 23) -> tuple:
 @app.post("/api/gis/export/shapefile")
 async def export_shapefile(
     request: ExportGISDataRequest,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(get_current_user_or_demo),
 ):
     """
     Export project data to Shapefile format (as ZIP with GeoJSON + CSV).
@@ -542,7 +590,12 @@ async def export_shapefile(
     - GeoJSON (universal GIS format)
     - CSV (tabular data)
     - PRJ (projection definition)
+
+    Demo: bloqueado - requer plano PRO.
     """
+    plan = get_user_plan(user)
+    enforce_feature(plan, "gis_export_shapefile")
+
     if not request.layers:
         raise HTTPException(status_code=400, detail="Nenhuma camada fornecida")
 
@@ -582,20 +635,32 @@ async def export_shapefile(
 @app.post("/api/gis/export/geojson")
 async def export_geojson(
     request: ExportGISDataRequest,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(get_current_user_or_demo),
 ):
     """
     Export project data to GeoJSON format.
 
     Returns a single GeoJSON FeatureCollection with all features.
+
+    Demo: disponivel, mas limitado a 10 features.
     """
+    plan = get_user_plan(user)
+    enforce_feature(plan, "gis_export_geojson")
+
     if not request.layers:
         raise HTTPException(status_code=400, detail="Nenhuma camada fornecida")
 
     all_features = []
+    max_features = get_limit(plan, "gis_export_max_features")
+    feature_count = 0
+    truncated = False
 
     for layer in request.layers:
         for f in layer.features:
+            if max_features is not None and feature_count >= max_features:
+                truncated = True
+                break
+
             coords = f.coordinates
 
             if layer.geometry_type == "Point":
@@ -618,6 +683,10 @@ async def export_geojson(
                 "geometry": geometry,
                 "properties": properties
             })
+            feature_count += 1
+
+        if truncated:
+            break
 
     geojson = {
         "type": "FeatureCollection",
@@ -629,24 +698,37 @@ async def export_geojson(
         "metadata": {
             "projeto_id": request.projeto_id,
             "generated_at": datetime.utcnow().isoformat(),
-            "generator": "HydroNetwork Engine API"
+            "generator": "HydroNetwork Engine API",
+            "truncated": truncated,
         }
     }
 
-    return geojson
+    if truncated:
+        total_features = sum(len(layer.features) for layer in request.layers)
+        geojson["metadata"]["truncated_message"] = (
+            f"Exportacao limitada a {max_features} features no plano DEMO "
+            f"(total: {total_features}). Upgrade para PRO para exportar tudo."
+        )
+
+    return add_demo_watermark(geojson, plan)
 
 
 @app.post("/api/gis/export/geopackage")
 async def export_geopackage(
     request: ExportGISDataRequest,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(get_current_user_or_demo),
 ):
     """
     Export project data to GeoPackage format.
 
     Returns a ZIP containing GeoJSON files (GeoPackage requires sqlite3 binary).
     For full GPKG support, use the Python CLI exporter.
+
+    Demo: bloqueado - requer plano PRO.
     """
+    plan = get_user_plan(user)
+    enforce_feature(plan, "gis_export_geopackage")
+
     if not request.layers:
         raise HTTPException(status_code=400, detail="Nenhuma camada fornecida")
 
@@ -845,13 +927,53 @@ async def generate_map_view(
 @app.post("/api/peer-review/analyze")
 async def analyze_project(
     projeto_id: str,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(get_current_user_or_demo),
 ):
     """
     Analyze project against ABNT rules and generate findings.
+
+    Demo: bloqueado - requer plano PRO.
     """
+    plan = get_user_plan(user)
+    enforce_feature(plan, "peer_review")
+
     return {
         "status": "pending_implementation",
         "projeto_id": projeto_id,
         "message": "Analise de peer review sera implementada com motor de regras ABNT",
     }
+
+
+# =============================================================================
+# Demo / Plan Management Endpoints
+# =============================================================================
+
+
+@app.get("/api/demo/limits")
+async def get_demo_limits(
+    user: dict = Depends(get_optional_user),
+):
+    """
+    Return the current user's plan and limits.
+
+    Public endpoint - returns demo limits for unauthenticated users,
+    or the actual plan limits for authenticated users.
+    Useful for the frontend to show/hide features and display upgrade CTAs.
+    """
+    plan = get_user_plan(user)
+    limits = PLAN_LIMITS[plan]
+
+    return {
+        "plan": plan.value,
+        "limits": limits,
+    }
+
+
+@app.get("/api/demo/plans")
+async def get_plans():
+    """
+    Return a comparison of all available plans (DEMO vs PRO).
+
+    Public endpoint for the pricing/upgrade page.
+    """
+    return get_plan_comparison()
