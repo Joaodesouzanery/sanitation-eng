@@ -1,0 +1,563 @@
+/**
+ * Module Sync - Sincronização entre Módulos
+ *
+ * Garante que todos os módulos (EPANET, SWMM, Planejamento) usam
+ * os mesmos dados do Spatial Core.
+ *
+ * REGRA: NADA DEVE SER DUPLICADO
+ */
+
+import { LayerRegistry, SpatialLayer } from '../spatial/LayerRegistry';
+import { NetworkModel, NetworkNode, NetworkEdge } from '../network/NetworkModel';
+import { Feature, LineString, Point } from 'geojson';
+
+// ============================================================================
+// INTERFACES
+// ============================================================================
+
+export interface EPANETInput {
+  nodes: EPANETNode[];
+  edges: EPANETLink[];
+  options: EPANETOptions;
+}
+
+export interface EPANETNode {
+  id: string;
+  type: 'junction' | 'reservoir' | 'tank';
+  x: number;
+  y: number;
+  elevation: number;
+  demand?: number;
+  pattern?: string;
+  head?: number;
+  initLevel?: number;
+  minLevel?: number;
+  maxLevel?: number;
+  diameter?: number;
+}
+
+export interface EPANETLink {
+  id: string;
+  type: 'pipe' | 'pump' | 'valve';
+  startNode: string;
+  endNode: string;
+  length: number;
+  diameter: number;
+  roughness?: number;
+  status?: string;
+  vertices?: number[][];
+}
+
+export interface EPANETOptions {
+  units: string;
+  headloss: string;
+  quality: string;
+}
+
+export interface SWMMInput {
+  nodes: SWMMNode[];
+  conduits: SWMMConduit[];
+  subcatchments?: SWMMSubcatchment[];
+  options: SWMMOptions;
+}
+
+export interface SWMMNode {
+  id: string;
+  type: 'junction' | 'outfall' | 'storage' | 'divider';
+  x: number;
+  y: number;
+  invertElevation: number;
+  maxDepth?: number;
+  initDepth?: number;
+  surchargeDepth?: number;
+}
+
+export interface SWMMConduit {
+  id: string;
+  fromNode: string;
+  toNode: string;
+  length: number;
+  roughness: number;
+  inletOffset?: number;
+  outletOffset?: number;
+  initFlow?: number;
+  maxFlow?: number;
+  shape: {
+    type: string;
+    geom1: number;
+    geom2?: number;
+    geom3?: number;
+    geom4?: number;
+  };
+  vertices?: number[][];
+}
+
+export interface SWMMSubcatchment {
+  id: string;
+  rainGage: string;
+  outlet: string;
+  area: number;
+  imperv: number;
+  width: number;
+  slope: number;
+}
+
+export interface SWMMOptions {
+  flowUnits: string;
+  infiltration: string;
+  flowRouting: string;
+}
+
+export interface PlanningInput {
+  totalLength: number;
+  quantities: QuantityItem[];
+  summary: PlanningSummary;
+}
+
+export interface QuantityItem {
+  category: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  material?: string;
+  diameter?: number;
+}
+
+export interface PlanningSummary {
+  totalPipeLength: number;
+  pipesByDiameter: Record<number, number>;
+  pipesByMaterial: Record<string, number>;
+  totalNodes: number;
+  nodesByType: Record<string, number>;
+}
+
+// ============================================================================
+// MODULE SYNC CLASS
+// ============================================================================
+
+class ModuleSyncImpl {
+
+  // --------------------------------------------------------------------------
+  // EPANET Integration
+  // --------------------------------------------------------------------------
+
+  getDataForEPANET(): EPANETInput {
+    const layers = LayerRegistry.getLayersByDiscipline('water');
+    const nodes = this.extractNodesFromLayers(layers);
+    const edges = this.extractEdgesFromLayers(layers);
+
+    return {
+      nodes: this.convertToEPANETNodes(nodes),
+      edges: this.convertToEPANETLinks(edges),
+      options: {
+        units: 'LPS',
+        headloss: 'H-W',
+        quality: 'NONE'
+      }
+    };
+  }
+
+  private convertToEPANETNodes(nodes: NetworkNode[]): EPANETNode[] {
+    return nodes
+      .filter(n => ['junction', 'reservoir', 'tank'].includes(n.type))
+      .map(node => ({
+        id: node.id,
+        type: node.type as EPANETNode['type'],
+        x: node.x,
+        y: node.y,
+        elevation: node.z,
+        demand: node.demand,
+        pattern: node.pattern,
+        head: node.head,
+        initLevel: node.initialLevel,
+        minLevel: node.minLevel,
+        maxLevel: node.maxLevel,
+        diameter: node.attributes?.diameter
+      }));
+  }
+
+  private convertToEPANETLinks(edges: NetworkEdge[]): EPANETLink[] {
+    return edges
+      .filter(e => ['pipe', 'pump', 'valve'].includes(e.type))
+      .map(edge => ({
+        id: edge.id,
+        type: edge.type as EPANETLink['type'],
+        startNode: edge.startNodeId,
+        endNode: edge.endNodeId,
+        length: edge.length,
+        diameter: edge.dn,
+        roughness: edge.roughness,
+        status: edge.status,
+        vertices: edge.geometry?.coordinates?.slice(1, -1) as number[][]
+      }));
+  }
+
+  generateINPFile(input: EPANETInput): string {
+    const lines: string[] = [];
+
+    // Title
+    lines.push('[TITLE]');
+    lines.push('Generated by ConstruData HydroNetwork');
+    lines.push('');
+
+    // Junctions
+    lines.push('[JUNCTIONS]');
+    lines.push(';ID              Elev        Demand      Pattern');
+    input.nodes
+      .filter(n => n.type === 'junction')
+      .forEach(n => {
+        lines.push(`${n.id.padEnd(16)} ${n.elevation.toFixed(2).padStart(10)} ${(n.demand || 0).toFixed(4).padStart(10)} ${n.pattern || ''}`);
+      });
+    lines.push('');
+
+    // Reservoirs
+    lines.push('[RESERVOIRS]');
+    lines.push(';ID              Head        Pattern');
+    input.nodes
+      .filter(n => n.type === 'reservoir')
+      .forEach(n => {
+        lines.push(`${n.id.padEnd(16)} ${(n.head || n.elevation).toFixed(2).padStart(10)} ${n.pattern || ''}`);
+      });
+    lines.push('');
+
+    // Tanks
+    lines.push('[TANKS]');
+    lines.push(';ID              Elevation   InitLevel   MinLevel    MaxLevel    Diameter');
+    input.nodes
+      .filter(n => n.type === 'tank')
+      .forEach(n => {
+        lines.push(`${n.id.padEnd(16)} ${n.elevation.toFixed(2).padStart(10)} ${(n.initLevel || 0).toFixed(2).padStart(10)} ${(n.minLevel || 0).toFixed(2).padStart(10)} ${(n.maxLevel || 10).toFixed(2).padStart(10)} ${(n.diameter || 10).toFixed(2).padStart(10)}`);
+      });
+    lines.push('');
+
+    // Pipes
+    lines.push('[PIPES]');
+    lines.push(';ID              Node1           Node2           Length      Diameter    Roughness');
+    input.edges
+      .filter(e => e.type === 'pipe')
+      .forEach(e => {
+        lines.push(`${e.id.padEnd(16)} ${e.startNode.padEnd(16)} ${e.endNode.padEnd(16)} ${e.length.toFixed(2).padStart(10)} ${e.diameter.toFixed(2).padStart(10)} ${(e.roughness || 100).toFixed(2).padStart(10)}`);
+      });
+    lines.push('');
+
+    // Pumps
+    lines.push('[PUMPS]');
+    lines.push(';ID              Node1           Node2           Parameters');
+    input.edges
+      .filter(e => e.type === 'pump')
+      .forEach(e => {
+        lines.push(`${e.id.padEnd(16)} ${e.startNode.padEnd(16)} ${e.endNode.padEnd(16)} HEAD PUMP_CURVE`);
+      });
+    lines.push('');
+
+    // Valves
+    lines.push('[VALVES]');
+    lines.push(';ID              Node1           Node2           Diameter    Type    Setting');
+    input.edges
+      .filter(e => e.type === 'valve')
+      .forEach(e => {
+        lines.push(`${e.id.padEnd(16)} ${e.startNode.padEnd(16)} ${e.endNode.padEnd(16)} ${e.diameter.toFixed(2).padStart(10)} PRV ${(0).toFixed(2).padStart(10)}`);
+      });
+    lines.push('');
+
+    // Coordinates
+    lines.push('[COORDINATES]');
+    lines.push(';Node            X-Coord         Y-Coord');
+    input.nodes.forEach(n => {
+      lines.push(`${n.id.padEnd(16)} ${n.x.toFixed(3).padStart(14)} ${n.y.toFixed(3).padStart(14)}`);
+    });
+    lines.push('');
+
+    // Vertices
+    lines.push('[VERTICES]');
+    lines.push(';Link            X-Coord         Y-Coord');
+    input.edges.forEach(e => {
+      if (e.vertices) {
+        e.vertices.forEach(v => {
+          lines.push(`${e.id.padEnd(16)} ${v[0].toFixed(3).padStart(14)} ${v[1].toFixed(3).padStart(14)}`);
+        });
+      }
+    });
+    lines.push('');
+
+    // Options
+    lines.push('[OPTIONS]');
+    lines.push(`Units            ${input.options.units}`);
+    lines.push(`Headloss         ${input.options.headloss}`);
+    lines.push(`Quality          ${input.options.quality}`);
+    lines.push('');
+
+    lines.push('[END]');
+
+    return lines.join('\n');
+  }
+
+  // --------------------------------------------------------------------------
+  // SWMM Integration
+  // --------------------------------------------------------------------------
+
+  getDataForSWMM(): SWMMInput {
+    const layers = LayerRegistry.getLayersByDiscipline(['sewer', 'drainage']);
+    const nodes = this.extractNodesFromLayers(layers);
+    const edges = this.extractEdgesFromLayers(layers);
+
+    return {
+      nodes: this.convertToSWMMNodes(nodes),
+      conduits: this.convertToSWMMConduits(edges),
+      options: {
+        flowUnits: 'LPS',
+        infiltration: 'HORTON',
+        flowRouting: 'DYNWAVE'
+      }
+    };
+  }
+
+  private convertToSWMMNodes(nodes: NetworkNode[]): SWMMNode[] {
+    return nodes
+      .filter(n => ['junction', 'manhole', 'outfall'].includes(n.type))
+      .map(node => ({
+        id: node.id,
+        type: node.type === 'manhole' ? 'junction' : node.type as SWMMNode['type'],
+        x: node.x,
+        y: node.y,
+        invertElevation: node.invertElevation || node.z,
+        maxDepth: node.depth || (node.groundElevation - node.invertElevation),
+        initDepth: 0,
+        surchargeDepth: 0
+      }));
+  }
+
+  private convertToSWMMConduits(edges: NetworkEdge[]): SWMMConduit[] {
+    return edges
+      .filter(e => e.type === 'pipe' || e.type === 'conduit')
+      .map(edge => ({
+        id: edge.id,
+        fromNode: edge.startNodeId,
+        toNode: edge.endNodeId,
+        length: edge.length,
+        roughness: edge.roughness || 0.013,
+        inletOffset: 0,
+        outletOffset: 0,
+        initFlow: 0,
+        maxFlow: 0,
+        shape: {
+          type: 'CIRCULAR',
+          geom1: edge.dn / 1000  // mm para m
+        },
+        vertices: edge.geometry?.coordinates?.slice(1, -1) as number[][]
+      }));
+  }
+
+  // --------------------------------------------------------------------------
+  // Planning Integration
+  // --------------------------------------------------------------------------
+
+  getDataForPlanning(): PlanningInput {
+    const allLayers = LayerRegistry.getNetworkLayers();
+    const nodes = this.extractNodesFromLayers(allLayers);
+    const edges = this.extractEdgesFromLayers(allLayers);
+
+    const totalLength = edges.reduce((sum, e) => sum + e.length, 0);
+    const quantities = this.calculateQuantities(nodes, edges);
+    const summary = this.calculateSummary(nodes, edges);
+
+    return {
+      totalLength,
+      quantities,
+      summary
+    };
+  }
+
+  private calculateQuantities(nodes: NetworkNode[], edges: NetworkEdge[]): QuantityItem[] {
+    const quantities: QuantityItem[] = [];
+
+    // Tubulações por diâmetro e material
+    const pipeGroups = new Map<string, { length: number; dn: number; material: string }>();
+
+    edges.forEach(edge => {
+      const key = `${edge.dn}_${edge.material || 'ND'}`;
+      const existing = pipeGroups.get(key) || { length: 0, dn: edge.dn, material: edge.material || 'ND' };
+      existing.length += edge.length;
+      pipeGroups.set(key, existing);
+    });
+
+    pipeGroups.forEach((data, key) => {
+      quantities.push({
+        category: 'Tubulação',
+        description: `Tubo DN ${data.dn}mm ${data.material}`,
+        quantity: data.length,
+        unit: 'm',
+        material: data.material,
+        diameter: data.dn
+      });
+    });
+
+    // Nós por tipo
+    const nodeGroups = new Map<string, number>();
+    nodes.forEach(node => {
+      nodeGroups.set(node.type, (nodeGroups.get(node.type) || 0) + 1);
+    });
+
+    nodeGroups.forEach((count, type) => {
+      quantities.push({
+        category: 'Dispositivos',
+        description: this.getNodeTypeDescription(type),
+        quantity: count,
+        unit: 'un'
+      });
+    });
+
+    return quantities;
+  }
+
+  private calculateSummary(nodes: NetworkNode[], edges: NetworkEdge[]): PlanningSummary {
+    const pipesByDiameter: Record<number, number> = {};
+    const pipesByMaterial: Record<string, number> = {};
+    const nodesByType: Record<string, number> = {};
+
+    let totalPipeLength = 0;
+
+    edges.forEach(edge => {
+      totalPipeLength += edge.length;
+
+      pipesByDiameter[edge.dn] = (pipesByDiameter[edge.dn] || 0) + edge.length;
+
+      const material = edge.material || 'ND';
+      pipesByMaterial[material] = (pipesByMaterial[material] || 0) + edge.length;
+    });
+
+    nodes.forEach(node => {
+      nodesByType[node.type] = (nodesByType[node.type] || 0) + 1;
+    });
+
+    return {
+      totalPipeLength,
+      pipesByDiameter,
+      pipesByMaterial,
+      totalNodes: nodes.length,
+      nodesByType
+    };
+  }
+
+  private getNodeTypeDescription(type: string): string {
+    const descriptions: Record<string, string> = {
+      'junction': 'Conexão',
+      'reservoir': 'Reservatório',
+      'tank': 'Tanque',
+      'manhole': 'Poço de Visita',
+      'outfall': 'Emissário'
+    };
+    return descriptions[type] || type;
+  }
+
+  // --------------------------------------------------------------------------
+  // Layer Extraction
+  // --------------------------------------------------------------------------
+
+  private extractNodesFromLayers(layers: SpatialLayer[]): NetworkNode[] {
+    // Se já tiver no NetworkModel, usar diretamente
+    const modelNodes = NetworkModel.getAllNodes();
+    if (modelNodes.length > 0) {
+      return modelNodes;
+    }
+
+    // Caso contrário, extrair das features das camadas
+    const nodes: NetworkNode[] = [];
+
+    layers.forEach(layer => {
+      layer.features
+        .filter(f => f.geometry.type === 'Point')
+        .forEach(feature => {
+          const coords = (feature.geometry as Point).coordinates;
+          nodes.push({
+            id: feature.id?.toString() || `node_${nodes.length}`,
+            x: coords[0],
+            y: coords[1],
+            z: coords[2] || 0,
+            type: 'junction',
+            groundElevation: coords[2] || 0,
+            invertElevation: coords[2] || 0,
+            depth: 0,
+            connectedEdges: [],
+            attributes: feature.properties || {}
+          });
+        });
+    });
+
+    return nodes;
+  }
+
+  private extractEdgesFromLayers(layers: SpatialLayer[]): NetworkEdge[] {
+    // Se já tiver no NetworkModel, usar diretamente
+    const modelEdges = NetworkModel.getAllEdges();
+    if (modelEdges.length > 0) {
+      return modelEdges;
+    }
+
+    // Caso contrário, extrair das features das camadas
+    const edges: NetworkEdge[] = [];
+
+    layers.forEach(layer => {
+      layer.features
+        .filter(f => f.geometry.type === 'LineString')
+        .forEach(feature => {
+          edges.push({
+            id: feature.id?.toString() || `edge_${edges.length}`,
+            startNodeId: '',
+            endNodeId: '',
+            geometry: feature.geometry as LineString,
+            dn: feature.properties?.diameter || feature.properties?.dn || 0,
+            length: feature.properties?.length || 0,
+            slope: feature.properties?.slope || 0,
+            material: feature.properties?.material || '',
+            type: 'pipe',
+            attributes: feature.properties || {}
+          });
+        });
+    });
+
+    return edges;
+  }
+
+  // --------------------------------------------------------------------------
+  // Sync Status
+  // --------------------------------------------------------------------------
+
+  getSyncStatus(): {
+    layerCount: number;
+    nodeCount: number;
+    edgeCount: number;
+    lastSync: Date | null;
+  } {
+    return {
+      layerCount: LayerRegistry.getAllLayers().length,
+      nodeCount: NetworkModel.getAllNodes().length,
+      edgeCount: NetworkModel.getAllEdges().length,
+      lastSync: new Date()
+    };
+  }
+}
+
+// Singleton instance
+export const ModuleSync = new ModuleSyncImpl();
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+export function getEPANETData(): EPANETInput {
+  return ModuleSync.getDataForEPANET();
+}
+
+export function getSWMMData(): SWMMInput {
+  return ModuleSync.getDataForSWMM();
+}
+
+export function getPlanningData(): PlanningInput {
+  return ModuleSync.getDataForPlanning();
+}
+
+export function generateINP(): string {
+  const data = ModuleSync.getDataForEPANET();
+  return ModuleSync.generateINPFile(data);
+}
