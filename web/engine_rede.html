@@ -8126,21 +8126,48 @@ PV02,359290.456,7352780.123,1.82</pre>
 
         // Parse SHP file (attribute fields as "layers")
         async function parseSHPLayers(file) {
-            // SHP files use attribute fields as classification
-            // We'll read the DBF structure
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = (e) => {
+                reader.onload = async (e) => {
                     try {
+                        const buffer = e.target.result;
+                        const view = new DataView(buffer);
+
+                        // Validate shapefile
+                        const fileCode = view.getInt32(0, false);
+                        if (fileCode !== 9994) {
+                            throw new Error('Arquivo não é um shapefile válido');
+                        }
+
+                        // Get shape type
+                        const shapeType = view.getInt32(32, true);
+                        const shapeTypes = {
+                            0: 'Null', 1: 'Point', 3: 'PolyLine', 5: 'Polygon',
+                            8: 'MultiPoint', 11: 'PointZ', 13: 'PolyLineZ',
+                            15: 'PolygonZ', 18: 'MultiPointZ'
+                        };
+
+                        // Count records
+                        let recordCount = 0;
+                        let offset = 100;
+                        while (offset < buffer.byteLength - 8) {
+                            try {
+                                const contentLength = view.getInt32(offset + 4, false) * 2;
+                                if (contentLength <= 0 || offset + 8 + contentLength > buffer.byteLength) break;
+                                recordCount++;
+                                offset += 8 + contentLength;
+                            } catch (e) {
+                                break;
+                            }
+                        }
+
                         const layers = [{
                             name: 'Shapefile_Features',
-                            objectCount: '?',
-                            geometryTypes: 'Polygon/Line/Point',
-                            sampleAttributes: 'Requer análise DBF'
+                            objectCount: recordCount,
+                            geometryTypes: shapeTypes[shapeType] || 'Unknown',
+                            sampleAttributes: 'ID, geometria'
                         }];
 
-                        // Note: Full SHP parsing would require reading the DBF file
-                        // For now, return placeholder and recommend using attribute fields
                         resolve(layers);
                     } catch (err) {
                         reject(err);
@@ -13733,13 +13760,192 @@ DATA;
                     showGISImportSuccess(features, planningInput);
                 }
             } else if (fileName.endsWith('.shp')) {
-                alert('Arquivos SHP requerem bibliotecas adicionais.\n\n' +
-                      'Alternativas:\n' +
-                      '• Converta para GeoJSON usando QGIS\n' +
-                      '• Exporte como KML\n' +
-                      '• Use ferramentas online como mapshaper.org\n\n' +
-                      'Converta o arquivo e tente novamente.');
+                // Parse Shapefile diretamente
+                try {
+                    const features = await parseShapefile(file);
+                    if (features.length === 0) {
+                        ToastSystem.warning('Nenhum ponto encontrado no shapefile. Verifique se o arquivo contém geometrias válidas.');
+                        return;
+                    }
+
+                    importedGISData = features;
+                    updateToolboxBadges();
+
+                    const planningInput = convertGeoJSONToPlanning(features);
+                    if (planningInput.length > 0) {
+                        planningData.input = planningInput;
+                        showGISImportSuccess(features, planningInput);
+                    }
+
+                    ToastSystem.success(`Shapefile importado: ${features.length} features`);
+                } catch (err) {
+                    console.error('Erro ao ler shapefile:', err);
+                    ToastSystem.error('Erro ao ler shapefile: ' + err.message);
+                }
             }
+        }
+
+        // =====================================================================
+        // SHAPEFILE PARSER - Parse .shp files directly in browser
+        // =====================================================================
+        async function parseShapefile(file) {
+            const buffer = await file.arrayBuffer();
+            const view = new DataView(buffer);
+            const features = [];
+
+            // Validate file magic number (should be 9994 in big endian)
+            const fileCode = view.getInt32(0, false);
+            if (fileCode !== 9994) {
+                throw new Error('Arquivo não é um shapefile válido');
+            }
+
+            // Read header
+            const shapeType = view.getInt32(32, true);
+            const bbox = {
+                minX: view.getFloat64(36, true),
+                minY: view.getFloat64(44, true),
+                maxX: view.getFloat64(52, true),
+                maxY: view.getFloat64(60, true)
+            };
+
+            // Parse records starting at byte 100
+            let offset = 100;
+
+            while (offset < buffer.byteLength - 8) {
+                try {
+                    const recordNumber = view.getInt32(offset, false);
+                    const contentLength = view.getInt32(offset + 4, false) * 2;
+
+                    if (contentLength <= 0 || offset + 8 + contentLength > buffer.byteLength) {
+                        break;
+                    }
+
+                    const recordShapeType = view.getInt32(offset + 8, true);
+                    const geometry = parseShapeRecord(view, offset + 8, recordShapeType);
+
+                    if (geometry) {
+                        features.push({
+                            type: 'Feature',
+                            properties: { id: recordNumber },
+                            geometry: geometry
+                        });
+                    }
+
+                    offset += 8 + contentLength;
+                } catch (e) {
+                    console.warn('Erro ao ler registro shapefile:', e);
+                    break;
+                }
+            }
+
+            return features;
+        }
+
+        function parseShapeRecord(view, offset, shapeType) {
+            // Null shape
+            if (shapeType === 0) return null;
+
+            // Point (1), PointZ (11), PointM (21)
+            if (shapeType === 1 || shapeType === 11 || shapeType === 21) {
+                const x = view.getFloat64(offset + 4, true);
+                const y = view.getFloat64(offset + 12, true);
+                let z = 0;
+
+                if (shapeType === 11) {
+                    z = view.getFloat64(offset + 20, true);
+                }
+
+                return { type: 'Point', coordinates: [x, y, z] };
+            }
+
+            // PolyLine (3), PolyLineZ (13), PolyLineM (23)
+            if (shapeType === 3 || shapeType === 13 || shapeType === 23) {
+                const numParts = view.getInt32(offset + 36, true);
+                const numPoints = view.getInt32(offset + 40, true);
+
+                const parts = [];
+                for (let i = 0; i < numParts; i++) {
+                    parts.push(view.getInt32(offset + 44 + i * 4, true));
+                }
+
+                const pointsOffset = offset + 44 + numParts * 4;
+                const coordinates = [];
+
+                for (let i = 0; i < numPoints; i++) {
+                    const x = view.getFloat64(pointsOffset + i * 16, true);
+                    const y = view.getFloat64(pointsOffset + i * 16 + 8, true);
+                    coordinates.push([x, y]);
+                }
+
+                // Handle Z values for PolyLineZ
+                if (shapeType === 13) {
+                    const zOffset = pointsOffset + numPoints * 16 + 16;
+                    for (let i = 0; i < numPoints && zOffset + i * 8 < view.byteLength; i++) {
+                        try {
+                            coordinates[i].push(view.getFloat64(zOffset + i * 8, true));
+                        } catch (e) {
+                            coordinates[i].push(0);
+                        }
+                    }
+                }
+
+                if (numParts === 1) {
+                    return { type: 'LineString', coordinates: coordinates };
+                } else {
+                    const lines = [];
+                    for (let i = 0; i < numParts; i++) {
+                        const start = parts[i];
+                        const end = parts[i + 1] || numPoints;
+                        lines.push(coordinates.slice(start, end));
+                    }
+                    return { type: 'MultiLineString', coordinates: lines };
+                }
+            }
+
+            // Polygon (5), PolygonZ (15), PolygonM (25)
+            if (shapeType === 5 || shapeType === 15 || shapeType === 25) {
+                const numParts = view.getInt32(offset + 36, true);
+                const numPoints = view.getInt32(offset + 40, true);
+
+                const parts = [];
+                for (let i = 0; i < numParts; i++) {
+                    parts.push(view.getInt32(offset + 44 + i * 4, true));
+                }
+
+                const pointsOffset = offset + 44 + numParts * 4;
+                const allPoints = [];
+
+                for (let i = 0; i < numPoints; i++) {
+                    const x = view.getFloat64(pointsOffset + i * 16, true);
+                    const y = view.getFloat64(pointsOffset + i * 16 + 8, true);
+                    allPoints.push([x, y]);
+                }
+
+                const rings = [];
+                for (let i = 0; i < numParts; i++) {
+                    const start = parts[i];
+                    const end = parts[i + 1] || numPoints;
+                    rings.push(allPoints.slice(start, end));
+                }
+
+                return { type: 'Polygon', coordinates: rings };
+            }
+
+            // MultiPoint (8), MultiPointZ (18), MultiPointM (28)
+            if (shapeType === 8 || shapeType === 18 || shapeType === 28) {
+                const numPoints = view.getInt32(offset + 36, true);
+                const coordinates = [];
+
+                for (let i = 0; i < numPoints; i++) {
+                    const x = view.getFloat64(offset + 40 + i * 16, true);
+                    const y = view.getFloat64(offset + 40 + i * 16 + 8, true);
+                    coordinates.push([x, y]);
+                }
+
+                return { type: 'MultiPoint', coordinates: coordinates };
+            }
+
+            return null;
         }
 
         // Convert GeoJSON features to planning input
@@ -16417,20 +16623,154 @@ DATA;
                     throw new Error('Arquivo .shp não encontrado no ZIP');
                 }
 
-                // Basic shapefile parsing (simplified)
+                // Parse shapefile using our binary parser
+                const view = new DataView(shpFile);
+                const fileCode = view.getInt32(0, false);
+                if (fileCode !== 9994) {
+                    throw new Error('Arquivo .shp inválido');
+                }
+
+                const shapeType = view.getInt32(32, true);
                 const nodes = [];
                 const links = [];
+                const polygons = [];
+                let offset = 100;
+                let recordIndex = 0;
 
-                // Note: Full shapefile parsing would require a dedicated library
-                // For now, we'll indicate success and recommend GeoJSON
-                ToastSystem.info('Shapefile carregado. Para melhor compatibilidade, converta para GeoJSON.');
+                // Parse DBF for attributes if available
+                let dbfRecords = [];
+                if (dbfFile) {
+                    try {
+                        dbfRecords = parseDBFFile(dbfFile);
+                    } catch (e) {
+                        console.warn('Erro ao ler DBF:', e);
+                    }
+                }
+
+                while (offset < shpFile.byteLength - 8) {
+                    try {
+                        const contentLength = view.getInt32(offset + 4, false) * 2;
+                        if (contentLength <= 0 || offset + 8 + contentLength > shpFile.byteLength) break;
+
+                        const recordShapeType = view.getInt32(offset + 8, true);
+                        const attrs = dbfRecords[recordIndex] || { id: recordIndex + 1 };
+
+                        // Point (1, 11, 21)
+                        if (recordShapeType === 1 || recordShapeType === 11 || recordShapeType === 21) {
+                            const x = view.getFloat64(offset + 12, true);
+                            const y = view.getFloat64(offset + 20, true);
+                            const z = recordShapeType === 11 ? view.getFloat64(offset + 28, true) : (attrs.z || attrs.cota || 0);
+                            nodes.push({
+                                id: attrs.id || attrs.ID || `P${recordIndex + 1}`,
+                                x, y, z,
+                                elevation: z,
+                                ...attrs
+                            });
+                        }
+                        // PolyLine (3, 13, 23)
+                        else if (recordShapeType === 3 || recordShapeType === 13 || recordShapeType === 23) {
+                            const numParts = view.getInt32(offset + 44, true);
+                            const numPoints = view.getInt32(offset + 48, true);
+                            const pointsOffset = offset + 52 + numParts * 4;
+                            const coords = [];
+                            for (let i = 0; i < numPoints; i++) {
+                                coords.push([
+                                    view.getFloat64(pointsOffset + i * 16, true),
+                                    view.getFloat64(pointsOffset + i * 16 + 8, true)
+                                ]);
+                            }
+                            if (coords.length >= 2) {
+                                links.push({
+                                    id: attrs.id || attrs.ID || `L${recordIndex + 1}`,
+                                    start: coords[0],
+                                    end: coords[coords.length - 1],
+                                    coords,
+                                    length: calculateLineLength(coords),
+                                    ...attrs
+                                });
+                            }
+                        }
+                        // Polygon (5, 15, 25)
+                        else if (recordShapeType === 5 || recordShapeType === 15 || recordShapeType === 25) {
+                            const numParts = view.getInt32(offset + 44, true);
+                            const numPoints = view.getInt32(offset + 48, true);
+                            const pointsOffset = offset + 52 + numParts * 4;
+                            const coords = [];
+                            for (let i = 0; i < numPoints; i++) {
+                                coords.push([
+                                    view.getFloat64(pointsOffset + i * 16, true),
+                                    view.getFloat64(pointsOffset + i * 16 + 8, true)
+                                ]);
+                            }
+                            polygons.push({
+                                id: attrs.id || attrs.ID || `PG${recordIndex + 1}`,
+                                coords,
+                                ...attrs
+                            });
+                        }
+
+                        offset += 8 + contentLength;
+                        recordIndex++;
+                    } catch (e) {
+                        break;
+                    }
+                }
+
+                moduleData.qgis = { nodes, links, polygons };
+                updateQgisUI();
                 document.getElementById('qgis-import-status').style.display = 'block';
+                ToastSystem.success(`Shapefile importado: ${nodes.length} pontos, ${links.length} linhas, ${polygons.length} polígonos`);
 
             } catch (error) {
                 ToastSystem.error('Erro ao processar Shapefile: ' + error.message);
             } finally {
                 LoadingSystem.hide();
             }
+        }
+
+        // Parse DBF file for attributes
+        function parseDBFFile(buffer) {
+            const view = new DataView(buffer);
+            const decoder = new TextDecoder('latin1');
+            const records = [];
+
+            try {
+                const numRecords = view.getUint32(4, true);
+                const headerLength = view.getUint16(8, true);
+                const recordLength = view.getUint16(10, true);
+
+                // Parse field descriptors
+                const fields = [];
+                let fieldOffset = 32;
+                while (fieldOffset < headerLength - 1) {
+                    const fieldName = decoder.decode(new Uint8Array(buffer, fieldOffset, 11)).replace(/\0/g, '').trim();
+                    if (!fieldName) break;
+                    fields.push({
+                        name: fieldName,
+                        type: String.fromCharCode(view.getUint8(fieldOffset + 11)),
+                        length: view.getUint8(fieldOffset + 16)
+                    });
+                    fieldOffset += 32;
+                }
+
+                // Parse records
+                let recOffset = headerLength;
+                for (let i = 0; i < numRecords && recOffset < buffer.byteLength; i++) {
+                    const record = {};
+                    let pos = 1; // Skip deletion flag
+                    for (const field of fields) {
+                        const value = decoder.decode(new Uint8Array(buffer, recOffset + pos, field.length)).trim();
+                        record[field.name] = field.type === 'N' || field.type === 'F' ? parseFloat(value) || 0 : value;
+                        pos += field.length;
+                    }
+                    records.push(record);
+                    recOffset += recordLength;
+                }
+            } catch (e) {
+                console.warn('Erro parsing DBF:', e);
+            }
+
+            return records;
         }
 
         // Parse network CSV (generic format)
