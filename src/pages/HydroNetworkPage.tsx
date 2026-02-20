@@ -6,8 +6,6 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import {
   parseCSV,
   createSampleTopography,
@@ -329,15 +327,6 @@ const styles = {
 };
 
 export const HydroNetworkPage: React.FC = () => {
-  // Auth state
-  const { user, signOut, isDemo } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/auth');
-  };
-
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('topografia');
 
@@ -1644,51 +1633,15 @@ export const HydroNetworkPage: React.FC = () => {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <div style={styles.headerTitle}>
-              <svg style={styles.headerIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
-              </svg>
-              <h1 style={styles.title}>HydroNetwork</h1>
-            </div>
-            <p style={styles.subtitle}>Plataforma completa de engenharia de saneamento</p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {isDemo && (
-              <span style={{
-                padding: '4px 12px',
-                backgroundColor: '#fef3c7',
-                color: '#92400e',
-                borderRadius: '16px',
-                fontSize: '12px',
-                fontWeight: '500'
-              }}>
-                Modo Demo
-              </span>
-            )}
-            <span style={{ color: '#64748b', fontSize: '14px' }}>
-              {isDemo ? 'demo@hydronetwork.app' : user?.email || ''}
-            </span>
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#f1f5f9',
-                color: '#64748b',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}
-            >
-              Sair
-            </button>
-          </div>
+        <div style={styles.headerTitle}>
+          <svg style={styles.headerIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
+          </svg>
+          <h1 style={styles.title}>HydroNetwork</h1>
         </div>
+        <p style={styles.subtitle}>Plataforma completa de engenharia de saneamento</p>
       </header>
 
       <nav style={styles.tabs}>
