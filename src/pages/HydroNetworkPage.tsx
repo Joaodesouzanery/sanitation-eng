@@ -31,7 +31,6 @@ import {
 } from '../engine/planning';
 import {
   RDOEngine,
-  type RDO,
   type ExecutedService,
   type SegmentProgress,
   ServiceUnit
@@ -48,6 +47,20 @@ declare const Chart: any;
 
 type TabType = 'topografia' | 'orcamento' | 'execucao' | 'planejamento' | 'rdo' | 'resultados';
 type RDOViewMode = 'dashboard' | 'list' | 'form' | 'detail';
+
+// Simplified RDO interface for local state management
+interface RDO {
+  id: string;
+  projectId: string;
+  date: string;
+  status: string;
+  services: ExecutedService[];
+  segments: Array<SegmentProgress & { executedToday?: number; plannedTotal?: number; executedBefore?: number; segmentName?: string }>;
+  notes: string;
+  occurrences: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // UTM to Lat/Lng conversion
 const EQUATORIAL_RADIUS = 6378137.0;
@@ -650,7 +663,7 @@ export const HydroNetworkPage: React.FC = () => {
       date: formDate,
       status,
       services: formServices.filter(s => s.serviceName && s.quantity) as ExecutedService[],
-      segments: formSegments.filter(s => s.segmentName) as SegmentProgress[],
+      segments: formSegments.filter(s => s.segmentName) as any[],
       notes: formNotes,
       occurrences: formOccurrences,
       createdAt: new Date().toISOString(),
