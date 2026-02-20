@@ -72,6 +72,14 @@ export interface AttributeMapping {
   startNode?: string;
   endNode?: string;
 
+  // Coordenadas de trechos (modo geométrico tabular)
+  xStart?: string;
+  yStart?: string;
+  zStart?: string;
+  xEnd?: string;
+  yEnd?: string;
+  zEnd?: string;
+
   // Campos de rede
   diameter?: string;
   material?: string;
@@ -80,6 +88,8 @@ export interface AttributeMapping {
   groundElevation?: string;
   invertElevation?: string;
   depth?: string;
+  depthStart?: string;
+  depthEnd?: string;
 
   // Campos adicionais personalizados
   customFields?: Record<string, string>;
@@ -288,6 +298,17 @@ class ImportEngineImpl {
     const headers = lines[0].split(/[,;\t]/).map(h => h.trim());
     const entities: RawEntity[] = [];
 
+    // Detectar colunas de coordenadas automaticamente
+    const xCol = headers.findIndex(h => /^x$/i.test(h) || /^easting$/i.test(h) || /^coord[_\s]?x$/i.test(h) || /^lon$/i.test(h) || /^longitude$/i.test(h));
+    const yCol = headers.findIndex(h => /^y$/i.test(h) || /^northing$/i.test(h) || /^coord[_\s]?y$/i.test(h) || /^lat$/i.test(h) || /^latitude$/i.test(h));
+    const zCol = headers.findIndex(h => /^z$/i.test(h) || /^elev$/i.test(h) || /^elevation$/i.test(h) || /^cota$/i.test(h) || /^altitude$/i.test(h));
+
+    // Detectar colunas para edges (linha)
+    const xStartCol = headers.findIndex(h => /^x[_\s]?(ini|inicio|start|1|mont)$/i.test(h));
+    const yStartCol = headers.findIndex(h => /^y[_\s]?(ini|inicio|start|1|mont)$/i.test(h));
+    const xEndCol = headers.findIndex(h => /^x[_\s]?(fim|end|2|jus)$/i.test(h));
+    const yEndCol = headers.findIndex(h => /^y[_\s]?(fim|end|2|jus)$/i.test(h));
+
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(/[,;\t]/).map(v => v.trim());
       const attributes: Record<string, any> = {};
@@ -296,10 +317,41 @@ class ImportEngineImpl {
         attributes[h] = values[j];
       });
 
+      let geometry: any = null;
+
+      // Tentar criar geometria de ponto se temos X e Y
+      if (xCol >= 0 && yCol >= 0) {
+        const x = parseFloat(values[xCol]);
+        const y = parseFloat(values[yCol]);
+        const z = zCol >= 0 ? parseFloat(values[zCol]) || 0 : 0;
+
+        if (!isNaN(x) && !isNaN(y)) {
+          geometry = {
+            type: 'Point',
+            coordinates: [x, y, z]
+          };
+        }
+      }
+
+      // Ou criar geometria de linha se temos coordenadas de início e fim
+      if (!geometry && xStartCol >= 0 && yStartCol >= 0 && xEndCol >= 0 && yEndCol >= 0) {
+        const x1 = parseFloat(values[xStartCol]);
+        const y1 = parseFloat(values[yStartCol]);
+        const x2 = parseFloat(values[xEndCol]);
+        const y2 = parseFloat(values[yEndCol]);
+
+        if (!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
+          geometry = {
+            type: 'LineString',
+            coordinates: [[x1, y1, 0], [x2, y2, 0]]
+          };
+        }
+      }
+
       entities.push({
-        id: `row_${i}`,
+        id: attributes['id'] || attributes['ID'] || attributes['codigo'] || attributes['CODIGO'] || `row_${i}`,
         type: 'CSV_ROW',
-        geometry: null,
+        geometry,
         attributes
       });
     }
@@ -501,11 +553,44 @@ class ImportEngineImpl {
   private suggestImportType(type: string, items: RawEntity[]): EntityTypeInfo['suggestedImportAs'] {
     const lineTypes = ['LINE', 'LWPOLYLINE', 'POLYLINE', 'PIPE', 'CONDUIT', 'LineString'];
     const pointTypes = ['POINT', 'JUNCTION', 'RESERVOIR', 'TANK', 'MANHOLE', 'OUTFALL', 'Point'];
-    const drawingTypes = ['TEXT', 'MTEXT', 'DIMENSION', 'HATCH', 'INSERT'];
+    const drawingTypes = ['TEXT', 'MTEXT', 'DIMENSION', 'HATCH'];
 
     if (lineTypes.includes(type)) return 'edge';
     if (pointTypes.includes(type)) return 'node';
     if (drawingTypes.includes(type)) return 'drawing';
+
+    // Para CSV_ROW, analisar atributos para sugerir tipo
+    if (type === 'CSV_ROW' && items.length > 0) {
+      const sampleAttrs = Object.keys(items[0].attributes).map(k => k.toLowerCase());
+
+      // Se tem campos de coordenadas de trecho (x_ini, x_fim, etc), sugerir edge
+      const hasEdgeCoords = sampleAttrs.some(a =>
+        /^x[_\s]?(ini|start|1|mont)$/i.test(a) || /^x[_\s]?(fim|end|2|jus)$/i.test(a)
+      );
+      if (hasEdgeCoords) return 'edge';
+
+      // Se tem campos de conectividade (no_ini, no_fim, etc), sugerir edge
+      const hasConnectivity = sampleAttrs.some(a =>
+        /^(no|node|pv)[_\s]?(ini|inicio|start|mont)$/i.test(a) ||
+        /^(de|from|montante)$/i.test(a)
+      );
+      if (hasConnectivity) return 'edge';
+
+      // Se tem X e Y simples, sugerir node
+      const hasXY = sampleAttrs.some(a => /^x$/i.test(a)) &&
+                    sampleAttrs.some(a => /^y$/i.test(a));
+      if (hasXY) return 'node';
+
+      // Se tem coordenadas lat/lon ou easting/northing, sugerir node
+      const hasGeoCoords = sampleAttrs.some(a =>
+        /^(lat|latitude|northing|n)$/i.test(a) || /^(lon|longitude|easting|e)$/i.test(a)
+      );
+      if (hasGeoCoords) return 'node';
+
+      // Padrão para CSV: node (mais comum em topografia)
+      return 'node';
+    }
+
     return 'ignore';
   }
 
@@ -692,22 +777,64 @@ class ImportEngineImpl {
     mapping: AttributeMapping,
     options: ImportOptions
   ): NetworkNode | null {
-    if (!entity.geometry?.coordinates) return null;
+    let x: number, y: number, z: number;
 
-    const coords = entity.geometry.coordinates;
+    // Tentar obter coordenadas da geometria
+    if (entity.geometry?.coordinates) {
+      const coords = entity.geometry.coordinates;
+      x = coords[0];
+      y = coords[1];
+      z = coords[2] || 0;
+    } else {
+      // Fallback: usar atributos mapeados (para CSV/tabular)
+      const mappedX = this.getMappedValue(entity.attributes, mapping.x, null);
+      const mappedY = this.getMappedValue(entity.attributes, mapping.y, null);
+
+      if (mappedX === null || mappedY === null) {
+        // Sem geometria nem coordenadas mapeadas - não é possível criar nó
+        return null;
+      }
+
+      x = this.parseNumericValue(mappedX, options.numericFormat);
+      y = this.parseNumericValue(mappedY, options.numericFormat);
+      z = this.parseNumericValue(this.getMappedValue(entity.attributes, mapping.z, 0), options.numericFormat);
+    }
+
+    // Validar que as coordenadas são números válidos
+    if (isNaN(x) || isNaN(y)) {
+      return null;
+    }
 
     return {
       id: entity.id,
-      x: coords[0],
-      y: coords[1],
-      z: coords[2] || this.getMappedValue(entity.attributes, mapping.z, 0),
+      x,
+      y,
+      z: z || this.getMappedValue(entity.attributes, mapping.z, 0),
       type: this.inferNodeType(entity.type),
-      groundElevation: this.getMappedValue(entity.attributes, mapping.groundElevation, coords[2] || 0),
-      invertElevation: this.getMappedValue(entity.attributes, mapping.invertElevation, coords[2] || 0),
+      groundElevation: this.getMappedValue(entity.attributes, mapping.groundElevation, z || 0),
+      invertElevation: this.getMappedValue(entity.attributes, mapping.invertElevation, z || 0),
       depth: this.getMappedValue(entity.attributes, mapping.depth, 0),
       connectedEdges: [],
       attributes: entity.attributes
     };
+  }
+
+  private parseNumericValue(value: any, format: 'brazilian' | 'american' | 'auto'): number {
+    if (typeof value === 'number') return value;
+    if (value === null || value === undefined) return 0;
+
+    let str = String(value).trim();
+
+    // Detectar formato brasileiro (1.234,56) vs americano (1,234.56)
+    if (format === 'brazilian' || (format === 'auto' && str.includes(',') && !str.includes('.'))) {
+      // Formato brasileiro: remover pontos de milhar, trocar vírgula por ponto
+      str = str.replace(/\./g, '').replace(',', '.');
+    } else if (format === 'american' || format === 'auto') {
+      // Formato americano: remover vírgulas de milhar
+      str = str.replace(/,/g, '');
+    }
+
+    return parseFloat(str) || 0;
   }
 
   private createEdgeFromEntity(
@@ -735,13 +862,44 @@ class ImportEngineImpl {
     options: ImportOptions,
     nodeMap: Map<string, NetworkNode>
   ): { edge: NetworkEdge; newNodes: NetworkNode[] } | null {
-    if (!entity.geometry?.coordinates || entity.geometry.coordinates.length < 2) {
-      return null;
+    let coords: number[][];
+    let startCoord: number[];
+    let endCoord: number[];
+
+    // Tentar obter coordenadas da geometria
+    if (entity.geometry?.coordinates && entity.geometry.coordinates.length >= 2) {
+      coords = entity.geometry.coordinates as number[][];
+      startCoord = coords[0];
+      endCoord = coords[coords.length - 1];
+    } else {
+      // Fallback: usar atributos mapeados (para CSV/tabular)
+      const xStart = this.getMappedValue(entity.attributes, mapping.xStart, null);
+      const yStart = this.getMappedValue(entity.attributes, mapping.yStart, null);
+      const xEnd = this.getMappedValue(entity.attributes, mapping.xEnd, null);
+      const yEnd = this.getMappedValue(entity.attributes, mapping.yEnd, null);
+
+      if (xStart === null || yStart === null || xEnd === null || yEnd === null) {
+        // Sem geometria nem coordenadas mapeadas - não é possível criar trecho
+        return null;
+      }
+
+      const x1 = this.parseNumericValue(xStart, options.numericFormat);
+      const y1 = this.parseNumericValue(yStart, options.numericFormat);
+      const z1 = this.parseNumericValue(this.getMappedValue(entity.attributes, mapping.zStart, 0), options.numericFormat);
+      const x2 = this.parseNumericValue(xEnd, options.numericFormat);
+      const y2 = this.parseNumericValue(yEnd, options.numericFormat);
+      const z2 = this.parseNumericValue(this.getMappedValue(entity.attributes, mapping.zEnd, 0), options.numericFormat);
+
+      // Validar coordenadas
+      if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+        return null;
+      }
+
+      startCoord = [x1, y1, z1];
+      endCoord = [x2, y2, z2];
+      coords = [startCoord, endCoord];
     }
 
-    const coords = entity.geometry.coordinates as number[][];
-    const startCoord = coords[0];
-    const endCoord = coords[coords.length - 1];
     const newNodes: NetworkNode[] = [];
 
     // Encontrar ou criar nó inicial
@@ -783,19 +941,31 @@ class ImportEngineImpl {
     }
 
     // Calcular comprimento
-    const length = this.calculateLineLength(coords);
+    const mappedLength = this.getMappedValue(entity.attributes, mapping.length, null);
+    const length = mappedLength !== null
+      ? this.parseNumericValue(mappedLength, options.numericFormat)
+      : this.calculateLineLength(coords);
 
     // Calcular declividade
-    const slope = coords.length >= 2 && startCoord[2] !== undefined && endCoord[2] !== undefined
-      ? (startCoord[2] - endCoord[2]) / length
-      : 0;
+    const mappedSlope = this.getMappedValue(entity.attributes, mapping.slope, null);
+    const slope = mappedSlope !== null
+      ? this.parseNumericValue(mappedSlope, options.numericFormat)
+      : (coords.length >= 2 && startCoord[2] !== undefined && endCoord[2] !== undefined && length > 0
+          ? (startCoord[2] - endCoord[2]) / length
+          : 0);
+
+    // Construir geometria se não existia
+    const geometry: LineString = entity.geometry as LineString || {
+      type: 'LineString',
+      coordinates: coords
+    };
 
     const edge: NetworkEdge = {
       id: entity.id,
       startNodeId: startNode.id,
       endNodeId: endNode.id,
-      geometry: entity.geometry as LineString,
-      dn: this.getMappedValue(entity.attributes, mapping.diameter, 0),
+      geometry,
+      dn: this.parseNumericValue(this.getMappedValue(entity.attributes, mapping.diameter, 0), options.numericFormat),
       length,
       slope,
       material: this.getMappedValue(entity.attributes, mapping.material, ''),
