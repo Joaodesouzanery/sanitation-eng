@@ -13,6 +13,8 @@
 import { Feature, LineString, Point } from 'geojson';
 import { NetworkNode, NetworkEdge, DrawingLayer } from '../network/NetworkModel';
 import { SHPReader } from './readers/SHPReader';
+import { DXFReader } from './readers/DXFReader';
+import { GeoJSONReader } from './readers/GeoJSONReader';
 
 // ============================================================================
 // INTERFACES
@@ -159,13 +161,18 @@ class ImportEngineImpl {
     const extension = file.name.split('.').pop()?.toLowerCase();
     const fileType = this.getFileType(extension);
 
-    // Ler conteúdo baseado no tipo
+    // Usar readers avançados para formatos específicos
+    if (fileType === 'DXF') {
+      return DXFReader.read(file);
+    }
+
+    if (fileType === 'GeoJSON') {
+      return GeoJSONReader.read(file);
+    }
+
+    // Para outros tipos, usar lógica existente
     const rawContent = await this.readFileContent(file, fileType);
-
-    // Extrair entidades
     const entities = await this.extractEntities(rawContent, fileType);
-
-    // Detectar metadata
     const metadata = this.analyzeMetadata(entities, rawContent, fileType);
 
     return {
