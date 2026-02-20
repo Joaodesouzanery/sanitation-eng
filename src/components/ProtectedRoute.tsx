@@ -7,7 +7,15 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, loading, isDemo } = useAuth();
+  const { user, loading, isDemo, signInWithDemo } = useAuth();
+
+  // Auto-activate demo mode if no user is logged in
+  // This allows the platform to work without authentication setup
+  React.useEffect(() => {
+    if (!loading && !user && !isDemo) {
+      signInWithDemo();
+    }
+  }, [loading, user, isDemo, signInWithDemo]);
 
   if (loading) {
     return (
@@ -18,11 +26,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // Allow access if user is authenticated OR in demo mode
-  if (!user && !isDemo) {
-    return <Navigate to="/auth" replace />;
-  }
-
+  // Allow access - demo mode is auto-activated
   return <>{children}</>;
 };
 
