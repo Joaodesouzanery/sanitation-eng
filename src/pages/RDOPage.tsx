@@ -3,6 +3,11 @@
  *
  * Provides daily work report management with dashboard,
  * form entry, list view, and interactive georeferenced map.
+ *
+ * IMPORTAÇÃO DE TOPOGRAFIA:
+ * - Permite importar dados topográficos diretamente
+ * - Identifica automaticamente trechos e nós
+ * - Sincroniza com dados de campo
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -17,12 +22,20 @@ import {
   RDOStatus
 } from '../engine/rdo';
 import { RDODashboard, type MapData } from '../engine/dashboard';
+import {
+  parseCSV,
+  type PontoTopografico,
+} from '../engine/reader';
+import {
+  createTrechosFromTopography,
+  type Trecho
+} from '../engine/domain';
 
 // Leaflet types
 declare const L: any;
 declare const Chart: any;
 
-type ViewMode = 'dashboard' | 'list' | 'form' | 'detail' | 'map';
+type ViewMode = 'dashboard' | 'list' | 'form' | 'detail' | 'map' | 'import';
 
 // Extended local interfaces for backward compatibility with existing code
 interface SegmentProgress extends BaseSegmentProgress {
@@ -85,6 +98,13 @@ export const RDOPage: React.FC<RDOPageProps> = ({
   const [formNotes, setFormNotes] = useState('');
   const [formOccurrences, setFormOccurrences] = useState('');
 
+  // Estados de topografia importada
+  const [topoPontos, setTopoPontos] = useState<PontoTopografico[]>([]);
+  const [topoTrechos, setTopoTrechos] = useState<Trecho[]>([]);
+  const [topoFileName, setTopoFileName] = useState<string>('');
+  const [topoLoading, setTopoLoading] = useState(false);
+  const [topoError, setTopoError] = useState<string>('');
+
   // Refs
   const engineRef = useRef<RDOEngine | null>(null);
   const dashboardRef = useRef<RDODashboard | null>(null);
@@ -92,6 +112,127 @@ export const RDOPage: React.FC<RDOPageProps> = ({
   const mapInstanceRef = useRef<any>(null);
   const timelineChartRef = useRef<any>(null);
   const statusChartRef = useRef<any>(null);
+  const topoFileInputRef = useRef<HTMLInputElement>(null);
+  const topoMarkersRef = useRef<any>(null);
+  const topoSegmentsRef = useRef<any>(null);
+
+  // =========================================================================
+  // IMPORTAÇÃO DE TOPOGRAFIA
+  // =========================================================================
+
+  // Handler para importar arquivo de topografia
+  const handleTopoFileSelect = useCallback(async (file: File) => {
+    setTopoLoading(true);
+    setTopoError('');
+    setTopoFileName(file.name);
+
+    try {
+      const content = await file.text();
+      const pontos = parseCSV(content);
+
+      if (pontos.length === 0) {
+        throw new Error('Nenhum ponto encontrado no arquivo');
+      }
+
+      // Criar trechos a partir dos pontos
+      const trechos = createTrechosFromTopography(pontos, 200, 'PVC');
+
+      setTopoPontos(pontos);
+      setTopoTrechos(trechos);
+
+      // Salvar no localStorage para persistência
+      localStorage.setItem('rdoTopoPontos', JSON.stringify(pontos));
+      localStorage.setItem('rdoTopoTrechos', JSON.stringify(trechos));
+      localStorage.setItem('rdoTopoFileName', file.name);
+
+    } catch (err) {
+      setTopoError(err instanceof Error ? err.message : 'Erro ao processar arquivo');
+    } finally {
+      setTopoLoading(false);
+    }
+  }, []);
+
+  // Carregar topografia do localStorage
+  useEffect(() => {
+    try {
+      const storedPontos = localStorage.getItem('rdoTopoPontos');
+      const storedTrechos = localStorage.getItem('rdoTopoTrechos');
+      const storedFileName = localStorage.getItem('rdoTopoFileName');
+
+      if (storedPontos && storedTrechos) {
+        setTopoPontos(JSON.parse(storedPontos));
+        setTopoTrechos(JSON.parse(storedTrechos));
+        setTopoFileName(storedFileName || 'Dados importados');
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar topografia:', e);
+    }
+  }, []);
+
+  // Limpar topografia importada
+  const clearTopography = useCallback(() => {
+    setTopoPontos([]);
+    setTopoTrechos([]);
+    setTopoFileName('');
+    localStorage.removeItem('rdoTopoPontos');
+    localStorage.removeItem('rdoTopoTrechos');
+    localStorage.removeItem('rdoTopoFileName');
+  }, []);
+
+  // Transformar coordenadas UTM para LatLon
+  const utmToLatLon = (x: number, y: number): { lat: number; lng: number } => {
+    // Constantes para UTM Zone 23S (SIRGAS 2000)
+    const k0 = 0.9996;
+    const a = 6378137.0;
+    const e = 0.0818191908426;
+    const e1sq = 0.006739496742;
+    const x0 = x - 500000;
+    const y0 = y - 10000000;
+    const lon0 = -45;
+
+    const M = y0 / k0;
+    const mu = M / (a * (1 - e * e / 4 - 3 * e * e * e * e / 64));
+    const e1 = (1 - Math.sqrt(1 - e * e)) / (1 + Math.sqrt(1 - e * e));
+
+    const J1 = (3 * e1 / 2 - 27 * e1 * e1 * e1 / 32);
+    const J2 = (21 * e1 * e1 / 16 - 55 * e1 * e1 * e1 * e1 / 32);
+    const J3 = (151 * e1 * e1 * e1 / 96);
+    const J4 = (1097 * e1 * e1 * e1 * e1 / 512);
+
+    const fp = mu + J1 * Math.sin(2 * mu) + J2 * Math.sin(4 * mu) + J3 * Math.sin(6 * mu) + J4 * Math.sin(8 * mu);
+
+    const C1 = e1sq * Math.cos(fp) * Math.cos(fp);
+    const T1 = Math.tan(fp) * Math.tan(fp);
+    const R1 = a * (1 - e * e) / Math.pow(1 - e * e * Math.sin(fp) * Math.sin(fp), 1.5);
+    const N1 = a / Math.sqrt(1 - e * e * Math.sin(fp) * Math.sin(fp));
+    const D = x0 / (N1 * k0);
+
+    const Q1 = N1 * Math.tan(fp) / R1;
+    const Q2 = D * D / 2;
+    const Q3 = (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * e1sq) * D * D * D * D / 24;
+    const Q4 = (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 3 * C1 * C1 - 252 * e1sq) * D * D * D * D * D * D / 720;
+
+    const lat = (fp - Q1 * (Q2 - Q3 + Q4)) * 180 / Math.PI;
+
+    const Q5 = D;
+    const Q6 = (1 + 2 * T1 + C1) * D * D * D / 6;
+    const Q7 = (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * e1sq + 24 * T1 * T1) * D * D * D * D * D / 120;
+
+    const lng = lon0 + ((Q5 - Q6 + Q7) / Math.cos(fp)) * 180 / Math.PI;
+
+    return { lat, lng };
+  };
+
+  // Converter coordenadas para mapa
+  const toMapCoords = (x: number, y: number): { lat: number; lng: number } => {
+    if (Math.abs(x) > 10000 || Math.abs(y) > 10000) {
+      return utmToLatLon(x, y);
+    }
+    return {
+      lat: -23.5505 + (y / 111320),
+      lng: -46.6333 + (x / 111320)
+    };
+  };
 
   // Initialize engine and dashboard
   useEffect(() => {
@@ -254,6 +395,183 @@ export const RDOPage: React.FC<RDOPageProps> = ({
     }
   }, [chartData, viewMode]);
 
+  // Update map with segments and topography data
+  const updateMap = useCallback(() => {
+    if (!mapInstanceRef.current) return;
+
+    // Clear existing layers (except tile layer)
+    mapInstanceRef.current.eachLayer((layer: any) => {
+      if (layer instanceof L.Polyline || layer instanceof L.CircleMarker || layer instanceof L.Marker) {
+        if (!layer._url) { // Don't remove tile layers
+          mapInstanceRef.current.removeLayer(layer);
+        }
+      }
+    });
+
+    const bounds: [number, number][] = [];
+
+    // =========================================================================
+    // RENDER IMPORTED TOPOGRAPHY DATA
+    // =========================================================================
+    if (topoPontos.length > 0) {
+      const referencePoint = { x: topoPontos[0].x, y: topoPontos[0].y };
+
+      // Add topography markers (nós)
+      topoPontos.forEach((ponto, idx) => {
+        const coords = toMapCoords(ponto.x, ponto.y);
+        bounds.push([coords.lat, coords.lng]);
+
+        // Color based on position
+        let markerColor = '#8b5cf6';  // Purple for topography
+        let label = 'PI';
+        if (idx === 0) {
+          markerColor = '#22c55e';  // Green for start
+          label = 'M';
+        } else if (idx === topoPontos.length - 1) {
+          markerColor = '#ef4444';  // Red for end
+          label = 'J';
+        }
+
+        const marker = L.circleMarker([coords.lat, coords.lng], {
+          radius: 8,
+          fillColor: markerColor,
+          fillOpacity: 0.9,
+          color: '#ffffff',
+          weight: 2
+        }).addTo(mapInstanceRef.current);
+
+        marker.bindTooltip(`<strong>${ponto.id}</strong><br/>Cota: ${ponto.cota.toFixed(2)}m`, {
+          permanent: false,
+          direction: 'top',
+          offset: [0, -8]
+        });
+
+        marker.bindPopup(`
+          <div style="min-width: 160px; font-family: system-ui, sans-serif;">
+            <div style="background: ${markerColor}; color: white; padding: 6px 10px; margin: -10px -16px 8px; border-radius: 4px 4px 0 0;">
+              <strong>${ponto.id}</strong> <span style="float: right; font-size: 0.8rem;">${label}</span>
+            </div>
+            <table style="width: 100%; font-size: 12px;">
+              <tr><td style="color: #666;">X (UTM)</td><td style="text-align: right;">${ponto.x.toFixed(2)}</td></tr>
+              <tr><td style="color: #666;">Y (UTM)</td><td style="text-align: right;">${ponto.y.toFixed(2)}</td></tr>
+              <tr><td style="color: #666;">Cota</td><td style="text-align: right; font-weight: bold;">${ponto.cota.toFixed(2)}m</td></tr>
+            </table>
+          </div>
+        `, { maxWidth: 250, autoPan: false });
+      });
+
+      // Add topography segments (trechos)
+      topoTrechos.forEach((trecho, idx) => {
+        const startCoords = toMapCoords(trecho.xInicio, trecho.yInicio);
+        const endCoords = toMapCoords(trecho.xFim, trecho.yFim);
+
+        // Color based on network type
+        let lineColor = '#8b5cf6';  // Purple for topography
+        let lineStyle: string | undefined;
+        if (trecho.tipoRede === 'Elevatoria / Booster') {
+          lineColor = '#f59e0b';
+          lineStyle = '5, 5';
+        } else if (trecho.declividade < 0) {
+          lineColor = '#ef4444';
+        }
+
+        const polyline = L.polyline(
+          [[startCoords.lat, startCoords.lng], [endCoords.lat, endCoords.lng]],
+          {
+            color: lineColor,
+            weight: 4,
+            opacity: 0.8,
+            dashArray: lineStyle
+          }
+        ).addTo(mapInstanceRef.current);
+
+        const declPercent = (trecho.declividade * 100).toFixed(3);
+        polyline.bindPopup(`
+          <div style="min-width: 180px; font-family: system-ui, sans-serif;">
+            <div style="background: ${lineColor}; color: white; padding: 6px 10px; margin: -10px -16px 8px; border-radius: 4px 4px 0 0;">
+              <strong>Trecho ${idx + 1}</strong>
+            </div>
+            <table style="width: 100%; font-size: 12px;">
+              <tr><td style="color: #666;">De → Para</td><td>${trecho.idInicio} → ${trecho.idFim}</td></tr>
+              <tr><td style="color: #666;">Comprimento</td><td style="text-align: right; font-weight: bold;">${trecho.comprimento.toFixed(2)}m</td></tr>
+              <tr><td style="color: #666;">Declividade</td><td style="text-align: right;">${declPercent}%</td></tr>
+              <tr><td style="color: #666;">DN</td><td style="text-align: right;">${trecho.diametroMm}mm</td></tr>
+              <tr><td style="color: #666;">Material</td><td style="text-align: right;">${trecho.material}</td></tr>
+            </table>
+          </div>
+        `, { maxWidth: 280, autoPan: false });
+      });
+    }
+
+    // =========================================================================
+    // RENDER RDO SEGMENTS (existing sample data)
+    // =========================================================================
+    const segmentCoords: Record<string, [number, number][]> = {
+      'seg1': [[-23.5500, -46.6340], [-23.5510, -46.6320]],
+      'seg2': [[-23.5510, -46.6320], [-23.5525, -46.6300]],
+      'seg3': [[-23.5525, -46.6300], [-23.5540, -46.6280]],
+      'seg4': [[-23.5495, -46.6350], [-23.5505, -46.6330]],
+      'seg5': [[-23.5505, -46.6330], [-23.5520, -46.6310]],
+      'seg6': [[-23.5530, -46.6350], [-23.5545, -46.6320]]
+    };
+
+    // Only show sample segments if no topography is loaded
+    if (topoPontos.length === 0) {
+      Object.entries(segmentCoords).forEach(([segId, coords]) => {
+        const system = segId.includes('1') || segId.includes('2') ? 'agua' :
+                       segId.includes('3') || segId.includes('4') ? 'esgoto' : 'drenagem';
+
+        if (systemFilter && system !== systemFilter) return;
+
+        bounds.push(...coords);
+
+        const progress = Math.random() * 100;
+        const color = progress >= 100 ? '#22c55e' : progress > 0 ? '#f59e0b' : '#ef4444';
+
+        const polyline = L.polyline(coords, {
+          color: color,
+          weight: progress >= 100 ? 6 : 4,
+          opacity: 0.8
+        }).addTo(mapInstanceRef.current);
+
+        const systemIcon = system === 'agua' ? '💧' : system === 'esgoto' ? '🚰' : '🌧️';
+
+        polyline.bindPopup(`
+          <div style="min-width: 200px;">
+            <h4 style="margin: 0 0 8px; color: #333;">${segId}</h4>
+            <p style="margin: 4px 0;"><strong>Sistema:</strong> ${systemIcon} ${system}</p>
+            <p style="margin: 4px 0;"><strong>Planejado:</strong> 100m</p>
+            <p style="margin: 4px 0;"><strong>Executado:</strong> ${progress.toFixed(1)}m</p>
+            <p style="margin: 4px 0;"><strong>Progresso:</strong> ${progress.toFixed(1)}%</p>
+            <div style="background: #eee; border-radius: 10px; height: 10px; margin-top: 8px;">
+              <div style="background: ${color}; height: 100%; width: ${Math.min(progress, 100)}%; border-radius: 10px;"></div>
+            </div>
+          </div>
+        `);
+
+        L.circleMarker(coords[0], {
+          radius: 6,
+          fillColor: color,
+          fillOpacity: 1,
+          color: 'white',
+          weight: 2
+        }).addTo(mapInstanceRef.current);
+
+        L.circleMarker(coords[1], {
+          radius: 6,
+          fillColor: color,
+          fillOpacity: 1,
+          color: 'white',
+          weight: 2
+        }).addTo(mapInstanceRef.current);
+      });
+    }
+
+    if (bounds.length > 0) {
+      mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [systemFilter, topoPontos, topoTrechos]);
+
   // Initialize map
   useEffect(() => {
     if (viewMode !== 'map' || typeof L === 'undefined' || !mapContainerRef.current) return;
@@ -267,87 +585,7 @@ export const RDOPage: React.FC<RDOPageProps> = ({
     }
 
     updateMap();
-  }, [viewMode]);
-
-  // Update map with segments
-  const updateMap = () => {
-    if (!mapInstanceRef.current) return;
-
-    // Clear existing layers
-    mapInstanceRef.current.eachLayer((layer: any) => {
-      if (layer instanceof L.Polyline || layer instanceof L.Marker) {
-        mapInstanceRef.current.removeLayer(layer);
-      }
-    });
-
-    // Sample segment coordinates
-    const segmentCoords: Record<string, [number, number][]> = {
-      'seg1': [[-23.5500, -46.6340], [-23.5510, -46.6320]],
-      'seg2': [[-23.5510, -46.6320], [-23.5525, -46.6300]],
-      'seg3': [[-23.5525, -46.6300], [-23.5540, -46.6280]],
-      'seg4': [[-23.5495, -46.6350], [-23.5505, -46.6330]],
-      'seg5': [[-23.5505, -46.6330], [-23.5520, -46.6310]],
-      'seg6': [[-23.5530, -46.6350], [-23.5545, -46.6320]]
-    };
-
-    const bounds: [number, number][] = [];
-
-    Object.entries(segmentCoords).forEach(([segId, coords]) => {
-      // Filter by system if needed
-      const system = segId.includes('1') || segId.includes('2') ? 'agua' :
-                     segId.includes('3') || segId.includes('4') ? 'esgoto' : 'drenagem';
-
-      if (systemFilter && system !== systemFilter) return;
-
-      bounds.push(...coords);
-
-      // Determine progress (mock data)
-      const progress = Math.random() * 100;
-      const color = progress >= 100 ? '#22c55e' : progress > 0 ? '#f59e0b' : '#ef4444';
-
-      const polyline = L.polyline(coords, {
-        color: color,
-        weight: progress >= 100 ? 6 : 4,
-        opacity: 0.8
-      }).addTo(mapInstanceRef.current);
-
-      const systemIcon = system === 'agua' ? '💧' : system === 'esgoto' ? '🚰' : '🌧️';
-
-      polyline.bindPopup(`
-        <div style="min-width: 200px;">
-          <h4 style="margin: 0 0 8px; color: #333;">${segId}</h4>
-          <p style="margin: 4px 0;"><strong>Sistema:</strong> ${systemIcon} ${system}</p>
-          <p style="margin: 4px 0;"><strong>Planejado:</strong> 100m</p>
-          <p style="margin: 4px 0;"><strong>Executado:</strong> ${progress.toFixed(1)}m</p>
-          <p style="margin: 4px 0;"><strong>Progresso:</strong> ${progress.toFixed(1)}%</p>
-          <div style="background: #eee; border-radius: 10px; height: 10px; margin-top: 8px;">
-            <div style="background: ${color}; height: 100%; width: ${Math.min(progress, 100)}%; border-radius: 10px;"></div>
-          </div>
-        </div>
-      `);
-
-      // Add markers
-      L.circleMarker(coords[0], {
-        radius: 6,
-        fillColor: color,
-        fillOpacity: 1,
-        color: 'white',
-        weight: 2
-      }).addTo(mapInstanceRef.current);
-
-      L.circleMarker(coords[1], {
-        radius: 6,
-        fillColor: color,
-        fillOpacity: 1,
-        color: 'white',
-        weight: 2
-      }).addTo(mapInstanceRef.current);
-    });
-
-    if (bounds.length > 0) {
-      mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
-    }
-  };
+  }, [viewMode, updateMap, topoPontos, topoTrechos]);
 
   // Create new RDO
   const handleCreateRDO = () => {
@@ -525,6 +763,19 @@ export const RDOPage: React.FC<RDOPageProps> = ({
           }}
         >
           🗺️ Mapa
+        </button>
+        <button
+          onClick={() => setViewMode('import')}
+          style={{
+            padding: '10px 20px',
+            borderRadius: '8px',
+            backgroundColor: viewMode === 'import' ? '#8b5cf6' : '#334155',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          📥 Importar Topografia
         </button>
       </div>
 
@@ -1272,6 +1523,39 @@ export const RDOPage: React.FC<RDOPageProps> = ({
             </div>
           </div>
 
+          {/* Indicador de Topografia Importada */}
+          {topoPontos.length > 0 && (
+            <div style={{
+              marginBottom: '10px',
+              padding: '10px 15px',
+              backgroundColor: 'rgba(139, 92, 246, 0.1)',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              borderRadius: '6px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{ color: '#a78bfa' }}>
+                📍 Topografia carregada: <strong>{topoPontos.length} nós</strong> e <strong>{topoTrechos.length} trechos</strong>
+                {topoFileName && ` (${topoFileName})`}
+              </span>
+              <button
+                onClick={() => setViewMode('import')}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  backgroundColor: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem'
+                }}
+              >
+                Gerenciar
+              </button>
+            </div>
+          )}
+
           {/* Legend */}
           <div style={{
             display: 'flex',
@@ -1293,6 +1577,12 @@ export const RDOPage: React.FC<RDOPageProps> = ({
               <span style={{ width: '20px', height: '4px', backgroundColor: '#ef4444' }}></span>
               Não Iniciado
             </span>
+            {topoPontos.length > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#8b5cf6', border: '2px solid white' }}></span>
+                Topografia
+              </span>
+            )}
           </div>
 
           <div
@@ -1315,6 +1605,213 @@ export const RDOPage: React.FC<RDOPageProps> = ({
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Import Topography View */}
+      {viewMode === 'import' && (
+        <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', padding: '20px' }}>
+          <h2 style={{ color: '#94a3b8', marginBottom: '20px' }}>📥 Importar Dados Topográficos</h2>
+
+          {/* Drop Zone */}
+          <div
+            onClick={() => topoFileInputRef.current?.click()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const file = e.dataTransfer.files[0];
+              if (file) handleTopoFileSelect(file);
+            }}
+            onDragOver={(e) => e.preventDefault()}
+            style={{
+              border: '2px dashed #475569',
+              borderRadius: '12px',
+              padding: '40px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              backgroundColor: '#0f172a',
+              marginBottom: '20px'
+            }}
+          >
+            {topoLoading ? (
+              <p style={{ color: '#3b82f6' }}>⏳ Processando...</p>
+            ) : (
+              <>
+                <p style={{ fontSize: '2rem', marginBottom: '10px' }}>📍</p>
+                <p style={{ color: '#94a3b8' }}>Arraste o arquivo de topografia aqui ou clique para selecionar</p>
+                <p style={{ color: '#3b82f6', fontSize: '0.85rem', marginTop: '10px' }}>Formatos: .txt, .csv</p>
+              </>
+            )}
+            <input
+              ref={topoFileInputRef}
+              type="file"
+              accept=".txt,.csv"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleTopoFileSelect(file);
+              }}
+              style={{ display: 'none' }}
+            />
+          </div>
+
+          {/* Error Message */}
+          {topoError && (
+            <div style={{
+              padding: '15px',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              color: '#fca5a5'
+            }}>
+              ❌ {topoError}
+            </div>
+          )}
+
+          {/* Imported Data Summary */}
+          {topoPontos.length > 0 && (
+            <div>
+              <div style={{
+                padding: '15px',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid #22c55e',
+                borderRadius: '8px',
+                marginBottom: '20px'
+              }}>
+                <p style={{ color: '#86efac', margin: 0 }}>
+                  ✅ Topografia importada com sucesso: <strong>{topoFileName}</strong>
+                </p>
+              </div>
+
+              {/* Summary Cards */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '15px',
+                marginBottom: '20px'
+              }}>
+                <div style={{ backgroundColor: '#0f172a', borderRadius: '10px', padding: '15px' }}>
+                  <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Total de Nós</p>
+                  <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#8b5cf6' }}>{topoPontos.length}</p>
+                </div>
+                <div style={{ backgroundColor: '#0f172a', borderRadius: '10px', padding: '15px' }}>
+                  <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Total de Trechos</p>
+                  <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#22c55e' }}>{topoTrechos.length}</p>
+                </div>
+                <div style={{ backgroundColor: '#0f172a', borderRadius: '10px', padding: '15px' }}>
+                  <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Comprimento Total</p>
+                  <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b' }}>
+                    {topoTrechos.reduce((sum, t) => sum + t.comprimento, 0).toFixed(1)}m
+                  </p>
+                </div>
+              </div>
+
+              {/* Nós Table */}
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ color: '#8b5cf6', marginBottom: '10px' }}>📍 Nós Identificados</h3>
+                <div style={{ maxHeight: '200px', overflowY: 'auto', borderRadius: '8px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={{ position: 'sticky', top: 0 }}>
+                      <tr style={{ backgroundColor: '#0f172a' }}>
+                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #334155' }}>ID</th>
+                        <th style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #334155' }}>X (UTM)</th>
+                        <th style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #334155' }}>Y (UTM)</th>
+                        <th style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #334155' }}>Cota (m)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topoPontos.slice(0, 20).map((ponto, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #334155' }}>
+                          <td style={{ padding: '8px', fontWeight: '500' }}>{ponto.id}</td>
+                          <td style={{ padding: '8px', textAlign: 'right' }}>{ponto.x.toFixed(3)}</td>
+                          <td style={{ padding: '8px', textAlign: 'right' }}>{ponto.y.toFixed(3)}</td>
+                          <td style={{ padding: '8px', textAlign: 'right' }}>{ponto.cota.toFixed(3)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {topoPontos.length > 20 && (
+                    <p style={{ textAlign: 'center', padding: '10px', color: '#64748b' }}>
+                      ... e mais {topoPontos.length - 20} nós
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Trechos Table */}
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ color: '#22c55e', marginBottom: '10px' }}>📏 Trechos Identificados</h3>
+                <div style={{ maxHeight: '200px', overflowY: 'auto', borderRadius: '8px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={{ position: 'sticky', top: 0 }}>
+                      <tr style={{ backgroundColor: '#0f172a' }}>
+                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #334155' }}>De</th>
+                        <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #334155' }}>Para</th>
+                        <th style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #334155' }}>Comp. (m)</th>
+                        <th style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #334155' }}>Decliv. (%)</th>
+                        <th style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #334155' }}>Tipo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topoTrechos.slice(0, 20).map((trecho, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #334155' }}>
+                          <td style={{ padding: '8px' }}>{trecho.idInicio}</td>
+                          <td style={{ padding: '8px' }}>{trecho.idFim}</td>
+                          <td style={{ padding: '8px', textAlign: 'right' }}>{trecho.comprimento.toFixed(2)}</td>
+                          <td style={{ padding: '8px', textAlign: 'right' }}>{(trecho.declividade * 100).toFixed(3)}</td>
+                          <td style={{ padding: '8px', textAlign: 'center' }}>
+                            <span style={{
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              fontSize: '0.8rem',
+                              backgroundColor: trecho.tipoRede === 'Esgoto por Gravidade' ? '#22c55e' : '#f59e0b',
+                              color: 'white'
+                            }}>
+                              {trecho.tipoRede === 'Esgoto por Gravidade' ? 'Gravidade' : 'Elevatória'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {topoTrechos.length > 20 && (
+                    <p style={{ textAlign: 'center', padding: '10px', color: '#64748b' }}>
+                      ... e mais {topoTrechos.length - 20} trechos
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={clearTopography}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🗑️ Limpar Dados
+                </button>
+                <button
+                  onClick={() => setViewMode('map')}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🗺️ Ver no Mapa
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

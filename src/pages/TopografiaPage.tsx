@@ -128,6 +128,15 @@ interface TopografiaPageProps {
   onDataLoaded?: (pontos: PontoTopografico[], trechos: Trecho[]) => void;
 }
 
+// Tipos para modo de edição/exclusão
+type EditMode = 'normal' | 'delete' | 'select' | 'connect';
+
+interface DeleteModalState {
+  show: boolean;
+  nodesToDelete: string[];
+  trechosToDelete: number[];
+}
+
 export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) => {
   // State
   const [pontos, setPontos] = useState<PontoTopografico[]>([]);
@@ -141,12 +150,136 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
   const [diametroMm, setDiametroMm] = useState(200);
   const [material, setMaterial] = useState('PVC');
 
+  // Estados do modo de exclusão
+  const [editMode, setEditMode] = useState<EditMode>('normal');
+  const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<DeleteModalState>({
+    show: false,
+    nodesToDelete: [],
+    trechosToDelete: []
+  });
+
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersLayerRef = useRef<any>(null);
   const segmentsLayerRef = useRef<any>(null);
+  const markerRefsMap = useRef<Map<string, any>>(new Map());
+  const initialBoundsFitted = useRef<boolean>(false);
+  const previousPontosCount = useRef<number>(0);
+
+  // =========================================================================
+  // FUNÇÕES DE EXCLUSÃO DE NÓS
+  // =========================================================================
+
+  // Toggle seleção de nó para exclusão
+  const toggleNodeSelection = useCallback((nodeId: string) => {
+    setSelectedNodes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Selecionar todos os nós
+  const selectAllNodes = useCallback(() => {
+    setSelectedNodes(new Set(pontos.map(p => p.id)));
+  }, [pontos]);
+
+  // Limpar seleção
+  const clearSelection = useCallback(() => {
+    setSelectedNodes(new Set());
+  }, []);
+
+  // Entrar no modo de exclusão
+  const enterDeleteMode = useCallback(() => {
+    setEditMode('delete');
+    setSelectedNodes(new Set());
+  }, []);
+
+  // Sair do modo de exclusão
+  const exitDeleteMode = useCallback(() => {
+    setEditMode('normal');
+    setSelectedNodes(new Set());
+  }, []);
+
+  // Calcular trechos conectados aos nós selecionados
+  const getConnectedTrechos = useCallback((nodeIds: Set<string>): number[] => {
+    const connectedIndices: number[] = [];
+    trechos.forEach((trecho, idx) => {
+      if (nodeIds.has(trecho.idInicio) || nodeIds.has(trecho.idFim)) {
+        connectedIndices.push(idx);
+      }
+    });
+    return connectedIndices;
+  }, [trechos]);
+
+  // Abrir modal de confirmação
+  const showDeleteConfirmation = useCallback(() => {
+    const nodesToDelete = Array.from(selectedNodes);
+    const trechosToDelete = getConnectedTrechos(selectedNodes);
+
+    setDeleteModal({
+      show: true,
+      nodesToDelete,
+      trechosToDelete
+    });
+  }, [selectedNodes, getConnectedTrechos]);
+
+  // Confirmar exclusão
+  const confirmDelete = useCallback(() => {
+    const { nodesToDelete, trechosToDelete } = deleteModal;
+
+    // Excluir pontos
+    const newPontos = pontos.filter(p => !nodesToDelete.includes(p.id));
+
+    // Excluir trechos conectados
+    const newTrechos = trechos.filter((_, idx) => !trechosToDelete.includes(idx));
+
+    // Atualizar estados
+    setPontos(newPontos);
+    setTrechos(newTrechos);
+
+    // Recalcular resumo
+    if (newTrechos.length > 0) {
+      const newSummary = summarizeNetwork(newTrechos);
+      setSummary(newSummary);
+    } else {
+      setSummary(null);
+    }
+
+    // Fechar modal e sair do modo de exclusão
+    setDeleteModal({ show: false, nodesToDelete: [], trechosToDelete: [] });
+    exitDeleteMode();
+
+    // Notificar
+    if (onDataLoaded) {
+      onDataLoaded(newPontos, newTrechos);
+    }
+  }, [deleteModal, pontos, trechos, exitDeleteMode, onDataLoaded]);
+
+  // Cancelar exclusão
+  const cancelDelete = useCallback(() => {
+    setDeleteModal({ show: false, nodesToDelete: [], trechosToDelete: [] });
+  }, []);
+
+  // Keyboard handler para ESC
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && editMode === 'delete') {
+        exitDeleteMode();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editMode, exitDeleteMode]);
 
   // Initialize map with multiple base layers and controls
   useEffect(() => {
@@ -242,7 +375,7 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
     };
   }, []);
 
-  // Update map when pontos or trechos change
+  // Update map when pontos, trechos, editMode, or selectedNodes change
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current || !segmentsLayerRef.current) {
       return;
@@ -251,6 +384,7 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
     // Clear existing layers
     markersLayerRef.current.clearLayers();
     segmentsLayerRef.current.clearLayers();
+    markerRefsMap.current.clear();
 
     if (pontos.length === 0) return;
 
@@ -264,56 +398,116 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
 
       bounds.push([lat, lng]);
 
-      // Determine marker color and icon
+      // Determine marker color and icon based on mode
       let markerColor = '#3b82f6';  // Default blue
       let markerLabel = 'PI';  // Ponto Intermediario
-      if (idx === 0) {
-        markerColor = '#22c55e';  // Green for start
-        markerLabel = 'M';  // Montante
-      } else if (idx === pontos.length - 1) {
-        markerColor = '#ef4444';  // Red for end
-        markerLabel = 'J';  // Jusante
+
+      if (editMode === 'delete') {
+        // Modo de exclusão: vermelho para selecionados, amarelo para hover
+        if (selectedNodes.has(ponto.id)) {
+          markerColor = '#ef4444';  // Red for selected to delete
+          markerLabel = '✗';
+        } else if (hoveredNode === ponto.id) {
+          markerColor = '#f59e0b';  // Orange for hover
+          markerLabel = '?';
+        } else {
+          markerColor = '#64748b';  // Gray for available
+          markerLabel = '○';
+        }
+      } else {
+        // Modo normal
+        if (idx === 0) {
+          markerColor = '#22c55e';  // Green for start
+          markerLabel = 'M';  // Montante
+        } else if (idx === pontos.length - 1) {
+          markerColor = '#ef4444';  // Red for end
+          markerLabel = 'J';  // Jusante
+        }
       }
 
-      // Create draggable marker
+      // Create marker with appropriate styling
+      const markerRadius = editMode === 'delete' ? (selectedNodes.has(ponto.id) ? 14 : 10) : 10;
+      const markerWeight = editMode === 'delete' && selectedNodes.has(ponto.id) ? 4 : 3;
+
       const marker = L.circleMarker([lat, lng], {
-        radius: 10,
+        radius: markerRadius,
         fillColor: markerColor,
         fillOpacity: 0.9,
         color: '#ffffff',
-        weight: 3
+        weight: markerWeight,
+        className: editMode === 'delete' ? 'delete-mode-marker' : ''
       });
 
-      // Enhanced popup with more information
-      const popupContent = `
-        <div style="min-width: 180px; font-family: system-ui, sans-serif;">
-          <div style="background: ${markerColor}; color: white; padding: 8px 12px; margin: -13px -19px 10px; border-radius: 4px 4px 0 0;">
-            <strong style="font-size: 14px;">${ponto.id}</strong>
-            <span style="float: right; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px; font-size: 11px;">${markerLabel}</span>
+      // Store reference for updates
+      markerRefsMap.current.set(ponto.id, marker);
+
+      // Enhanced popup with more information (only in normal mode)
+      if (editMode === 'normal') {
+        const popupContent = `
+          <div style="min-width: 180px; font-family: system-ui, sans-serif;">
+            <div style="background: ${markerColor}; color: white; padding: 8px 12px; margin: -13px -19px 10px; border-radius: 4px 4px 0 0;">
+              <strong style="font-size: 14px;">${ponto.id}</strong>
+              <span style="float: right; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px; font-size: 11px;">${markerLabel}</span>
+            </div>
+            <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+              <tr><td style="padding: 4px 0; color: #666;">X (UTM)</td><td style="text-align: right; font-weight: 500;">${ponto.x.toFixed(3)}</td></tr>
+              <tr><td style="padding: 4px 0; color: #666;">Y (UTM)</td><td style="text-align: right; font-weight: 500;">${ponto.y.toFixed(3)}</td></tr>
+              <tr style="border-top: 1px solid #eee;"><td style="padding: 4px 0; color: #666;">Cota</td><td style="text-align: right; font-weight: 600; color: ${markerColor};">${ponto.cota.toFixed(3)} m</td></tr>
+              <tr><td style="padding: 4px 0; color: #666;">Latitude</td><td style="text-align: right; font-size: 11px;">${lat.toFixed(6)}</td></tr>
+              <tr><td style="padding: 4px 0; color: #666;">Longitude</td><td style="text-align: right; font-size: 11px;">${lng.toFixed(6)}</td></tr>
+            </table>
           </div>
-          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
-            <tr><td style="padding: 4px 0; color: #666;">X (UTM)</td><td style="text-align: right; font-weight: 500;">${ponto.x.toFixed(3)}</td></tr>
-            <tr><td style="padding: 4px 0; color: #666;">Y (UTM)</td><td style="text-align: right; font-weight: 500;">${ponto.y.toFixed(3)}</td></tr>
-            <tr style="border-top: 1px solid #eee;"><td style="padding: 4px 0; color: #666;">Cota</td><td style="text-align: right; font-weight: 600; color: ${markerColor};">${ponto.cota.toFixed(3)} m</td></tr>
-            <tr><td style="padding: 4px 0; color: #666;">Latitude</td><td style="text-align: right; font-size: 11px;">${lat.toFixed(6)}</td></tr>
-            <tr><td style="padding: 4px 0; color: #666;">Longitude</td><td style="text-align: right; font-size: 11px;">${lng.toFixed(6)}</td></tr>
-          </table>
-        </div>
-      `;
+        `;
+        marker.bindPopup(popupContent, { maxWidth: 300, autoPan: false });
+      }
 
-      marker.bindPopup(popupContent, { maxWidth: 300 });
-      marker.bindTooltip(`<strong>${ponto.id}</strong><br/>Cota: ${ponto.cota.toFixed(2)}m`, {
-        permanent: false,
-        direction: 'top',
-        offset: [0, -10]
-      });
+      // Tooltip (different for delete mode)
+      if (editMode === 'delete') {
+        const status = selectedNodes.has(ponto.id) ? '✗ Selecionado para exclusão' : 'Clique para selecionar';
+        marker.bindTooltip(`<strong>${ponto.id}</strong><br/>${status}`, {
+          permanent: false,
+          direction: 'top',
+          offset: [0, -10]
+        });
+      } else {
+        marker.bindTooltip(`<strong>${ponto.id}</strong><br/>Cota: ${ponto.cota.toFixed(2)}m`, {
+          permanent: false,
+          direction: 'top',
+          offset: [0, -10]
+        });
+      }
 
-      // Highlight on hover
+      // Event handlers
       marker.on('mouseover', function() {
-        this.setStyle({ weight: 4, radius: 12 });
+        if (editMode === 'delete') {
+          setHoveredNode(ponto.id);
+          if (!selectedNodes.has(ponto.id)) {
+            this.setStyle({ fillColor: '#f59e0b', radius: 12 });
+          }
+        } else {
+          this.setStyle({ weight: 4, radius: 12 });
+        }
       });
+
       marker.on('mouseout', function() {
-        this.setStyle({ weight: 3, radius: 10 });
+        if (editMode === 'delete') {
+          setHoveredNode(null);
+          if (!selectedNodes.has(ponto.id)) {
+            this.setStyle({ fillColor: '#64748b', radius: 10 });
+          }
+        } else {
+          this.setStyle({ weight: 3, radius: 10 });
+        }
+      });
+
+      marker.on('click', function(e: any) {
+        if (editMode === 'delete') {
+          // Prevent popup in delete mode
+          e.originalEvent?.preventDefault?.();
+          e.originalEvent?.stopPropagation?.();
+          toggleNodeSelection(ponto.id);
+        }
+        // Normal mode: popup will open automatically
       });
 
       markersLayerRef.current.addLayer(marker);
@@ -387,18 +581,26 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
       segmentsLayerRef.current.addLayer(polyline);
     });
 
-    // Fit bounds with padding
-    if (bounds.length > 0) {
+    // Fit bounds with padding ONLY when new data is loaded (pontos count changes)
+    // This prevents zoom changes when clicking on points or changing selection
+    const shouldFitBounds = bounds.length > 0 &&
+      pontos.length !== previousPontosCount.current;
+
+    if (shouldFitBounds) {
       try {
         mapInstanceRef.current.fitBounds(bounds, {
           padding: [50, 50],
-          maxZoom: 18
+          maxZoom: 18,
+          animate: true,
+          duration: 0.5
         });
+        previousPontosCount.current = pontos.length;
+        initialBoundsFitted.current = true;
       } catch (e) {
         console.warn('Could not fit bounds:', e);
       }
     }
-  }, [pontos, trechos]);
+  }, [pontos, trechos, editMode, selectedNodes, hoveredNode, toggleNodeSelection]);
 
   // Process imported data
   const processData = useCallback((newPontos: PontoTopografico[]) => {
@@ -719,11 +921,130 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
         </div>
       )}
 
+      {/* Modal de Confirmação de Exclusão */}
+      {deleteModal.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            backgroundColor: '#1e293b',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '500px',
+            width: '90%',
+            border: '2px solid #ef4444'
+          }}>
+            <h3 style={{ margin: '0 0 15px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              ⚠️ Confirmar Exclusão
+            </h3>
+
+            <div style={{ marginBottom: '20px', color: '#e2e8f0' }}>
+              <p style={{ marginBottom: '10px' }}>
+                Você está prestes a excluir <strong style={{ color: '#ef4444' }}>{deleteModal.nodesToDelete.length} nó(s)</strong>:
+              </p>
+              <div style={{
+                maxHeight: '100px',
+                overflowY: 'auto',
+                backgroundColor: '#0f172a',
+                padding: '10px',
+                borderRadius: '6px',
+                marginBottom: '15px'
+              }}>
+                {deleteModal.nodesToDelete.map(id => (
+                  <span key={id} style={{
+                    display: 'inline-block',
+                    margin: '2px',
+                    padding: '4px 8px',
+                    backgroundColor: '#334155',
+                    borderRadius: '4px',
+                    fontSize: '0.85rem'
+                  }}>{id}</span>
+                ))}
+              </div>
+
+              {deleteModal.trechosToDelete.length > 0 && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '6px'
+                }}>
+                  <p style={{ margin: 0, color: '#fca5a5' }}>
+                    <strong>Atenção:</strong> {deleteModal.trechosToDelete.length} trecho(s) conectado(s) também serão excluídos
+                    para manter a integridade topológica.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={cancelDelete}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '6px',
+                  backgroundColor: '#334155',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '6px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}
+              >
+                🗑️ Confirmar Exclusão
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Map */}
       <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
           <h2 style={{ color: '#94a3b8', margin: 0 }}>🗺️ Mapa Interativo</h2>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Botões de modo de edição */}
+            {editMode === 'normal' && pontos.length > 0 && (
+              <button
+                onClick={enterDeleteMode}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                🗑️ Excluir Nós
+              </button>
+            )}
+
+            {/* Zoom controls */}
             <button
               onClick={() => mapInstanceRef.current?.setZoom(mapInstanceRef.current.getZoom() + 1)}
               style={{
@@ -752,6 +1073,97 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
             </button>
           </div>
         </div>
+
+        {/* Barra de ferramentas do modo de exclusão */}
+        {editMode === 'delete' && (
+          <div style={{
+            marginBottom: '15px',
+            padding: '15px',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            border: '2px solid #ef4444',
+            borderRadius: '8px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <span style={{ color: '#fca5a5', fontWeight: 'bold' }}>
+                  🗑️ MODO DE EXCLUSÃO
+                </span>
+                <span style={{ color: '#94a3b8' }}>
+                  {selectedNodes.size > 0
+                    ? `${selectedNodes.size} nó(s) selecionado(s)`
+                    : 'Clique nos nós para selecionar'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={selectAllNodes}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    backgroundColor: '#f59e0b',
+                    color: 'white',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✓ Selecionar Todos
+                </button>
+
+                {selectedNodes.size > 0 && (
+                  <>
+                    <button
+                      onClick={clearSelection}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        backgroundColor: '#334155',
+                        color: 'white',
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✕ Limpar Seleção
+                    </button>
+
+                    <button
+                      onClick={showDeleteConfirmation}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      🗑️ Confirmar Exclusão ({selectedNodes.size})
+                    </button>
+                  </>
+                )}
+
+                <button
+                  onClick={exitDeleteMode}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    backgroundColor: '#475569',
+                    color: 'white',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✕ Cancelar (ESC)
+                </button>
+              </div>
+            </div>
+
+            <p style={{ margin: '10px 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>
+              💡 Dica: Pressione ESC para sair do modo de exclusão. Trechos conectados aos nós selecionados serão excluídos automaticamente.
+            </p>
+          </div>
+        )}
 
         <div style={{
           display: 'flex',

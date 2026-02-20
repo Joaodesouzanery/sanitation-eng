@@ -713,28 +713,78 @@ interface Step4Props {
 const Step4AttributeMapping: React.FC<Step4Props> = ({ fileData, attributeMapping, onChange }) => {
   const mapping = attributeMapping || {};
 
-  // Coletar todos os atributos disponíveis
+  // Coletar TODOS os atributos disponíveis de todas as entidades
   const availableAttributes = new Set<string>();
   fileData?.entities.forEach(e => {
     Object.keys(e.attributes).forEach(key => availableAttributes.add(key));
   });
   const attributes = Array.from(availableAttributes);
 
-  const systemFields = [
-    { key: 'id', label: 'ID', description: 'Identificador único' },
-    { key: 'x', label: 'Coordenada X', description: 'Easting / Longitude' },
-    { key: 'y', label: 'Coordenada Y', description: 'Northing / Latitude' },
-    { key: 'z', label: 'Coordenada Z', description: 'Elevação' },
-    { key: 'startNode', label: 'Nó Início', description: 'ID do nó inicial (modo tabular)' },
-    { key: 'endNode', label: 'Nó Fim', description: 'ID do nó final (modo tabular)' },
-    { key: 'diameter', label: 'Diâmetro', description: 'DN em mm' },
-    { key: 'material', label: 'Material', description: 'Tipo de material' },
-    { key: 'length', label: 'Comprimento', description: 'Em metros' },
-    { key: 'slope', label: 'Declividade', description: 'Em m/m ou %' },
-    { key: 'groundElevation', label: 'Cota Terreno', description: 'Elevação do terreno' },
-    { key: 'invertElevation', label: 'Cota Fundo', description: 'Cota de fundo do tubo' },
-    { key: 'depth', label: 'Profundidade', description: 'Profundidade em metros' }
+  // Campos do sistema organizados por categoria
+  const systemFieldCategories = [
+    {
+      category: 'Identificação',
+      icon: '🏷️',
+      fields: [
+        { key: 'id', label: 'ID', description: 'Identificador único' },
+      ]
+    },
+    {
+      category: 'Coordenadas de Pontos/Nós',
+      icon: '📍',
+      fields: [
+        { key: 'x', label: 'Coordenada X', description: 'Easting / Longitude' },
+        { key: 'y', label: 'Coordenada Y', description: 'Northing / Latitude' },
+        { key: 'z', label: 'Coordenada Z', description: 'Elevação (cota)' },
+      ]
+    },
+    {
+      category: 'Conectividade de Trechos',
+      icon: '🔗',
+      fields: [
+        { key: 'startNode', label: 'Nó Início', description: 'ID do nó inicial / Montante' },
+        { key: 'endNode', label: 'Nó Fim', description: 'ID do nó final / Jusante' },
+      ]
+    },
+    {
+      category: 'Coordenadas de Trechos (Geométrico)',
+      icon: '📐',
+      fields: [
+        { key: 'xStart', label: 'X Início', description: 'Coordenada X do ponto inicial' },
+        { key: 'yStart', label: 'Y Início', description: 'Coordenada Y do ponto inicial' },
+        { key: 'zStart', label: 'Z Início', description: 'Cota do ponto inicial' },
+        { key: 'xEnd', label: 'X Fim', description: 'Coordenada X do ponto final' },
+        { key: 'yEnd', label: 'Y Fim', description: 'Coordenada Y do ponto final' },
+        { key: 'zEnd', label: 'Z Fim', description: 'Cota do ponto final' },
+      ]
+    },
+    {
+      category: 'Propriedades de Rede',
+      icon: '🔧',
+      fields: [
+        { key: 'diameter', label: 'Diâmetro', description: 'DN em mm' },
+        { key: 'material', label: 'Material', description: 'Tipo de material' },
+        { key: 'length', label: 'Comprimento', description: 'Em metros' },
+        { key: 'slope', label: 'Declividade', description: 'Em m/m ou %' },
+        { key: 'roughness', label: 'Rugosidade', description: 'Coeficiente de rugosidade' },
+        { key: 'networkType', label: 'Tipo de Rede', description: 'Água, Esgoto, Drenagem' },
+      ]
+    },
+    {
+      category: 'Elevações e Profundidades',
+      icon: '📊',
+      fields: [
+        { key: 'groundElevation', label: 'Cota Terreno', description: 'Elevação do terreno' },
+        { key: 'invertElevation', label: 'Cota Fundo', description: 'Cota de fundo do tubo' },
+        { key: 'depth', label: 'Profundidade', description: 'Profundidade em metros' },
+        { key: 'depthStart', label: 'Prof. Início', description: 'Profundidade no início do trecho' },
+        { key: 'depthEnd', label: 'Prof. Fim', description: 'Profundidade no fim do trecho' },
+      ]
+    }
   ];
+
+  // Lista plana para compatibilidade
+  const systemFields = systemFieldCategories.flatMap(cat => cat.fields);
 
   const updateMapping = (field: string, value: string) => {
     onChange({
@@ -743,44 +793,140 @@ const Step4AttributeMapping: React.FC<Step4Props> = ({ fileData, attributeMappin
     });
   };
 
+  // Auto-detectar mapeamentos sugeridos
+  const autoDetectMappings = () => {
+    const detected: Record<string, string> = {};
+
+    // Padrões de detecção automática
+    const patterns: Record<string, RegExp[]> = {
+      id: [/^(id|codigo|code|nome|name|trecho|identificador)$/i],
+      x: [/^x$/i, /^coord[_\s]?x$/i, /^easting$/i, /^e$/i, /^longitude$/i, /^lon$/i],
+      y: [/^y$/i, /^coord[_\s]?y$/i, /^northing$/i, /^n$/i, /^latitude$/i, /^lat$/i],
+      z: [/^z$/i, /^coord[_\s]?z$/i, /^elevation$/i, /^elev$/i, /^altitude$/i, /^cota$/i],
+      startNode: [/^(no|node)[_\s]?(inicio|ini|start|mont)$/i, /^(de|from)$/i, /^montante$/i, /^pv[_\s]?mont$/i],
+      endNode: [/^(no|node)[_\s]?(fim|end|jus)$/i, /^(para|to)$/i, /^jusante$/i, /^pv[_\s]?jus$/i],
+      diameter: [/^(diametro|diameter|dn|diam)$/i],
+      material: [/^(material|mat)$/i],
+      length: [/^(comprimento|length|comp|ext)$/i],
+      slope: [/^(declividade|slope|decliv)$/i],
+      groundElevation: [/^(cota[_\s]?terreno|ct|ground)$/i],
+      invertElevation: [/^(cota[_\s]?fundo|cf|invert)$/i],
+      depth: [/^(profundidade|depth|prof)$/i],
+      xStart: [/^x[_\s]?(inicio|ini|start|1)$/i],
+      yStart: [/^y[_\s]?(inicio|ini|start|1)$/i],
+      zStart: [/^z[_\s]?(inicio|ini|start|1)$/i, /^cota[_\s]?(mont|ini|1)$/i],
+      xEnd: [/^x[_\s]?(fim|end|2)$/i],
+      yEnd: [/^y[_\s]?(fim|end|2)$/i],
+      zEnd: [/^z[_\s]?(fim|end|2)$/i, /^cota[_\s]?(jus|fim|2)$/i],
+    };
+
+    for (const attr of attributes) {
+      for (const [systemField, fieldPatterns] of Object.entries(patterns)) {
+        for (const pattern of fieldPatterns) {
+          if (pattern.test(attr)) {
+            detected[systemField] = attr;
+            break;
+          }
+        }
+      }
+    }
+
+    onChange({ ...mapping, ...detected });
+  };
+
   return (
     <div className="step-content step4">
       <h3>Etapa 4: Mapeamento de Atributos</h3>
 
       <div className="mapping-form">
-        <p className="mapping-hint">
-          Associe os campos do arquivo aos campos do sistema.
-          Campos não mapeados serão ignorados ou preenchidos automaticamente.
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <p className="mapping-hint" style={{ margin: 0 }}>
+            Associe os campos do arquivo aos campos do sistema.
+          </p>
+          <button
+            onClick={autoDetectMappings}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              backgroundColor: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            🔍 Auto-detectar
+          </button>
+        </div>
 
-        <table className="mapping-table">
-          <thead>
-            <tr>
-              <th>Campo do Sistema</th>
-              <th>Descrição</th>
-              <th>Campo do Arquivo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {systemFields.map(field => (
-              <tr key={field.key}>
-                <td><strong>{field.label}</strong></td>
-                <td><span className="description">{field.description}</span></td>
-                <td>
-                  <select
-                    value={(mapping as any)[field.key] || ''}
-                    onChange={(e) => updateMapping(field.key, e.target.value)}
-                  >
-                    <option value="">-- Não mapear --</option>
-                    {attributes.map(attr => (
-                      <option key={attr} value={attr}>{attr}</option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
+        {/* Campos do Arquivo Disponíveis */}
+        <div style={{
+          marginBottom: '20px',
+          padding: '15px',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderRadius: '8px',
+          border: '1px solid rgba(59, 130, 246, 0.3)'
+        }}>
+          <h4 style={{ margin: '0 0 10px 0', color: '#3b82f6' }}>📋 Campos do Arquivo ({attributes.length} detectados)</h4>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {attributes.map(attr => (
+              <span key={attr} style={{
+                padding: '4px 10px',
+                backgroundColor: '#1e293b',
+                borderRadius: '15px',
+                fontSize: '0.85rem',
+                color: '#e2e8f0'
+              }}>
+                {attr}
+              </span>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </div>
+
+        {/* Mapeamento por Categorias */}
+        {systemFieldCategories.map(category => (
+          <div key={category.category} style={{ marginBottom: '20px' }}>
+            <h4 style={{
+              margin: '0 0 10px 0',
+              padding: '8px 12px',
+              backgroundColor: '#334155',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              {category.icon} {category.category}
+            </h4>
+            <table className="mapping-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <tbody>
+                {category.fields.map(field => (
+                  <tr key={field.key} style={{ borderBottom: '1px solid #334155' }}>
+                    <td style={{ padding: '10px', width: '150px' }}><strong>{field.label}</strong></td>
+                    <td style={{ padding: '10px', color: '#94a3b8', fontSize: '0.85rem' }}>{field.description}</td>
+                    <td style={{ padding: '10px', width: '200px' }}>
+                      <select
+                        value={(mapping as any)[field.key] || ''}
+                        onChange={(e) => updateMapping(field.key, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          borderRadius: '6px',
+                          backgroundColor: (mapping as any)[field.key] ? '#22543d' : '#0f172a',
+                          border: (mapping as any)[field.key] ? '1px solid #22c55e' : '1px solid #334155',
+                          color: '#e2e8f0'
+                        }}
+                      >
+                        <option value="">-- Não mapear --</option>
+                        {attributes.map(attr => (
+                          <option key={attr} value={attr}>{attr}</option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
 
         {/* Template Actions */}
         <div className="template-actions">

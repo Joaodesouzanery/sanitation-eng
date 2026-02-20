@@ -1,8 +1,15 @@
 /**
  * CSV Reader - Leitor de arquivos CSV/TXT com coordenadas
+ *
+ * LEITURA INTEGRAL: Este reader foi otimizado para extrair TODOS os atributos
+ * disponíveis em arquivos CSV/TXT, incluindo:
+ * - Campos de coordenadas (X, Y, Z)
+ * - Campos de conectividade (startNode, endNode, de, para)
+ * - Campos de rede (diâmetro, material, comprimento, declividade)
+ * - Campos personalizados
  */
 
-import { RawEntity, RawImportData, ImportMetadata } from '../ImportEngine';
+import { RawEntity, RawImportData, ImportMetadata, EntityTypeInfo } from '../ImportEngine';
 import { NumericParser } from '../NumericParser';
 
 // ============================================================================
@@ -21,7 +28,8 @@ export interface CSVColumn {
   name: string;
   index: number;
   sampleValues: string[];
-  dataType: 'string' | 'number' | 'coordinate' | 'unknown';
+  dataType: 'string' | 'number' | 'coordinate' | 'id' | 'node_reference' | 'unknown';
+  suggestedMapping?: string; // Campo do sistema sugerido
 }
 
 // ============================================================================
@@ -146,15 +154,45 @@ class CSVReaderImpl {
 
   private analyzeColumns(headers: string[], rows: string[][]): CSVColumn[] {
     return headers.map((name, index) => {
-      const sampleValues = rows.slice(0, 10).map(row => row[index] || '').filter(v => v);
-      const dataType = this.detectDataType(sampleValues);
+      // Coletar TODAS as amostras, não apenas as primeiras 10
+      const sampleValues = rows.slice(0, Math.min(100, rows.length))
+        .map(row => row[index] || '')
+        .filter(v => v.trim() !== '');
+      const dataType = this.detectDataType(sampleValues, name);
+      const suggestedMapping = this.suggestMapping(name);
 
-      return { name, index, sampleValues, dataType };
+      return { name, index, sampleValues, dataType, suggestedMapping };
     });
   }
 
-  private detectDataType(values: string[]): CSVColumn['dataType'] {
+  private detectDataType(values: string[], columnName: string): CSVColumn['dataType'] {
     if (values.length === 0) return 'unknown';
+
+    const nameLower = columnName.toLowerCase();
+
+    // Verificar se é referência de nó (startNode, endNode, de, para, no_inicio, no_fim)
+    const nodeRefPatterns = [
+      /^(no|node|n[oó])[_\s]?(inicio|ini|start|montante|m)$/i,
+      /^(no|node|n[oó])[_\s]?(fim|end|final|jusante|j)$/i,
+      /^(de|from|origem|start[_\s]?node)$/i,
+      /^(para|to|destino|end[_\s]?node)$/i,
+      /^(pv|poço|poco|mh)[_\s]?(mont|jus|ini|fim|1|2)$/i,
+      /^id[_\s]?(inicio|fim|start|end)$/i
+    ];
+
+    for (const pattern of nodeRefPatterns) {
+      if (pattern.test(nameLower)) {
+        return 'node_reference';
+      }
+    }
+
+    // Verificar se é ID
+    const idPatterns = [/^id$/i, /^codigo$/i, /^code$/i, /^identificador$/i, /^nome$/i, /^name$/i, /^trecho$/i];
+    for (const pattern of idPatterns) {
+      if (pattern.test(nameLower)) {
+        return 'id';
+      }
+    }
 
     let numericCount = 0;
     let coordinateCount = 0;
@@ -165,7 +203,7 @@ class CSVReaderImpl {
       if (!isNaN(parsed.value)) {
         numericCount++;
 
-        // Verificar se parece coordenada
+        // Verificar se parece coordenada UTM (valores grandes)
         if (parsed.value > 100000 && parsed.value < 10000000) {
           coordinateCount++;
         }
@@ -175,6 +213,70 @@ class CSVReaderImpl {
     if (coordinateCount > values.length * 0.8) return 'coordinate';
     if (numericCount > values.length * 0.8) return 'number';
     return 'string';
+  }
+
+  /**
+   * Sugere mapeamento automático baseado no nome da coluna
+   */
+  private suggestMapping(columnName: string): string | undefined {
+    const nameLower = columnName.toLowerCase().trim();
+
+    // Mapeamentos de coordenadas
+    const xPatterns = [/^x$/i, /^coord[_\s]?x$/i, /^easting$/i, /^e$/i, /^longitude$/i, /^lon$/i, /^x[_\s]?utm$/i];
+    const yPatterns = [/^y$/i, /^coord[_\s]?y$/i, /^northing$/i, /^n$/i, /^latitude$/i, /^lat$/i, /^y[_\s]?utm$/i];
+    const zPatterns = [/^z$/i, /^coord[_\s]?z$/i, /^elevation$/i, /^elev$/i, /^altitude$/i, /^alt$/i, /^cota$/i, /^z[_\s]?utm$/i];
+
+    for (const p of xPatterns) if (p.test(nameLower)) return 'x';
+    for (const p of yPatterns) if (p.test(nameLower)) return 'y';
+    for (const p of zPatterns) if (p.test(nameLower)) return 'z';
+
+    // Mapeamentos de conectividade (TRECHOS)
+    const startNodePatterns = [
+      /^(no|node|n[oó])[_\s]?(inicio|ini|start|montante|m)$/i,
+      /^(de|from|origem|start[_\s]?node)$/i,
+      /^(pv|poço|poco|mh)[_\s]?(mont|ini|1)$/i,
+      /^id[_\s]?(inicio|start)$/i,
+      /^montante$/i, /^m$/i
+    ];
+    const endNodePatterns = [
+      /^(no|node|n[oó])[_\s]?(fim|end|final|jusante|j)$/i,
+      /^(para|to|destino|end[_\s]?node)$/i,
+      /^(pv|poço|poco|mh)[_\s]?(jus|fim|2)$/i,
+      /^id[_\s]?(fim|end)$/i,
+      /^jusante$/i, /^j$/i
+    ];
+
+    for (const p of startNodePatterns) if (p.test(nameLower)) return 'startNode';
+    for (const p of endNodePatterns) if (p.test(nameLower)) return 'endNode';
+
+    // Mapeamentos de rede
+    const diameterPatterns = [/^(diametro|diameter|dn|diam|d)$/i, /^di[aâ]metro$/i];
+    const materialPatterns = [/^(material|mat|tipo[_\s]?mat)$/i];
+    const lengthPatterns = [/^(comprimento|length|comp|ext|extensao|l)$/i];
+    const slopePatterns = [/^(declividade|slope|decliv|inclinacao|i)$/i];
+    const depthPatterns = [/^(profundidade|depth|prof|h)$/i];
+    const groundElevPatterns = [/^(cota[_\s]?(terreno|terr|sup)?)$/i, /^(ground[_\s]?elev)$/i, /^ct$/i];
+    const invertElevPatterns = [/^(cota[_\s]?(fundo|inv|inf|soleira))$/i, /^(invert[_\s]?elev)$/i, /^cf$/i];
+    const idPatterns = [/^(id|codigo|code|nome|name|trecho|identificador)$/i];
+
+    for (const p of diameterPatterns) if (p.test(nameLower)) return 'diameter';
+    for (const p of materialPatterns) if (p.test(nameLower)) return 'material';
+    for (const p of lengthPatterns) if (p.test(nameLower)) return 'length';
+    for (const p of slopePatterns) if (p.test(nameLower)) return 'slope';
+    for (const p of depthPatterns) if (p.test(nameLower)) return 'depth';
+    for (const p of groundElevPatterns) if (p.test(nameLower)) return 'groundElevation';
+    for (const p of invertElevPatterns) if (p.test(nameLower)) return 'invertElevation';
+    for (const p of idPatterns) if (p.test(nameLower)) return 'id';
+
+    // Coordenadas de início e fim (para trechos com geometria)
+    if (/^x[_\s]?(inicio|ini|start|mont|1)$/i.test(nameLower)) return 'xStart';
+    if (/^y[_\s]?(inicio|ini|start|mont|1)$/i.test(nameLower)) return 'yStart';
+    if (/^z[_\s]?(inicio|ini|start|mont|1)$/i.test(nameLower)) return 'zStart';
+    if (/^x[_\s]?(fim|end|jus|2)$/i.test(nameLower)) return 'xEnd';
+    if (/^y[_\s]?(fim|end|jus|2)$/i.test(nameLower)) return 'yEnd';
+    if (/^z[_\s]?(fim|end|jus|2)$/i.test(nameLower)) return 'zEnd';
+
+    return undefined;
   }
 
   // --------------------------------------------------------------------------
@@ -219,18 +321,80 @@ class CSVReaderImpl {
     const yColumn = this.findCoordinateColumn(parsedData.columns, 'y');
     const zColumn = this.findCoordinateColumn(parsedData.columns, 'z');
 
+    // Detectar colunas de conectividade (TRECHOS)
+    const startNodeColumn = parsedData.columns.find(c => c.suggestedMapping === 'startNode');
+    const endNodeColumn = parsedData.columns.find(c => c.suggestedMapping === 'endNode');
+    const hasTrechoData = startNodeColumn && endNodeColumn;
+
+    // Detectar coordenadas de início/fim (para trechos com geometria embutida)
+    const xStartColumn = parsedData.columns.find(c => c.suggestedMapping === 'xStart');
+    const yStartColumn = parsedData.columns.find(c => c.suggestedMapping === 'yStart');
+    const xEndColumn = parsedData.columns.find(c => c.suggestedMapping === 'xEnd');
+    const yEndColumn = parsedData.columns.find(c => c.suggestedMapping === 'yEnd');
+    const hasGeometricTrechoData = xStartColumn && yStartColumn && xEndColumn && yEndColumn;
+
+    // Determinar tipo de geometria e tipo de importação sugerido
+    let geometryType: 'point' | 'line' | 'polygon' | 'mixed' = 'mixed';
+    let suggestedImportAs: 'edge' | 'node' | 'drawing' | 'ignore' = 'ignore';
+
+    if (hasTrechoData || hasGeometricTrechoData) {
+      geometryType = 'line';
+      suggestedImportAs = 'edge';
+    } else if (xColumn && yColumn) {
+      geometryType = 'point';
+      suggestedImportAs = 'node';
+    }
+
+    // Criar lista de tipos de entidade com base na análise
+    const entityTypes: EntityTypeInfo[] = [];
+
+    if (hasTrechoData) {
+      entityTypes.push({
+        type: 'TRECHO_TABULAR',
+        count: entities.length,
+        suggestedImportAs: 'edge',
+        hasZ: zColumn !== null,
+        sampleAttributes: parsedData.headers
+      });
+    }
+
+    if (hasGeometricTrechoData) {
+      entityTypes.push({
+        type: 'TRECHO_GEOMETRICO',
+        count: entities.length,
+        suggestedImportAs: 'edge',
+        hasZ: zColumn !== null,
+        sampleAttributes: parsedData.headers
+      });
+    }
+
+    if (xColumn && yColumn && !hasTrechoData && !hasGeometricTrechoData) {
+      entityTypes.push({
+        type: 'PONTO',
+        count: entities.length,
+        suggestedImportAs: 'node',
+        hasZ: zColumn !== null,
+        sampleAttributes: parsedData.headers
+      });
+    }
+
+    // Sempre adicionar CSV_ROW como fallback
+    if (entityTypes.length === 0) {
+      entityTypes.push({
+        type: 'CSV_ROW',
+        count: entities.length,
+        suggestedImportAs: suggestedImportAs,
+        hasZ: zColumn !== null,
+        sampleAttributes: parsedData.headers
+      });
+    }
+
     return {
       detectedCRS: null,
       detectedUnit: null,
       hasZ: zColumn !== null,
-      geometryType: xColumn && yColumn ? 'point' : 'mixed',
-      entityTypes: [{
-        type: 'CSV_ROW',
-        count: entities.length,
-        suggestedImportAs: xColumn && yColumn ? 'node' : 'ignore',
-        hasZ: zColumn !== null,
-        sampleAttributes: parsedData.headers
-      }],
+      geometryType: geometryType,
+      entityTypes,
       numericFormat: formatDetection.format,
       totalEntities: entities.length
     };
