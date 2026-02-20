@@ -598,7 +598,7 @@ export class RDODashboard {
 
     // Timeline
     const timelineChart = {
-      labels: metrics.executionTimeline.map(t => t.dateFormatted),
+      labels: metrics.executionTimeline.map(t => t.date),
       daily: metrics.executionTimeline.map(t => t.dailyExecuted),
       accumulated: metrics.executionTimeline.map(t => t.accumulatedExecuted)
     };

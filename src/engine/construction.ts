@@ -234,7 +234,7 @@ export function calcularProdutividade(
  * Calcula a equipe necessaria para execucao.
  */
 export function calcularEquipe(parametros: ParametrosExecucao): ResultadoEquipe {
-  const { tipoSolo, tipoEscavacao, profundidade, diametroMm } = parametros;
+  const { tipoSolo, tipoEscavacao, profundidadeMedia: profundidade, diametroMm } = parametros;
 
   let encarregado = 1;
   let pedreiro = 2;

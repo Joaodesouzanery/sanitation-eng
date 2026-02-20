@@ -99,7 +99,7 @@ class LayerRegistryImpl {
     }
 
     // Validar SRID da camada
-    if (layer.srid !== this._projectCRS.code.split(':')[1]) {
+    if (layer.srid !== parseInt(this._projectCRS.code.split(':')[1], 10)) {
       console.warn(`Camada ${layer.id} tem SRID diferente do projeto. Transformação necessária.`);
     }
 

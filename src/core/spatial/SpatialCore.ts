@@ -11,8 +11,10 @@ import { Feature, Point, LineString, Polygon } from 'geojson';
 // RE-EXPORTS
 // ============================================================================
 
-export { LayerRegistry, SpatialLayer, CRSDefinition, createLayer, generateLayerId } from './LayerRegistry';
-export { ProjectCRS, ProjectSettings, CRS_PRESETS } from './ProjectCRS';
+export { LayerRegistry, createLayer, generateLayerId } from './LayerRegistry';
+export type { SpatialLayer, CRSDefinition } from './LayerRegistry';
+export { ProjectCRS, CRS_PRESETS } from './ProjectCRS';
+export type { ProjectSettings } from './ProjectCRS';
 
 // ============================================================================
 // SPATIAL CORE CLASS

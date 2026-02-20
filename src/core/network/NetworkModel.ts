@@ -327,8 +327,8 @@ class NetworkModelImpl {
     const coords = edge.geometry.coordinates;
     const splitIndex = this.findNearestSegment(coords, splitPoint);
 
-    const coords1 = coords.slice(0, splitIndex + 1).concat([splitPoint as [number, number, number]]);
-    const coords2 = [splitPoint as [number, number, number]].concat(coords.slice(splitIndex + 1));
+    const coords1 = [...coords.slice(0, splitIndex + 1), splitPoint] as [number, number, number][];
+    const coords2 = [splitPoint, ...coords.slice(splitIndex + 1)] as [number, number, number][];
 
     // Criar primeiro trecho
     const edge1: NetworkEdge = {

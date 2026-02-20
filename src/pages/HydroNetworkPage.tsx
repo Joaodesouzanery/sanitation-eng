@@ -32,7 +32,7 @@ import {
 import {
   RDOEngine,
   type ExecutedService,
-  type SegmentProgress,
+  type SegmentProgress as BaseSegmentProgress,
   ServiceUnit
 } from '../engine/rdo';
 import { RDODashboard } from '../engine/dashboard';
@@ -44,6 +44,14 @@ import {
 // Declare external libraries
 declare const L: any;
 declare const Chart: any;
+
+// Extended SegmentProgress for form compatibility
+interface SegmentProgress extends BaseSegmentProgress {
+  id?: string;
+  plannedTotal?: number;
+  executedBefore?: number;
+  executedToday?: number;
+}
 
 type TabType = 'topografia' | 'orcamento' | 'execucao' | 'planejamento' | 'rdo' | 'resultados';
 type RDOViewMode = 'dashboard' | 'list' | 'form' | 'detail';
@@ -1195,7 +1203,7 @@ export const HydroNetworkPage: React.FC = () => {
                   {schedule.trechos?.slice(0, 10).map((trecho, idx) => (
                     <tr key={idx}>
                       <td style={styles.td}>{trecho.trechoId}</td>
-                      <td style={styles.td}>{trecho.metrosTotal?.toFixed(0)}m</td>
+                      <td style={styles.td}>{trecho.comprimentoTotal?.toFixed(0)}m</td>
                       {Array.from({ length: Math.min(schedule.totalDays, 15) }, (_, day) => {
                         const seg = schedule.allSegments?.find(s =>
                           s.trechoId === trecho.trechoId && s.day === day + 1

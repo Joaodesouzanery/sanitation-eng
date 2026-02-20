@@ -327,7 +327,7 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
       // Color coding by network type
       let lineColor = '#22c55e';  // Green for gravity
       let lineStyle = [];
-      if (trecho.tipoRede === 'Esgoto por Recalque' || trecho.tipoRede === 'Elevatoria') {
+      if (trecho.tipoRede === 'Elevatoria / Booster') {
         lineColor = '#f59e0b';  // Orange for pumped
         lineStyle = [5, 5];  // Dashed line
       } else if (trecho.declividade < 0) {

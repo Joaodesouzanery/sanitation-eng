@@ -8,11 +8,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   RDOEngine,
-  type RDO,
+  type RDO as BaseRDO,
   type ExecutedService,
-  type SegmentProgress,
+  type SegmentProgress as BaseSegmentProgress,
   type Worker,
-  ServiceUnit
+  type Occurrence,
+  ServiceUnit,
+  RDOStatus
 } from '../engine/rdo';
 import { RDODashboard, type MapData } from '../engine/dashboard';
 
@@ -21,7 +23,20 @@ declare const L: any;
 declare const Chart: any;
 
 type ViewMode = 'dashboard' | 'list' | 'form' | 'detail' | 'map';
-type RDOStatusType = 'rascunho' | 'enviado' | 'aprovado' | 'rejeitado';
+
+// Extended local interfaces for backward compatibility with existing code
+interface SegmentProgress extends BaseSegmentProgress {
+  plannedTotal?: number;
+  executedBefore?: number;
+  executedToday?: number;
+}
+
+interface RDO extends BaseRDO {
+  services?: ExecutedService[];
+  segments?: SegmentProgress[];
+  workers?: Worker[];
+  notes?: string;
+}
 
 interface DashboardMetrics {
   totalPlanned: number;
@@ -81,7 +96,7 @@ export const RDOPage: React.FC<RDOPageProps> = ({
   // Initialize engine and dashboard
   useEffect(() => {
     engineRef.current = new RDOEngine();
-    dashboardRef.current = new RDODashboard(projectId);
+    dashboardRef.current = new RDODashboard([]);
 
     // Load RDOs from localStorage
     loadRDOsFromStorage();
@@ -346,20 +361,43 @@ export const RDOPage: React.FC<RDOPageProps> = ({
   };
 
   // Save RDO
-  const handleSaveRDO = (status: RDOStatus = 'rascunho') => {
+  const handleSaveRDO = (status: RDOStatus = RDOStatus.RASCUNHO) => {
+    const now = new Date().toISOString();
     const newRDO: RDO = {
       id: `rdo-${Date.now()}`,
       projectId,
       date: formDate,
       projectName: 'Projeto Saneamento',
       status,
+      workFronts: [],
+      workFrontNames: [],
+      workLocations: [],
+      workLocationNames: [],
+      executedServices: formServices.filter(s => s.serviceName) as ExecutedService[],
+      segmentProgress: formSegments.filter(s => s.segmentName) as SegmentProgress[],
+      visits: [],
+      occurrences: formOccurrences ? [{
+        id: `occ-${Date.now()}`,
+        type: 'geral',
+        description: formOccurrences,
+        severity: 'baixa',
+        timestamp: now
+      }] : [],
+      financialEntries: [],
+      dailyLaborCost: 0,
+      dailyMaterialCost: 0,
+      dailyEquipmentCost: 0,
+      dailyTotalCost: 0,
+      generalNotes: formNotes,
+      createdAt: now,
+      updatedAt: now,
+      version: 1,
+      history: [],
+      // Extended fields for local compatibility
       services: formServices.filter(s => s.serviceName) as ExecutedService[],
       segments: formSegments.filter(s => s.segmentName) as SegmentProgress[],
       workers: formWorkers.filter(w => w.name) as Worker[],
-      notes: formNotes,
-      occurrences: formOccurrences,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      notes: formNotes
     };
 
     const newRdos = [...rdos, newRDO];
@@ -1037,7 +1075,7 @@ export const RDOPage: React.FC<RDOPageProps> = ({
               Cancelar
             </button>
             <button
-              onClick={() => handleSaveRDO('rascunho')}
+              onClick={() => handleSaveRDO(RDOStatus.RASCUNHO)}
               style={{
                 padding: '12px 24px',
                 borderRadius: '8px',
@@ -1050,7 +1088,7 @@ export const RDOPage: React.FC<RDOPageProps> = ({
               💾 Salvar Rascunho
             </button>
             <button
-              onClick={() => handleSaveRDO('enviado')}
+              onClick={() => handleSaveRDO(RDOStatus.ENVIADO)}
               style={{
                 padding: '12px 24px',
                 borderRadius: '8px',
@@ -1182,10 +1220,12 @@ export const RDOPage: React.FC<RDOPageProps> = ({
           )}
 
           {/* Occurrences */}
-          {selectedRDO.occurrences && (
+          {selectedRDO.occurrences && selectedRDO.occurrences.length > 0 && (
             <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#0f172a', borderRadius: '10px', borderLeft: '4px solid #ef4444' }}>
               <h4 style={{ marginBottom: '10px', color: '#ef4444' }}>⚠️ Ocorrências</h4>
-              <p>{selectedRDO.occurrences}</p>
+              {selectedRDO.occurrences.map((occ, idx) => (
+                <p key={idx}>{occ.description}</p>
+              ))}
             </div>
           )}
         </div>

@@ -256,7 +256,9 @@ export function calculateMaterialNeeds(
   const requirements: MaterialRequirement[] = [];
 
   // Parse datas do cronograma
-  const startDate = schedule.startDate;
+  const startDateStr = schedule.startDate instanceof Date
+    ? schedule.startDate.toISOString().split('T')[0]
+    : schedule.startDate;
   const calendar = schedule.calendar;
   const dateMap: Record<number, string> = {};
   calendar.forEach((d, i) => {
@@ -272,7 +274,7 @@ export function calculateMaterialNeeds(
     for (const segment of trecho.segments) {
       const day = segment.day;
       const meters = segment.meters;
-      const activityDate = dateMap[day] || addDays(startDate, day - 1);
+      const activityDate = dateMap[day] || addDays(startDateStr, day - 1);
 
       // Calcula data de entrega (precisa antes da atividade)
       const deliveryDate = addDays(activityDate, -2);
@@ -310,7 +312,7 @@ export function calculateMaterialNeeds(
 
       // PVs sao necessarios no inicio do trecho
       const firstDay = trecho.startDay;
-      const pvDate = dateMap[firstDay] || startDate;
+      const pvDate = dateMap[firstDay] || startDateStr;
       const pvDelivery = addDays(pvDate, -3);
       const pvOrder = addDays(pvDelivery, -defaultLeadTime);
 
