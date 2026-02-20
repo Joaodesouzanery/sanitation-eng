@@ -569,86 +569,6 @@ export const HydroNetworkPage: React.FC = () => {
     }
   }, [diametroMm, material]);
 
-  // Handle DXF import from TopografiaImportNovo component
-  const handleDxfImportComplete = useCallback((data: { nodes: Array<{ id: string; x: number; y: number; z: number; layer?: string }>; edges: Array<{ id: string; coordinates: number[][]; layer?: string }> }) => {
-    try {
-      // Convert nodes to PontoTopografico format
-      const newPontos: PontoTopografico[] = data.nodes.map(node => ({
-        id: node.id,
-        x: node.x,
-        y: node.y,
-        cota: node.z
-      }));
-
-      // Create trechos from edges
-      const newTrechos: Trecho[] = data.edges.map((edge, idx) => {
-        const coords = edge.coordinates;
-        const start = coords[0];
-        const end = coords[coords.length - 1];
-        const dx = end[0] - start[0];
-        const dy = end[1] - start[1];
-        const dz = (end[2] || 0) - (start[2] || 0);
-        const comprimento = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        const declividade = comprimento > 0 ? dz / comprimento : 0;
-
-        return {
-          idInicio: `P${idx + 1}`,
-          idFim: `P${idx + 2}`,
-          xInicio: start[0],
-          yInicio: start[1],
-          cotaInicio: start[2] || 0,
-          xFim: end[0],
-          yFim: end[1],
-          cotaFim: end[2] || 0,
-          comprimento,
-          declividade,
-          diametroMm,
-          material,
-          tipoRede: declividade >= 0.005 ? 'Esgoto por Gravidade' : 'Elevatoria / Booster'
-        };
-      });
-
-      // If no nodes from DXF, create them from edge endpoints
-      if (newPontos.length === 0 && newTrechos.length > 0) {
-        const uniquePoints = new Map<string, PontoTopografico>();
-        newTrechos.forEach(t => {
-          const startKey = `${t.xInicio.toFixed(3)},${t.yInicio.toFixed(3)}`;
-          const endKey = `${t.xFim.toFixed(3)},${t.yFim.toFixed(3)}`;
-          if (!uniquePoints.has(startKey)) {
-            uniquePoints.set(startKey, { id: t.idInicio, x: t.xInicio, y: t.yInicio, cota: t.cotaInicio });
-          }
-          if (!uniquePoints.has(endKey)) {
-            uniquePoints.set(endKey, { id: t.idFim, x: t.xFim, y: t.yFim, cota: t.cotaFim });
-          }
-        });
-        newPontos.push(...uniquePoints.values());
-      }
-
-      setPontos(newPontos);
-      setTrechos(newTrechos);
-
-      if (newTrechos.length > 0) {
-        const newSummary = summarizeNetwork(newTrechos);
-        setSummary(newSummary);
-
-        // Auto-generate budget
-        if (typeof generateBudgetFromTrechos === 'function') {
-          try {
-            const newBudget = generateBudgetFromTrechos(newTrechos);
-            setBudget(newBudget);
-          } catch (e) {
-            console.warn('Could not generate budget', e);
-          }
-        }
-      }
-
-      setError('');
-      setFileName('DXF Import');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao importar DXF');
-    }
-  }, [diametroMm, material]);
-
   // File handling
   const handleFileSelect = useCallback(async (file: File) => {
     setIsLoading(true);
@@ -934,7 +854,10 @@ export const HydroNetworkPage: React.FC = () => {
 
         {/* New DXF import card */}
         <div style={{ flex: '1', minWidth: '320px' }}>
-          <TopografiaImportNovo onImportComplete={handleDxfImportComplete} />
+          <TopografiaImportNovo onImportComplete={(dxfPontos) => {
+            setFileName('DXF Import');
+            processData(dxfPontos as PontoTopografico[]);
+          }} />
         </div>
       </div>
 
