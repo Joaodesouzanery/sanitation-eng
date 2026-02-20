@@ -69,13 +69,32 @@ class DXFReaderImpl {
   // --------------------------------------------------------------------------
 
   private parseDXF(content: string): { header: DXFHeader; layers: DXFLayer[]; entities: DXFEntity[] } {
-    const lines = content.split('\n').map(l => l.trim());
+    // Normalize line endings and split
+    const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
     const pairs: Array<{ code: number; value: string }> = [];
 
-    // Converter para pares código/valor
-    for (let i = 0; i < lines.length - 1; i += 2) {
-      const code = parseInt(lines[i]);
-      const value = lines[i + 1];
+    // Converter para pares código/valor - skip blank lines to maintain alignment
+    let i = 0;
+    while (i < lines.length) {
+      // Skip blank lines to find code
+      while (i < lines.length && lines[i].trim() === '') {
+        i++;
+      }
+      if (i >= lines.length) break;
+
+      const codeLine = lines[i].trim();
+      const code = parseInt(codeLine, 10);
+      i++;
+
+      // Skip blank lines to find value
+      while (i < lines.length && lines[i].trim() === '') {
+        i++;
+      }
+      if (i >= lines.length) break;
+
+      const value = lines[i].trim();
+      i++;
+
       if (!isNaN(code)) {
         pairs.push({ code, value });
       }
