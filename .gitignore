@@ -349,3 +349,6 @@ yarn.lock
 .safety/
 security_report*.json
 vulnerability_scan*.xml
+
+# TypeScript build info
+tsconfig.tsbuildinfo
