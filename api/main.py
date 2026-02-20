@@ -38,9 +38,10 @@ app = FastAPI(
     version="2.0.0",
 )
 
-# CORS - Allow Lovable frontend and local development
+# CORS - Allow Lovable frontend, Vercel deployment, and local development
 allowed_origins = os.environ.get(
-    "ALLOWED_ORIGINS", "http://localhost:5173"
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,https://hydronetwork.vercel.app,https://*.vercel.app"
 ).split(",")
 
 app.add_middleware(
