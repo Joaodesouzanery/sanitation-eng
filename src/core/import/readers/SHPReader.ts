@@ -35,6 +35,19 @@ export interface ShapefileHeader {
   };
 }
 
+export interface ShapefileValidation {
+  isValid: boolean;
+  hasShp: boolean;
+  hasDbf: boolean;
+  hasPrj: boolean;
+  hasShx: boolean;
+  warnings: Array<{
+    code: string;
+    message: string;
+    suggestion: string;
+  }>;
+}
+
 // Shape types
 const SHAPE_TYPES: Record<number, string> = {
   0: 'Null',
@@ -58,6 +71,45 @@ const SHAPE_TYPES: Record<number, string> = {
 // ============================================================================
 
 class SHPReaderImpl {
+
+  validateFiles(files: File[]): ShapefileValidation {
+    const extensions = files.map(f => f.name.split('.').pop()?.toLowerCase());
+
+    const warnings: Array<{ code: string; message: string; suggestion: string }> = [];
+
+    if (!extensions.includes('dbf')) {
+      warnings.push({
+        code: 'MISSING_DBF',
+        message: 'Arquivo .dbf não encontrado',
+        suggestion: 'Sem o .dbf, atributos como elevação não serão importados'
+      });
+    }
+
+    if (!extensions.includes('prj')) {
+      warnings.push({
+        code: 'MISSING_PRJ',
+        message: 'Arquivo .prj não encontrado',
+        suggestion: 'Selecione o sistema de coordenadas manualmente na etapa 2'
+      });
+    }
+
+    if (!extensions.includes('shx')) {
+      warnings.push({
+        code: 'MISSING_SHX',
+        message: 'Arquivo .shx não encontrado',
+        suggestion: 'Pode haver perda de performance na leitura'
+      });
+    }
+
+    return {
+      isValid: extensions.includes('shp'),
+      hasShp: extensions.includes('shp') || false,
+      hasDbf: extensions.includes('dbf') || false,
+      hasPrj: extensions.includes('prj') || false,
+      hasShx: extensions.includes('shx') || false,
+      warnings
+    };
+  }
 
   async read(files: File[]): Promise<RawImportData> {
     const components = await this.readComponents(files);

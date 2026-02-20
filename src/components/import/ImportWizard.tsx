@@ -15,6 +15,7 @@ import {
   ImportOptions,
   ImportResult
 } from '../../core/import/ImportEngine';
+import { SHPReader, ShapefileValidation } from '../../core/import/readers/SHPReader';
 import { ProjectCRS } from '../../core/spatial/ProjectCRS';
 import { SpatialCore } from '../../core/spatial/SpatialCore';
 
@@ -25,6 +26,8 @@ import { SpatialCore } from '../../core/spatial/SpatialCore';
 export interface ImportWizardState {
   currentStep: 1 | 2 | 3 | 4;
   file: File | null;
+  companionFiles: File[];
+  shapefileValidation: ShapefileValidation | null;
   fileData: RawImportData | null;
   crsSelection: CRSSelection | null;
   modelTypeSelection: ModelTypeSelection | null;
@@ -65,6 +68,8 @@ export const ImportWizard: React.FC<{
   const [state, setState] = useState<ImportWizardState>({
     currentStep: 1,
     file: null,
+    companionFiles: [],
+    shapefileValidation: null,
     fileData: null,
     crsSelection: null,
     modelTypeSelection: null,
@@ -98,11 +103,40 @@ export const ImportWizard: React.FC<{
   // Step 1: File Detection
   // --------------------------------------------------------------------------
 
-  const handleFileSelect = useCallback(async (file: File) => {
-    setState(prev => ({ ...prev, file, importing: true, error: null }));
+  const handleFileSelect = useCallback(async (files: File[]) => {
+    // Verificar se é um shapefile
+    const hasShp = files.some(f => f.name.toLowerCase().endsWith('.shp'));
+    const mainFile = files.find(f => !f.name.match(/\.(shx|dbf|prj)$/i)) || files[0];
+    const companionFiles = files.filter(f => f !== mainFile);
+
+    // Validar shapefile se necessário
+    let shapefileValidation: ShapefileValidation | null = null;
+    if (hasShp) {
+      shapefileValidation = SHPReader.validateFiles(files);
+      if (!shapefileValidation.isValid) {
+        setState(prev => ({
+          ...prev,
+          error: 'Arquivo .shp principal não encontrado',
+          importing: false
+        }));
+        return;
+      }
+    }
+
+    setState(prev => ({
+      ...prev,
+      file: mainFile,
+      companionFiles,
+      shapefileValidation,
+      importing: true,
+      error: null
+    }));
 
     try {
-      const fileData = await ImportEngine.detectFile(file);
+      // Usar detectFiles para shapefiles (múltiplos arquivos)
+      const fileData = hasShp
+        ? await ImportEngine.detectFiles(files)
+        : await ImportEngine.detectFile(mainFile);
 
       setState(prev => ({
         ...prev,
@@ -238,6 +272,8 @@ export const ImportWizard: React.FC<{
         {state.currentStep === 1 && (
           <Step1FileDetection
             file={state.file}
+            companionFiles={state.companionFiles}
+            shapefileValidation={state.shapefileValidation}
             fileData={state.fileData}
             importing={state.importing}
             onFileSelect={handleFileSelect}
@@ -332,14 +368,18 @@ export const ImportWizard: React.FC<{
 
 interface Step1Props {
   file: File | null;
+  companionFiles: File[];
+  shapefileValidation: ShapefileValidation | null;
   fileData: RawImportData | null;
   importing: boolean;
-  onFileSelect: (file: File) => void;
+  onFileSelect: (files: File[]) => void;
   onEntityTypeChange: (entityType: string, importAs: 'edge' | 'node' | 'drawing' | 'ignore') => void;
 }
 
 const Step1FileDetection: React.FC<Step1Props> = ({
   file,
+  companionFiles,
+  shapefileValidation,
   fileData,
   importing,
   onFileSelect,
@@ -347,16 +387,16 @@ const Step1FileDetection: React.FC<Step1Props> = ({
 }) => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) {
-      onFileSelect(droppedFile);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      onFileSelect(files);
     }
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      onFileSelect(selectedFile);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      onFileSelect(files);
     }
   };
 
@@ -381,21 +421,56 @@ const Step1FileDetection: React.FC<Step1Props> = ({
             <div className="file-details">
               <strong>{file.name}</strong>
               <span>{(file.size / 1024).toFixed(1)} KB</span>
+              {companionFiles.length > 0 && (
+                <span style={{ color: '#22c55e', fontSize: '0.85rem' }}>
+                  +{companionFiles.length} arquivo(s) auxiliar(es)
+                </span>
+              )}
             </div>
           </div>
         ) : (
           <div className="dropzone-content">
             <span className="upload-icon">📁</span>
-            <p>Arraste um arquivo aqui ou clique para selecionar</p>
-            <span className="formats">IFC, DWG, DXF, SHP, GeoJSON, CSV, INP</span>
+            <p>Arraste arquivos aqui ou clique para selecionar</p>
+            <span className="formats">IFC, DWG, DXF, SHP (+.shx, .dbf, .prj), GeoJSON, CSV, INP</span>
             <input
               type="file"
-              accept=".ifc,.dwg,.dxf,.shp,.geojson,.json,.csv,.txt,.inp"
+              accept=".ifc,.dwg,.dxf,.shp,.shx,.dbf,.prj,.geojson,.json,.csv,.txt,.inp"
+              multiple
               onChange={handleFileInput}
             />
           </div>
         )}
       </div>
+
+      {/* Shapefile Validation Warnings */}
+      {shapefileValidation && shapefileValidation.warnings.length > 0 && (
+        <div className="shapefile-warnings" style={{
+          marginTop: '15px',
+          padding: '15px',
+          backgroundColor: 'rgba(234, 179, 8, 0.1)',
+          border: '1px solid rgba(234, 179, 8, 0.3)',
+          borderRadius: '8px'
+        }}>
+          <h4 style={{ margin: '0 0 10px 0', color: '#eab308' }}>⚠️ Avisos do Shapefile</h4>
+          {shapefileValidation.warnings.map((warning, index) => (
+            <div key={index} style={{
+              display: 'flex',
+              gap: '10px',
+              marginBottom: index < shapefileValidation.warnings.length - 1 ? '10px' : 0,
+              padding: '10px',
+              backgroundColor: 'rgba(0, 0, 0, 0.2)',
+              borderRadius: '6px'
+            }}>
+              <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+              <div>
+                <strong style={{ display: 'block', marginBottom: '4px' }}>{warning.message}</strong>
+                <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{warning.suggestion}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Detection Results */}
       {fileData && (

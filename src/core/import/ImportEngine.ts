@@ -12,6 +12,7 @@
 
 import { Feature, LineString, Point } from 'geojson';
 import { NetworkNode, NetworkEdge, DrawingLayer } from '../network/NetworkModel';
+import { SHPReader } from './readers/SHPReader';
 
 // ============================================================================
 // INTERFACES
@@ -177,6 +178,23 @@ class ImportEngineImpl {
     };
   }
 
+  async detectFiles(files: File[]): Promise<RawImportData> {
+    // Encontrar arquivo principal (não auxiliar de shapefile)
+    const mainFile = files.find(f =>
+      !f.name.match(/\.(shx|dbf|prj)$/i)
+    ) || files[0];
+
+    const extension = mainFile.name.split('.').pop()?.toLowerCase();
+
+    // Para SHP, usar SHPReader diretamente com todos os arquivos
+    if (extension === 'shp') {
+      return SHPReader.read(files);
+    }
+
+    // Para outros tipos, usar detectFile existente
+    return this.detectFile(mainFile);
+  }
+
   private getFileType(extension?: string): RawImportData['fileType'] {
     const typeMap: Record<string, RawImportData['fileType']> = {
       'ifc': 'IFC',
@@ -235,6 +253,10 @@ class ImportEngineImpl {
         return this.extractDXFEntities(rawContent);
       case 'INP':
         return this.extractINPEntities(rawContent);
+      case 'SHP':
+        // Para SHP, entities já vêm processadas pelo SHPReader via detectFiles()
+        // Se rawContent.entities existe, retornar diretamente
+        return rawContent.entities || [];
       default:
         return [];
     }
