@@ -40,6 +40,7 @@ import {
   generateBudgetFromTrechos,
   type BudgetSummary
 } from '../engine/budget';
+import { TopografiaImportNovo } from '../components/hydronetwork/TopografiaImportNovo';
 
 // Declare external libraries
 declare const L: any;
@@ -431,9 +432,10 @@ export const HydroNetworkPage: React.FC = () => {
       const [lat, lng] = getMapCoordinates(ponto.x, ponto.y, refX, refY);
       bounds.push([lat, lng]);
 
+      const originalColor = idx === 0 ? '#22c55e' : idx === pontos.length - 1 ? '#ef4444' : '#3b82f6';
       const marker = L.circleMarker([lat, lng], {
         radius: 8,
-        fillColor: idx === 0 ? '#22c55e' : idx === pontos.length - 1 ? '#ef4444' : '#3b82f6',
+        fillColor: originalColor,
         fillOpacity: 0.9,
         color: '#fff',
         weight: 2
@@ -448,16 +450,49 @@ export const HydroNetworkPage: React.FC = () => {
         </div>
       `);
       marker.bindTooltip(ponto.id, { permanent: false, direction: 'top' });
+
+      // Click handler: highlight without zoom if visible, pan only if not visible
+      marker.on('click', function(e: any) {
+        const clickedLatLng = e.latlng;
+        const mapBounds = mapInstanceRef.current?.getBounds();
+
+        // Check if point is already visible in current viewport
+        const isVisible = mapBounds?.contains(clickedLatLng);
+
+        if (!isVisible) {
+          // Only pan to center if not visible (no zoom change)
+          mapInstanceRef.current?.panTo(clickedLatLng);
+        }
+
+        // Visual highlight effect - pulse animation
+        marker.setStyle({
+          fillColor: '#ffff00',
+          color: '#ffff00',
+          weight: 4,
+          radius: 12
+        });
+
+        // Reset to original style after 1.5 seconds
+        setTimeout(() => {
+          marker.setStyle({
+            fillColor: originalColor,
+            color: '#fff',
+            weight: 2,
+            radius: 8
+          });
+        }, 1500);
+      });
+
       markersLayerRef.current.addLayer(marker);
     });
 
     trechos.forEach(trecho => {
       const [startLat, startLng] = getMapCoordinates(trecho.xInicio, trecho.yInicio, refX, refY);
       const [endLat, endLng] = getMapCoordinates(trecho.xFim, trecho.yFim, refX, refY);
-      const color = trecho.tipoRede === 'Esgoto por Gravidade' ? '#22c55e' : '#f59e0b';
+      const originalColor = trecho.tipoRede === 'Esgoto por Gravidade' ? '#22c55e' : '#f59e0b';
 
       const polyline = L.polyline([[startLat, startLng], [endLat, endLng]], {
-        color: color,
+        color: originalColor,
         weight: 4,
         opacity: 0.8
       });
@@ -472,6 +507,36 @@ export const HydroNetworkPage: React.FC = () => {
           <p style="margin: 4px 0;"><strong>Material:</strong> ${trecho.material}</p>
         </div>
       `);
+
+      // Click handler: highlight without zoom if visible
+      polyline.on('click', function(e: any) {
+        const clickedLatLng = e.latlng;
+        const mapBounds = mapInstanceRef.current?.getBounds();
+
+        // Check if clicked point is visible
+        const isVisible = mapBounds?.contains(clickedLatLng);
+
+        if (!isVisible) {
+          mapInstanceRef.current?.panTo(clickedLatLng);
+        }
+
+        // Visual highlight effect
+        polyline.setStyle({
+          color: '#ffff00',
+          weight: 8,
+          opacity: 1
+        });
+
+        // Reset to original style after 1.5 seconds
+        setTimeout(() => {
+          polyline.setStyle({
+            color: originalColor,
+            weight: 4,
+            opacity: 0.8
+          });
+        }, 1500);
+      });
+
       segmentsLayerRef.current.addLayer(polyline);
     });
 
@@ -501,6 +566,86 @@ export const HydroNetworkPage: React.FC = () => {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao processar dados');
+    }
+  }, [diametroMm, material]);
+
+  // Handle DXF import from TopografiaImportNovo component
+  const handleDxfImportComplete = useCallback((data: { nodes: Array<{ id: string; x: number; y: number; z: number; layer?: string }>; edges: Array<{ id: string; coordinates: number[][]; layer?: string }> }) => {
+    try {
+      // Convert nodes to PontoTopografico format
+      const newPontos: PontoTopografico[] = data.nodes.map(node => ({
+        id: node.id,
+        x: node.x,
+        y: node.y,
+        cota: node.z
+      }));
+
+      // Create trechos from edges
+      const newTrechos: Trecho[] = data.edges.map((edge, idx) => {
+        const coords = edge.coordinates;
+        const start = coords[0];
+        const end = coords[coords.length - 1];
+        const dx = end[0] - start[0];
+        const dy = end[1] - start[1];
+        const dz = (end[2] || 0) - (start[2] || 0);
+        const comprimento = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        const declividade = comprimento > 0 ? dz / comprimento : 0;
+
+        return {
+          idInicio: `P${idx + 1}`,
+          idFim: `P${idx + 2}`,
+          xInicio: start[0],
+          yInicio: start[1],
+          cotaInicio: start[2] || 0,
+          xFim: end[0],
+          yFim: end[1],
+          cotaFim: end[2] || 0,
+          comprimento,
+          declividade,
+          diametroMm,
+          material,
+          tipoRede: declividade >= 0.005 ? 'Esgoto por Gravidade' : 'Elevatoria / Booster'
+        };
+      });
+
+      // If no nodes from DXF, create them from edge endpoints
+      if (newPontos.length === 0 && newTrechos.length > 0) {
+        const uniquePoints = new Map<string, PontoTopografico>();
+        newTrechos.forEach(t => {
+          const startKey = `${t.xInicio.toFixed(3)},${t.yInicio.toFixed(3)}`;
+          const endKey = `${t.xFim.toFixed(3)},${t.yFim.toFixed(3)}`;
+          if (!uniquePoints.has(startKey)) {
+            uniquePoints.set(startKey, { id: t.idInicio, x: t.xInicio, y: t.yInicio, cota: t.cotaInicio });
+          }
+          if (!uniquePoints.has(endKey)) {
+            uniquePoints.set(endKey, { id: t.idFim, x: t.xFim, y: t.yFim, cota: t.cotaFim });
+          }
+        });
+        newPontos.push(...uniquePoints.values());
+      }
+
+      setPontos(newPontos);
+      setTrechos(newTrechos);
+
+      if (newTrechos.length > 0) {
+        const newSummary = summarizeNetwork(newTrechos);
+        setSummary(newSummary);
+
+        // Auto-generate budget
+        if (typeof generateBudgetFromTrechos === 'function') {
+          try {
+            const newBudget = generateBudgetFromTrechos(newTrechos);
+            setBudget(newBudget);
+          } catch (e) {
+            console.warn('Could not generate budget', e);
+          }
+        }
+      }
+
+      setError('');
+      setFileName('DXF Import');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao importar DXF');
     }
   }, [diametroMm, material]);
 
@@ -699,89 +844,98 @@ export const HydroNetworkPage: React.FC = () => {
   // Tab content renderers
   const renderTopografia = () => (
     <div>
-      <div style={styles.card}>
-        <div style={styles.cardTitle}>
-          <span>&#8593;</span> Carregar Topografia
-        </div>
-        <div style={styles.cardSubtitle}>
-          Arquivo CSV, TXT ou Excel com colunas: id, x, y, cota
-        </div>
+      {/* Side-by-side import cards */}
+      <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '20px' }}>
+        {/* Existing CSV/TXT import card */}
+        <div style={{ ...styles.card, flex: '1', minWidth: '320px' }}>
+          <div style={styles.cardTitle}>
+            <span>&#8593;</span> Carregar Topografia (CSV/TXT)
+          </div>
+          <div style={styles.cardSubtitle}>
+            Arquivo CSV, TXT ou Excel com colunas: id, x, y, cota
+          </div>
 
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onClick={() => fileInputRef.current?.click()}
-          style={{
-            ...styles.dropZone,
-            ...(isDragging ? styles.dropZoneActive : {})
-          }}
-        >
-          <div style={{ fontSize: '32px', marginBottom: '12px' }}>&#8593;</div>
-          <p style={{ color: '#64748b', marginBottom: '8px' }}>
-            Arraste o arquivo aqui ou clique para selecionar
-          </p>
-          <p style={{ color: '#94a3b8', fontSize: '12px' }}>
-            Formatos: .csv, .txt, .xlsx, .xls
-          </p>
-          {fileName && (
-            <p style={{ color: '#3b82f6', marginTop: '12px', fontSize: '13px' }}>
-              Arquivo selecionado: {fileName}
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              ...styles.dropZone,
+              ...(isDragging ? styles.dropZoneActive : {})
+            }}
+          >
+            <div style={{ fontSize: '32px', marginBottom: '12px' }}>&#8593;</div>
+            <p style={{ color: '#64748b', marginBottom: '8px' }}>
+              Arraste o arquivo aqui ou clique para selecionar
             </p>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,.txt,.xlsx,.xls"
-            onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
-            style={{ display: 'none' }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px', marginTop: '20px', flexWrap: 'wrap' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '6px', color: '#64748b', fontSize: '13px' }}>
-              Diametro (mm)
-            </label>
-            <select
-              value={diametroMm}
-              onChange={(e) => setDiametroMm(Number(e.target.value))}
-              style={styles.select}
-            >
-              <option value={100}>DN100</option>
-              <option value={150}>DN150</option>
-              <option value={200}>DN200</option>
-              <option value={250}>DN250</option>
-              <option value={300}>DN300</option>
-              <option value={400}>DN400</option>
-              <option value={500}>DN500</option>
-            </select>
+            <p style={{ color: '#94a3b8', fontSize: '12px' }}>
+              Formatos: .csv, .txt, .xlsx, .xls
+            </p>
+            {fileName && (
+              <p style={{ color: '#3b82f6', marginTop: '12px', fontSize: '13px' }}>
+                Arquivo selecionado: {fileName}
+              </p>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.txt,.xlsx,.xls"
+              onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+              style={{ display: 'none' }}
+            />
           </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '6px', color: '#64748b', fontSize: '13px' }}>
-              Material
-            </label>
-            <select
-              value={material}
-              onChange={(e) => setMaterial(e.target.value)}
-              style={styles.select}
-            >
-              <option value="PVC">PVC</option>
-              <option value="PEAD">PEAD</option>
-              <option value="FOFO">Ferro Fundido</option>
-              <option value="Concreto">Concreto</option>
-            </select>
+
+          <div style={{ display: 'flex', gap: '12px', marginTop: '20px', flexWrap: 'wrap' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '6px', color: '#64748b', fontSize: '13px' }}>
+                Diametro (mm)
+              </label>
+              <select
+                value={diametroMm}
+                onChange={(e) => setDiametroMm(Number(e.target.value))}
+                style={styles.select}
+              >
+                <option value={100}>DN100</option>
+                <option value={150}>DN150</option>
+                <option value={200}>DN200</option>
+                <option value={250}>DN250</option>
+                <option value={300}>DN300</option>
+                <option value={400}>DN400</option>
+                <option value={500}>DN500</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '6px', color: '#64748b', fontSize: '13px' }}>
+                Material
+              </label>
+              <select
+                value={material}
+                onChange={(e) => setMaterial(e.target.value)}
+                style={styles.select}
+              >
+                <option value="PVC">PVC</option>
+                <option value="PEAD">PEAD</option>
+                <option value="FOFO">Ferro Fundido</option>
+                <option value="Concreto">Concreto</option>
+              </select>
+            </div>
           </div>
+
+          <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+            <button onClick={loadSampleData} style={{ ...styles.button, ...styles.buttonSecondary }}>
+              Carregar Exemplo
+            </button>
+          </div>
+
+          {isLoading && <p style={{ marginTop: '16px', color: '#3b82f6' }}>Processando...</p>}
+          {error && <p style={{ marginTop: '16px', color: '#ef4444' }}>{error}</p>}
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-          <button onClick={loadSampleData} style={{ ...styles.button, ...styles.buttonSecondary }}>
-            Carregar Exemplo
-          </button>
+        {/* New DXF import card */}
+        <div style={{ flex: '1', minWidth: '320px' }}>
+          <TopografiaImportNovo onImportComplete={handleDxfImportComplete} />
         </div>
-
-        {isLoading && <p style={{ marginTop: '16px', color: '#3b82f6' }}>Processando...</p>}
-        {error && <p style={{ marginTop: '16px', color: '#ef4444' }}>{error}</p>}
       </div>
 
       {summary && (
