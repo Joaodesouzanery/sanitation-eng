@@ -21,6 +21,10 @@ import {
   type Trecho,
   type NetworkSummary
 } from '../engine/domain';
+import { SHPReader } from '../core/import/readers/SHPReader';
+import { GeoJSONReader } from '../core/import/readers/GeoJSONReader';
+import { DXFReader } from '../core/import/readers/DXFReader';
+import type { RawEntity } from '../core/import/ImportEngine';
 
 // Leaflet types for when library is loaded
 declare const L: any;
@@ -122,6 +126,221 @@ function toMapCoordinates(x: number, y: number, referencePoint?: { x: number; y:
     lat: -23.5505 + (y / 111320),
     lng: -46.6333 + (x / 111320)
   };
+}
+
+// =============================================================================
+// ENTITY TO TOPOGRAPHY CONVERSION
+// =============================================================================
+
+/**
+ * Detecta automaticamente o campo de elevação/cota nos atributos
+ */
+function detectElevationField(attributes: Record<string, any>): string | null {
+  const elevationKeys = [
+    'z', 'Z', 'cota', 'COTA', 'elevation', 'ELEVATION', 'elev', 'ELEV',
+    'elevacao', 'ELEVACAO', 'altitude', 'ALTITUDE', 'alt', 'ALT',
+    'height', 'HEIGHT', 'h', 'H', 'ct', 'CT', 'cota_terreno', 'COTA_TERRENO'
+  ];
+
+  for (const key of elevationKeys) {
+    if (key in attributes && typeof attributes[key] === 'number') {
+      return key;
+    }
+  }
+
+  // Tentar encontrar qualquer campo numérico que possa ser elevação
+  for (const [key, value] of Object.entries(attributes)) {
+    if (typeof value === 'number' && !['x', 'y', 'X', 'Y'].includes(key)) {
+      return key;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extrai coordenadas de uma geometria GeoJSON
+ */
+function extractCoordinates(geometry: any): { x: number; y: number; z?: number } | null {
+  if (!geometry || !geometry.coordinates) return null;
+
+  const coords = geometry.coordinates;
+
+  switch (geometry.type) {
+    case 'Point':
+      return { x: coords[0], y: coords[1], z: coords[2] };
+
+    case 'LineString':
+    case 'MultiPoint':
+      // Pegar o primeiro ponto
+      if (coords.length > 0) {
+        return { x: coords[0][0], y: coords[0][1], z: coords[0][2] };
+      }
+      break;
+
+    case 'Polygon':
+      // Pegar o centróide aproximado
+      if (coords[0] && coords[0].length > 0) {
+        const ring = coords[0];
+        let sumX = 0, sumY = 0, sumZ = 0, hasZ = false;
+        for (const pt of ring) {
+          sumX += pt[0];
+          sumY += pt[1];
+          if (pt[2] !== undefined) {
+            sumZ += pt[2];
+            hasZ = true;
+          }
+        }
+        const n = ring.length;
+        return {
+          x: sumX / n,
+          y: sumY / n,
+          z: hasZ ? sumZ / n : undefined
+        };
+      }
+      break;
+
+    case 'MultiLineString':
+      // Pegar o primeiro ponto da primeira linha
+      if (coords[0] && coords[0].length > 0) {
+        return { x: coords[0][0][0], y: coords[0][0][1], z: coords[0][0][2] };
+      }
+      break;
+  }
+
+  return null;
+}
+
+/**
+ * Converte entidades brutas em pontos topográficos
+ */
+function convertEntitiesToTopography(entities: RawEntity[], fileName: string): PontoTopografico[] {
+  const pontos: PontoTopografico[] = [];
+  let pointIndex = 0;
+
+  for (const entity of entities) {
+    const coords = extractCoordinates(entity.geometry);
+    if (!coords) continue;
+
+    // Tentar obter elevação do Z da geometria ou dos atributos
+    let cota = coords.z;
+
+    if (cota === undefined || cota === 0) {
+      const elevField = detectElevationField(entity.attributes);
+      if (elevField) {
+        cota = entity.attributes[elevField];
+      }
+    }
+
+    // Se ainda não tem cota, usar 0 (será detectado como problema)
+    if (cota === undefined || isNaN(cota)) {
+      cota = 0;
+    }
+
+    // Gerar ID do ponto
+    let id = entity.id || `P${pointIndex + 1}`;
+
+    // Tentar obter ID dos atributos
+    const idFields = ['id', 'ID', 'Id', 'name', 'NAME', 'Name', 'ponto', 'PONTO', 'point', 'POINT'];
+    for (const field of idFields) {
+      if (entity.attributes[field]) {
+        id = String(entity.attributes[field]);
+        break;
+      }
+    }
+
+    pontos.push({
+      id,
+      x: coords.x,
+      y: coords.y,
+      cota
+    });
+
+    pointIndex++;
+  }
+
+  return pontos;
+}
+
+/**
+ * Converte linhas em pontos topográficos (extrai vértices)
+ */
+function convertLinesToTopography(entities: RawEntity[], fileName: string): PontoTopografico[] {
+  const pontos: PontoTopografico[] = [];
+  const seenCoords = new Set<string>();
+  let pointIndex = 0;
+
+  for (const entity of entities) {
+    if (!entity.geometry || !entity.geometry.coordinates) continue;
+
+    const processCoords = (coordList: number[][]) => {
+      for (const coord of coordList) {
+        const key = `${coord[0].toFixed(6)},${coord[1].toFixed(6)}`;
+        if (seenCoords.has(key)) continue;
+        seenCoords.add(key);
+
+        let cota = coord[2];
+        if (cota === undefined || cota === 0) {
+          const elevField = detectElevationField(entity.attributes);
+          if (elevField) {
+            cota = entity.attributes[elevField];
+          }
+        }
+
+        pontos.push({
+          id: `V${pointIndex + 1}`,
+          x: coord[0],
+          y: coord[1],
+          cota: cota ?? 0
+        });
+
+        pointIndex++;
+      }
+    };
+
+    switch (entity.geometry.type) {
+      case 'LineString':
+        processCoords(entity.geometry.coordinates);
+        break;
+      case 'MultiLineString':
+        for (const line of entity.geometry.coordinates) {
+          processCoords(line);
+        }
+        break;
+      case 'Polygon':
+        processCoords(entity.geometry.coordinates[0]);
+        break;
+    }
+  }
+
+  return pontos;
+}
+
+/**
+ * Processa entidades e decide a melhor estratégia de conversão
+ */
+function processEntitiesToTopography(entities: RawEntity[], fileName: string): PontoTopografico[] {
+  // Contar tipos de geometria
+  let pointCount = 0;
+  let lineCount = 0;
+
+  for (const entity of entities) {
+    if (!entity.geometry) continue;
+    const type = entity.geometry.type;
+    if (type === 'Point' || type === 'MultiPoint') {
+      pointCount++;
+    } else if (type === 'LineString' || type === 'MultiLineString' || type === 'Polygon') {
+      lineCount++;
+    }
+  }
+
+  // Se maioria são pontos, usar conversão direta
+  if (pointCount >= lineCount) {
+    return convertEntitiesToTopography(entities, fileName);
+  } else {
+    // Se maioria são linhas, extrair vértices
+    return convertLinesToTopography(entities, fileName);
+  }
 }
 
 interface TopografiaPageProps {
@@ -635,16 +854,154 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
         throw new Error('Arquivo muito grande. Máximo: 50MB');
       }
 
-      let data: TopographyData;
+      const ext = file.name.toLowerCase().split('.').pop() || '';
+      let newPontos: PontoTopografico[] = [];
 
-      if (file.name.toLowerCase().endsWith('.csv') || file.name.toLowerCase().endsWith('.txt')) {
+      // CSV / TXT - Usar parseCSV existente
+      if (ext === 'csv' || ext === 'txt') {
         const content = await file.text();
-        // parseCSV now auto-detects delimiters and handles files without headers
-        const newPontos = parseCSV(content);
-        data = {
+        newPontos = parseCSV(content);
+      }
+      // GeoJSON
+      else if (ext === 'geojson' || ext === 'json') {
+        const importData = await GeoJSONReader.read(file);
+        newPontos = processEntitiesToTopography(importData.entities, file.name);
+
+        if (newPontos.length === 0) {
+          throw new Error('Nenhum ponto topográfico encontrado no arquivo GeoJSON.');
+        }
+      }
+      // DXF
+      else if (ext === 'dxf') {
+        const importData = await DXFReader.read(file);
+        newPontos = processEntitiesToTopography(importData.entities, file.name);
+
+        if (newPontos.length === 0) {
+          throw new Error('Nenhum ponto topográfico encontrado no arquivo DXF.');
+        }
+      }
+      // Shapefile (.shp) - Precisa de múltiplos arquivos
+      else if (ext === 'shp' || ext === 'dbf' || ext === 'shx' || ext === 'prj') {
+        // Para shapefile, precisamos de múltiplos arquivos
+        // Se o usuário selecionou apenas um arquivo, informar sobre os outros
+        setError('');
+
+        // Verificar se existem outros arquivos do shapefile no mesmo input
+        const fileInput = fileInputRef.current;
+        if (fileInput && fileInput.files && fileInput.files.length > 1) {
+          // Múltiplos arquivos selecionados - processar como shapefile
+          const files = Array.from(fileInput.files);
+          const validation = SHPReader.validateFiles(files);
+
+          if (!validation.isValid) {
+            throw new Error('Arquivo .shp principal não encontrado. Selecione todos os arquivos do shapefile (.shp, .dbf, .shx, .prj).');
+          }
+
+          // Mostrar warnings se houver
+          if (validation.warnings.length > 0) {
+            const warningMessages = validation.warnings.map(w => w.message).join('; ');
+            console.warn('Shapefile warnings:', warningMessages);
+          }
+
+          const importData = await SHPReader.read(files);
+          newPontos = processEntitiesToTopography(importData.entities, file.name);
+
+          if (newPontos.length === 0) {
+            throw new Error('Nenhum ponto topográfico encontrado no shapefile.');
+          }
+        } else {
+          // Apenas um arquivo .shp selecionado - tentar processar só com ele
+          const importData = await SHPReader.read([file]);
+          newPontos = processEntitiesToTopography(importData.entities, file.name);
+
+          if (newPontos.length === 0) {
+            throw new Error(
+              'Shapefile processado mas sem dados de atributos. ' +
+              'Para melhor resultado, selecione todos os arquivos (.shp, .dbf, .shx, .prj) juntos.'
+            );
+          }
+        }
+      }
+      // Formato não suportado
+      else {
+        const supportedFormats = 'CSV, TXT, GeoJSON, DXF, Shapefile (.shp/.dbf/.shx/.prj)';
+        throw new Error(`Formato .${ext} não suportado. Formatos aceitos: ${supportedFormats}`);
+      }
+
+      // Validar que temos pontos válidos
+      if (newPontos.length === 0) {
+        throw new Error('Nenhum ponto topográfico encontrado no arquivo.');
+      }
+
+      // Criar TopographyData
+      const data: TopographyData = {
+        pontos: newPontos,
+        metadata: {
+          source: file.name,
+          totalPoints: newPontos.length,
+          bounds: {
+            minX: Math.min(...newPontos.map(p => p.x)),
+            maxX: Math.max(...newPontos.map(p => p.x)),
+            minY: Math.min(...newPontos.map(p => p.y)),
+            maxY: Math.max(...newPontos.map(p => p.y)),
+            minCota: Math.min(...newPontos.map(p => p.cota)),
+            maxCota: Math.max(...newPontos.map(p => p.cota))
+          },
+          importedAt: new Date().toISOString()
+        }
+      };
+
+      processData(data.pontos);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao importar arquivo');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [processData]);
+
+  // Handle multiple files (for shapefile support)
+  const handleFiles = useCallback(async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Check if it's a shapefile set (multiple files with .shp, .dbf, .shx, .prj)
+      const extensions = fileArray.map(f => f.name.split('.').pop()?.toLowerCase());
+      const hasShp = extensions.includes('shp');
+      const hasMultipleShapefileComponents = extensions.some(ext =>
+        ['shp', 'dbf', 'shx', 'prj'].includes(ext || '')
+      );
+
+      if (hasShp || (fileArray.length > 1 && hasMultipleShapefileComponents)) {
+        // Process as shapefile set
+        const validation = SHPReader.validateFiles(fileArray);
+
+        if (!validation.isValid) {
+          throw new Error('Arquivo .shp principal não encontrado. Selecione todos os arquivos do shapefile.');
+        }
+
+        // Show warnings
+        if (validation.warnings.length > 0) {
+          console.warn('Shapefile warnings:', validation.warnings.map(w => w.message).join('; '));
+        }
+
+        const mainFile = fileArray.find(f => f.name.toLowerCase().endsWith('.shp'));
+        setFileName(mainFile?.name || 'shapefile');
+
+        const importData = await SHPReader.read(fileArray);
+        const newPontos = processEntitiesToTopography(importData.entities, mainFile?.name || 'shapefile');
+
+        if (newPontos.length === 0) {
+          throw new Error('Nenhum ponto topográfico encontrado no shapefile.');
+        }
+
+        const data: TopographyData = {
           pontos: newPontos,
           metadata: {
-            source: file.name,
+            source: mainFile?.name || 'shapefile',
             totalPoints: newPontos.length,
             bounds: {
               minX: Math.min(...newPontos.map(p => p.x)),
@@ -657,22 +1014,27 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
             importedAt: new Date().toISOString()
           }
         };
-      } else {
-        throw new Error(`Formato não suportado: ${file.name}. Use CSV ou TXT.`);
-      }
 
-      processData(data.pontos);
+        processData(data.pontos);
+      } else {
+        // Single file - use standard handler
+        handleFileSelect(fileArray[0]);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao importar arquivo');
+      setError(err instanceof Error ? err.message : 'Erro ao importar arquivos');
     } finally {
       setIsLoading(false);
     }
-  }, [processData]);
+  }, [handleFileSelect, processData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFileSelect(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      if (files.length > 1) {
+        handleFiles(files);
+      } else {
+        handleFileSelect(files[0]);
+      }
     }
   };
 
@@ -680,11 +1042,15 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
     e.preventDefault();
     setIsDragging(false);
 
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      handleFileSelect(file);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      if (files.length > 1) {
+        handleFiles(files);
+      } else {
+        handleFileSelect(files[0]);
+      }
     }
-  }, [handleFileSelect]);
+  }, [handleFileSelect, handleFiles]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -816,11 +1182,17 @@ export const TopografiaPage: React.FC<TopografiaPageProps> = ({ onDataLoaded }) 
         >
           <p style={{ fontSize: '2rem', marginBottom: '10px' }}>📁</p>
           <p style={{ color: '#94a3b8' }}>Arraste o arquivo aqui ou clique para selecionar</p>
-          <p style={{ color: '#3b82f6', fontSize: '0.85rem', marginTop: '10px' }}>Formatos: .txt, .csv</p>
+          <p style={{ color: '#3b82f6', fontSize: '0.85rem', marginTop: '10px' }}>
+            Formatos: CSV, TXT, GeoJSON, DXF, Shapefile (.shp, .dbf, .shx, .prj)
+          </p>
+          <p style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '5px' }}>
+            Para Shapefile, selecione todos os arquivos juntos (Ctrl+clique)
+          </p>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".txt,.csv"
+            accept=".txt,.csv,.geojson,.json,.dxf,.shp,.dbf,.shx,.prj"
+            multiple
             onChange={handleInputChange}
             style={{ display: 'none' }}
           />
