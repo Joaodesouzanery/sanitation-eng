@@ -1,6 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-
-declare const L: any;
+import React, { useState, useCallback, useRef } from 'react';
 
 interface DXFEntity {
   type: string;
@@ -26,7 +24,7 @@ export interface ImportedData {
 }
 
 // ============================================================================
-// PARSER DXF
+// PARSER DXF - leitura robusta com skip de linhas em branco
 // ============================================================================
 
 function parseDXF(content: string): { entities: DXFEntity[]; layers: LayerInfo[] } {
@@ -180,7 +178,7 @@ function convertWithDecisions(entities: DXFEntity[], decisions: Map<string, stri
 }
 
 // ============================================================================
-// COMPONENTE COM MAPA EMBUTIDO
+// COMPONENTE - envia dados para o mapa existente da plataforma
 // ============================================================================
 
 export var TopografiaImportNovo: React.FC<{
@@ -197,8 +195,6 @@ export var TopografiaImportNovo: React.FC<{
   var _s8 = useState<DXFEntity[]>([]); var entities = _s8[0]; var setEntities = _s8[1];
   var _s9 = useState<LayerInfo[]>([]); var layers = _s9[0]; var setLayers = _s9[1];
   var fileInputRef = useRef<HTMLInputElement>(null);
-  var mapRef = useRef<HTMLDivElement>(null);
-  var mapInstanceRef = useRef<any>(null);
 
   // --- Upload ---
   var handleFile = useCallback(async function(file: File) {
@@ -222,7 +218,7 @@ export var TopografiaImportNovo: React.FC<{
     });
   }
 
-  // --- CONFIRMAR IMPORTACAO (com try-catch total) ---
+  // --- CONFIRMAR IMPORTACAO ---
   function doImport() {
     if (entities.length === 0) return;
     setIsImporting(true);
@@ -236,7 +232,7 @@ export var TopografiaImportNovo: React.FC<{
         var data = convertWithDecisions(entities, decisions);
         console.log('[DXF Import] Resultado:', data.nodes.length, 'pontos,', data.edges.length, 'trechos,', data.layers.length, 'camadas');
 
-        // Salvar no localStorage
+        // Salvar no localStorage para persistencia
         try {
           localStorage.setItem('dxfImportData', JSON.stringify(data));
           localStorage.setItem('importedNodes', JSON.stringify(data.nodes));
@@ -244,7 +240,8 @@ export var TopografiaImportNovo: React.FC<{
           localStorage.setItem('dxfImportTimestamp', new Date().toISOString());
         } catch (e) { /* localStorage cheio */ }
 
-        // Callback seguro para o pai
+        // Callback para o componente pai (HydroNetworkPage)
+        // Isso dispara setPontos() e setTrechos() que atualizam o mapa existente
         try {
           if (props.onImportComplete && typeof props.onImportComplete === 'function') {
             props.onImportComplete(data);
@@ -253,7 +250,7 @@ export var TopografiaImportNovo: React.FC<{
           console.warn('[DXF Import] Callback error (ignorado):', cbErr);
         }
 
-        // Evento global para outros componentes
+        // Evento global para outros modulos da plataforma
         try {
           window.dispatchEvent(new CustomEvent('dxfDataImported', { detail: data }));
         } catch (evErr) { /* ok */ }
@@ -268,119 +265,6 @@ export var TopografiaImportNovo: React.FC<{
       }
     }, 200);
   }
-
-  // --- MAPA EMBUTIDO: renderizar apos importacao ---
-  useEffect(function() {
-    if (!importDone || !importResult || !mapRef.current) return;
-    if (typeof L === 'undefined') return;
-
-    // Limpar mapa anterior
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove();
-      mapInstanceRef.current = null;
-    }
-
-    var map = L.map(mapRef.current).setView([-23.55, -46.63], 12);
-    mapInstanceRef.current = map;
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: 'OpenStreetMap'
-    }).addTo(map);
-
-    var bounds: Array<[number, number]> = [];
-    var allCoords: number[][] = [];
-
-    // Coletar todas as coordenadas
-    importResult.nodes.forEach(function(n) { allCoords.push([n.x, n.y]); });
-    importResult.edges.forEach(function(e) {
-      e.coordinates.forEach(function(c) { allCoords.push([c[0], c[1]]); });
-    });
-
-    if (allCoords.length === 0) return;
-
-    // Detectar se coordenadas sao UTM (valores grandes) ou lat/lng
-    var isUTM = Math.abs(allCoords[0][0]) > 360 || Math.abs(allCoords[0][1]) > 360;
-    var refX = allCoords[0][0];
-    var refY = allCoords[0][1];
-
-    function toLatLng(x: number, y: number): [number, number] {
-      if (isUTM) {
-        // Converter UTM relativo para pseudo lat/lng para visualizacao
-        var lat = -23.55 + (y - refY) / 111320;
-        var lng = -46.63 + (x - refX) / (111320 * Math.cos(-23.55 * Math.PI / 180));
-        return [lat, lng];
-      }
-      return [y, x]; // GeoJSON: [lng, lat] -> Leaflet: [lat, lng]
-    }
-
-    // Desenhar TRECHOS como polilinhas
-    importResult.edges.forEach(function(edge) {
-      var latlngs = edge.coordinates.map(function(c) { return toLatLng(c[0], c[1]); });
-      bounds = bounds.concat(latlngs);
-
-      var polyline = L.polyline(latlngs, {
-        color: '#22c55e', weight: 3, opacity: 0.8
-      }).addTo(map);
-
-      polyline.bindPopup(
-        '<div style="min-width:120px">' +
-        '<b>Trecho: ' + edge.id + '</b><br>' +
-        'Camada: ' + edge.layer + '<br>' +
-        'Vertices: ' + edge.coordinates.length +
-        '</div>'
-      );
-
-      // Destaque ao clicar sem mudar zoom
-      polyline.on('click', function() {
-        polyline.setStyle({ color: '#ffff00', weight: 5 });
-        setTimeout(function() { polyline.setStyle({ color: '#22c55e', weight: 3 }); }, 1500);
-      });
-    });
-
-    // Desenhar PONTOS como marcadores
-    importResult.nodes.forEach(function(node) {
-      var ll = toLatLng(node.x, node.y);
-      bounds.push(ll);
-
-      var marker = L.circleMarker(ll, {
-        radius: 6, fillColor: '#3b82f6', fillOpacity: 0.9,
-        color: '#fff', weight: 2
-      }).addTo(map);
-
-      marker.bindPopup(
-        '<div style="min-width:120px">' +
-        '<b>' + node.id + '</b><br>' +
-        'X: ' + node.x.toFixed(3) + '<br>' +
-        'Y: ' + node.y.toFixed(3) + '<br>' +
-        'Z: ' + node.z.toFixed(3) + '<br>' +
-        'Camada: ' + node.layer +
-        '</div>'
-      );
-
-      // Destaque ao clicar sem mudar zoom
-      marker.on('click', function(ev: any) {
-        var mapBounds = map.getBounds();
-        if (!mapBounds.contains(ev.latlng)) {
-          map.panTo(ev.latlng);
-        }
-        marker.setStyle({ fillColor: '#ffff00', color: '#ffff00', weight: 4, radius: 10 });
-        setTimeout(function() { marker.setStyle({ fillColor: '#3b82f6', color: '#fff', weight: 2, radius: 6 }); }, 1500);
-      });
-    });
-
-    // Ajustar zoom suave
-    if (bounds.length > 0) {
-      try { map.fitBounds(bounds, { padding: [40, 40], maxZoom: 18 }); }
-      catch (e) { /* bounds invalido */ }
-    }
-
-    return function() {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, [importDone, importResult]);
 
   // --- Contadores ---
   var selectedLayers = layers.filter(function(l) { return l.importAs !== 'ignore'; });
@@ -453,7 +337,7 @@ export var TopografiaImportNovo: React.FC<{
             )
           ),
           React.createElement('tbody', null,
-            layers.map(function(layer, idx) {
+            layers.map(function(layer) {
               return React.createElement('tr', { key: layer.name, style: { borderTop: '1px solid #334155' } },
                 React.createElement('td', { style: { padding: '8px 10px', color: '#e2e8f0', fontWeight: 600 } }, layer.name),
                 React.createElement('td', { style: { padding: '8px 10px', textAlign: 'center' as any, color: '#3b82f6', fontWeight: 600 } }, layer.count),
@@ -538,7 +422,7 @@ export var TopografiaImportNovo: React.FC<{
 
     ) : null,
 
-    // SUCESSO + MAPA
+    // SUCESSO - dados enviados ao mapa da plataforma
     importDone && importResult ? React.createElement('div', null,
       React.createElement('div', {
         style: { padding: '20px', backgroundColor: 'rgba(34,197,94,0.1)', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.3)', textAlign: 'center' as any }
@@ -559,21 +443,9 @@ export var TopografiaImportNovo: React.FC<{
             React.createElement('div', { style: { fontSize: '11px', color: '#94a3b8' } }, 'Camadas')
           )
         ),
-        React.createElement('p', { style: { color: '#94a3b8', fontSize: '13px' } }, 'Dados salvos. Veja o mapa abaixo.')
-      ),
-
-      // MAPA LEAFLET
-      React.createElement('div', { style: { marginTop: '16px' } },
-        React.createElement('div', { style: { fontSize: '14px', fontWeight: 600, color: '#e2e8f0', marginBottom: '8px' } }, 'Mapa Interativo'),
-        React.createElement('div', { style: { display: 'flex', gap: '16px', marginBottom: '8px', fontSize: '12px' } },
-          React.createElement('span', { style: { color: '#22c55e' } }, '\u25CF Trechos'),
-          React.createElement('span', { style: { color: '#3b82f6' } }, '\u25CF Pontos'),
-          React.createElement('span', { style: { color: '#ffff00' } }, '\u25CF Destaque (clique)')
-        ),
-        React.createElement('div', {
-          ref: mapRef,
-          style: { height: '400px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #334155' }
-        })
+        React.createElement('p', { style: { color: '#94a3b8', fontSize: '13px' } },
+          'Dados enviados ao Mapa da Rede. Role para baixo para visualizar.'
+        )
       ),
 
       // Importar outro

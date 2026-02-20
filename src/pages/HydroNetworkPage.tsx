@@ -395,7 +395,7 @@ export const HydroNetworkPage: React.FC = () => {
     }
   }, []);
 
-  // Initialize map
+  // Initialize map - re-runs when pontos/trechos change so the container is available in the DOM
   useEffect(() => {
     if (typeof L === 'undefined' || !mapContainerRef.current || mapInstanceRef.current) return;
 
@@ -413,7 +413,7 @@ export const HydroNetworkPage: React.FC = () => {
         mapInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [pontos, trechos]);
 
   // Update map when data changes
   useEffect(() => {
@@ -938,6 +938,24 @@ export const HydroNetworkPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Mapa da Rede - visivel sempre que houver pontos ou trechos */}
+      {(pontos.length > 0 || trechos.length > 0) && (
+        <div style={styles.card}>
+          <div style={styles.cardTitle}>Mapa da Rede</div>
+          <div
+            ref={mapContainerRef}
+            style={{ height: '400px', borderRadius: '8px', overflow: 'hidden', marginTop: '16px' }}
+          />
+          <div style={{ display: 'flex', gap: '20px', marginTop: '12px', fontSize: '13px' }}>
+            <span><span style={{ color: '#22c55e' }}>●</span> Gravidade</span>
+            <span><span style={{ color: '#f59e0b' }}>●</span> Elevatoria/Booster</span>
+            <span><span style={{ color: '#22c55e' }}>●</span> Ponto Inicial</span>
+            <span><span style={{ color: '#ef4444' }}>●</span> Ponto Final</span>
+            <span><span style={{ color: '#3b82f6' }}>●</span> Pontos Intermediarios</span>
+          </div>
+        </div>
+      )}
+
       {summary && (
         <>
           <div style={styles.grid}>
@@ -964,21 +982,6 @@ export const HydroNetworkPage: React.FC = () => {
             <div style={styles.summaryCard}>
               <div style={styles.summaryLabel}>Declividade Media</div>
               <div style={{ ...styles.summaryValue, color: '#8b5cf6' }}>{(summary.declividadeMedia * 100).toFixed(2)}%</div>
-            </div>
-          </div>
-
-          <div style={styles.card}>
-            <div style={styles.cardTitle}>Mapa da Rede</div>
-            <div
-              ref={mapContainerRef}
-              style={{ height: '400px', borderRadius: '8px', overflow: 'hidden', marginTop: '16px' }}
-            />
-            <div style={{ display: 'flex', gap: '20px', marginTop: '12px', fontSize: '13px' }}>
-              <span><span style={{ color: '#22c55e' }}>●</span> Gravidade</span>
-              <span><span style={{ color: '#f59e0b' }}>●</span> Elevatoria/Booster</span>
-              <span><span style={{ color: '#22c55e' }}>●</span> Ponto Inicial</span>
-              <span><span style={{ color: '#ef4444' }}>●</span> Ponto Final</span>
-              <span><span style={{ color: '#3b82f6' }}>●</span> Pontos Intermediarios</span>
             </div>
           </div>
 
