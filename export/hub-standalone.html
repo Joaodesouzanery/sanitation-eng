@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<!--
+    =====================================================
+    HUB DE NOTICIAS - TEMPLATE STANDALONE
+    =====================================================
+
+    COMO PERSONALIZAR:
+    1. Busque por "CUSTOMIZE" neste arquivo para encontrar as areas que precisam de ajuste
+    2. Altere as cores no :root (CSS) conforme sua identidade visual
+    3. Substitua o conteudo das noticias/artigos
+    4. Ajuste os links de navegacao
+
+    AREAS PARA CUSTOMIZAR:
+    - Linha ~6: Titulo e descricao
+    - Linha ~824: Header/Logo e navegacao
+    - Linha ~1200: Links rapidos da sidebar
+    - Linha ~1295: Footer
+    - CSS :root: Cores do tema
+
+    =====================================================
+-->
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CUSTOMIZE: Altere titulo e descricao -->
+    <title>Hub | Seu Projeto - Central de Conteudo</title>
+    <meta name="description" content="Hub de noticias, artigos tecnicos e atualizacoes do seu projeto.">
+
+    <!-- SECURITY HEADERS -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' blob: https:; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Permissions-Policy" content="accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Noto+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-dark: #1a1f2e;
+            --primary-blue: #2c4a7c;
+            --accent-blue: #3d6cb9;
+            --gold: #c9a227;
+            --gold-light: #e8c547;
+            --text-white: #ffffff;
+            --text-light: rgba(255,255,255,0.85);
+            --text-muted: rgba(255,255,255,0.6);
+            --bg-light: #f5f7fa;
+            --bg-white: #ffffff;
+            --text-dark: #1a1f2e;
+            --text-gray: #5a6577;
+            --border-light: #e0e5ed;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --purple: #8b5cf6;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-dark);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            background: var(--bg-light);
+        }
+
+        /* ==================== HEADER ==================== */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(26, 31, 46, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 70px;
+        }
+
+        .logo-text {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: white;
+            letter-spacing: 1px;
+            text-decoration: none;
+        }
+        .logo-text span { color: var(--gold); font-weight: 300; }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        .nav-link:hover { color: white; }
+        .nav-link.active { color: var(--gold); }
+
+        .nav-btn {
+            padding: 10px 24px;
+            background: var(--gold);
+            border: none;
+            color: var(--primary-dark);
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .nav-btn:hover { background: var(--gold-light); }
+
+        /* ==================== HERO HUB ==================== */
+        .hero-hub {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-blue) 100%);
+            padding: 120px 40px 60px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-hub::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='rgba(201,162,39,0.1)' stroke-width='0.5'/%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='rgba(201,162,39,0.08)' stroke-width='0.5'/%3E%3Ccircle cx='50' cy='50' r='20' fill='none' stroke='rgba(201,162,39,0.06)' stroke-width='0.5'/%3E%3C/svg%3E");
+            background-size: 200px;
+            opacity: 0.5;
+        }
+
+        .hero-hub-content {
+            position: relative;
+            z-index: 2;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero-hub-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(201,162,39,0.2);
+            color: var(--gold);
+            padding: 8px 20px;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .hero-hub h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 3rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 15px;
+        }
+        .hero-hub h1 span { color: var(--gold); }
+
+        .hero-hub p {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* ==================== CATEGORY TABS ==================== */
+        .category-tabs {
+            background: white;
+            border-bottom: 1px solid var(--border-light);
+            position: sticky;
+            top: 70px;
+            z-index: 100;
+        }
+
+        .tabs-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .tab-btn {
+            padding: 18px 30px;
+            background: transparent;
+            border: none;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-gray);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gold);
+            transform: scaleX(0);
+            transition: transform 0.3s;
+        }
+
+        .tab-btn:hover { color: var(--text-dark); }
+        .tab-btn.active { color: var(--primary-blue); }
+        .tab-btn.active::after { transform: scaleX(1); }
+
+        .tab-icon {
+            margin-right: 8px;
+        }
+
+        /* ==================== MAIN CONTENT ==================== */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 40px;
+        }
+
+        /* ==================== NEWS SECTION ==================== */
+        .section-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title .icon {
+            font-size: 1.3rem;
+        }
+
+        .news-section {
+            display: none;
+        }
+        .news-section.active {
+            display: block;
+        }
+
+        /* Featured News */
+        .featured-news {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .featured-news:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+        }
+
+        .featured-image {
+            width: 100%;
+            height: 280px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--accent-blue));
+            position: relative;
+            overflow: hidden;
+        }
+
+        .featured-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .featured-badge {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--gold);
+            color: var(--primary-dark);
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .featured-content {
+            padding: 25px;
+        }
+
+        .news-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 12px;
+            font-size: 0.8rem;
+            color: var(--text-gray);
+        }
+
+        .news-category {
+            background: rgba(44,74,124,0.1);
+            color: var(--primary-blue);
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-weight: 600;
+        }
+
+        .featured-content h2 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+
+        .featured-content p {
+            color: var(--text-gray);
+            font-size: 0.95rem;
+            line-height: 1.7;
+            margin-bottom: 15px;
+        }
+
+        .read-more {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--primary-blue);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: gap 0.3s;
+        }
+        .read-more:hover { gap: 10px; }
+
+        /* News Grid */
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .news-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .news-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .news-card-image {
+            width: 100%;
+            height: 140px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            position: relative;
+        }
+
+        .news-card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .news-card-content {
+            padding: 18px;
+        }
+
+        .news-card h3 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .news-card p {
+            color: var(--text-gray);
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        /* ==================== UPDATES SECTION ==================== */
+        .update-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--success);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            transition: transform 0.3s;
+        }
+        .update-card:hover {
+            transform: translateX(5px);
+        }
+
+        .update-card.feature { border-left-color: var(--info); }
+        .update-card.improvement { border-left-color: var(--success); }
+        .update-card.fix { border-left-color: var(--warning); }
+        .update-card.announcement { border-left-color: var(--purple); }
+
+        .update-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .update-version {
+            background: var(--bg-light);
+            color: var(--text-gray);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .update-type {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 4px 10px;
+            border-radius: 100px;
+        }
+        .update-type.feature { background: rgba(59,130,246,0.1); color: var(--info); }
+        .update-type.improvement { background: rgba(16,185,129,0.1); color: var(--success); }
+        .update-type.fix { background: rgba(245,158,11,0.1); color: var(--warning); }
+        .update-type.announcement { background: rgba(139,92,246,0.1); color: var(--purple); }
+
+        .update-card h4 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .update-card p {
+            color: var(--text-gray);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .update-date {
+            font-size: 0.8rem;
+            color: var(--text-gray);
+            margin-top: 10px;
+        }
+
+        /* ==================== BLOG SECTION ==================== */
+        .blog-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .blog-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+        }
+
+        .blog-image {
+            background: linear-gradient(135deg, var(--primary-blue), var(--accent-blue));
+            position: relative;
+        }
+
+        .blog-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .blog-content {
+            padding: 25px;
+        }
+
+        .blog-tags {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .blog-tag {
+            background: var(--bg-light);
+            color: var(--text-gray);
+            padding: 4px 10px;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .blog-card h3 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .blog-card > .blog-content > p {
+            color: var(--text-gray);
+            font-size: 0.9rem;
+            line-height: 1.7;
+            margin-bottom: 15px;
+        }
+
+        .blog-author {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .author-avatar {
+            width: 36px;
+            height: 36px;
+            background: var(--primary-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .author-info {
+            font-size: 0.85rem;
+        }
+
+        .author-name {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .author-date {
+            color: var(--text-gray);
+        }
+
+        /* ==================== SIDEBAR ==================== */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .sidebar-card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .sidebar-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Quick Links */
+        .quick-links {
+            list-style: none;
+        }
+
+        .quick-links li {
+            margin-bottom: 12px;
+        }
+
+        .quick-links a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-gray);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+
+        .quick-links a:hover { color: var(--primary-blue); }
+
+        .quick-links .link-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-light);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
+
+        .quick-links a:hover .link-icon {
+            background: rgba(44,74,124,0.1);
+        }
+
+        /* Newsletter */
+        .newsletter-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .newsletter-form input {
+            padding: 14px 16px;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .newsletter-form input:focus {
+            border-color: var(--primary-blue);
+        }
+
+        .newsletter-form button {
+            padding: 14px 20px;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .newsletter-form button:hover {
+            background: var(--primary-dark);
+        }
+
+        .newsletter-note {
+            font-size: 0.8rem;
+            color: var(--text-gray);
+            margin-top: 10px;
+        }
+
+        /* Stats Card */
+        .stats-mini {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .stat-mini-item {
+            text-align: center;
+            padding: 15px;
+            background: var(--bg-light);
+            border-radius: 10px;
+        }
+
+        .stat-mini-value {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+
+        .stat-mini-label {
+            font-size: 0.75rem;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Social Links */
+        .social-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .social-link {
+            width: 40px;
+            height: 40px;
+            background: var(--bg-light);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-gray);
+            text-decoration: none;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+        }
+
+        .social-link:hover {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        /* ==================== FOOTER ==================== */
+        .footer {
+            background: var(--primary-dark);
+            padding: 40px 0;
+            margin-top: 60px;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-logo {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: white;
+        }
+        .footer-logo span { color: var(--gold); font-weight: 300; }
+
+        .footer-links {
+            display: flex;
+            gap: 30px;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover { color: white; }
+
+        .footer-copy {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                order: -1;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .sidebar-card {
+                flex: 1;
+                min-width: 280px;
+            }
+
+            .blog-card {
+                grid-template-columns: 1fr;
+            }
+
+            .blog-image {
+                height: 180px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav { display: none; }
+
+            .hero-hub h1 { font-size: 2rem; }
+
+            .tabs-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .tab-btn {
+                white-space: nowrap;
+                padding: 15px 20px;
+            }
+
+            .news-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .footer-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <!-- CUSTOMIZE: Altere o nome e links abaixo para seu projeto -->
+            <a href="#" class="logo-text">SEU PROJETO <span>| HUB</span></a>
+            <nav class="nav">
+                <a href="#" class="nav-link">Home</a>
+                <a href="#" class="nav-link active">Hub</a>
+                <a href="#" class="nav-link">Secao 1</a>
+                <a href="#" class="nav-link">Secao 2</a>
+                <a href="#" class="nav-btn">ACAO PRINCIPAL</a>
+            </nav>
+            <!-- FIM CUSTOMIZE -->
+        </div>
+    </header>
+
+    <!-- Hero Hub -->
+    <section class="hero-hub">
+        <!-- CUSTOMIZE: Ajuste titulo e descricao do hero -->
+        <div class="hero-hub-content">
+            <div class="hero-hub-badge">
+                <span>Central de Conteudo</span>
+            </div>
+            <h1>Hub <span>Seu Projeto</span></h1>
+            <p>Noticias, atualizacoes e artigos tecnicos do seu projeto.</p>
+        </div>
+        <!-- FIM CUSTOMIZE -->
+    </section>
+
+    <!-- Category Tabs -->
+    <div class="category-tabs">
+        <div class="tabs-container">
+            <button class="tab-btn active" data-tab="noticias">
+                <span class="tab-icon">📰</span>Noticias do Setor
+            </button>
+            <button class="tab-btn" data-tab="atualizacoes">
+                <span class="tab-icon">🚀</span>Atualizacoes do Sistema
+            </button>
+            <button class="tab-btn" data-tab="blog">
+                <span class="tab-icon">📝</span>Blog & Artigos
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="content-grid">
+            <!-- Main Column -->
+            <div class="main-column">
+                <!-- Noticias Section -->
+                <section class="news-section active" id="noticias">
+                    <h2 class="section-title">
+                        <span class="icon">📰</span>
+                        Ultimas Noticias do Setor
+                    </h2>
+
+                    <!-- Featured News -->
+                    <article class="featured-news">
+                        <div class="featured-image">
+                            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800" alt="Marco do Saneamento">
+                            <span class="featured-badge">Destaque</span>
+                        </div>
+                        <div class="featured-content">
+                            <div class="news-meta">
+                                <span class="news-category">Legislacao</span>
+                                <span>12 de Fevereiro, 2026</span>
+                                <span>5 min de leitura</span>
+                            </div>
+                            <h2>Novo Marco do Saneamento: Municipios tem ate 2033 para universalizar servicos — e o relogio ja esta correndo</h2>
+                            <p>O Ministerio das Cidades publicou novas diretrizes para implementacao do Marco Legal do Saneamento (Lei 14.026/2020), estabelecendo metas intermediarias para que municipios atinjam 99% de cobertura de agua e 90% de esgoto tratado ate 2033. As novas regras exigem que, ate 2028, todos os municipios apresentem planos detalhados de universalizacao com cronograma fisico-financeiro vinculante. Segundo dados do SNIS 2024, ainda existem mais de 100 milhoes de brasileiros sem coleta de esgoto e 35 milhoes sem acesso a agua tratada — numeros que revelam a dimensao do desafio. Para engenheiros e projetistas de saneamento, isso significa uma demanda sem precedentes: estima-se que o Brasil precisara investir mais de R$ 700 bilhoes ate 2033 para cumprir as metas, gerando milhares de projetos de redes de agua, esgoto e drenagem em todo o pais. Ferramentas de dimensionamento automatizado e integracao com EPANET/SWMM serao essenciais para dar vazao a essa demanda de forma tecnica e eficiente.</p>
+                            <a href="#" class="read-more">Ler materia completa →</a>
+                        </div>
+                    </article>
+
+                    <!-- News Grid -->
+                    <div class="news-grid">
+                        <article class="news-card">
+                            <div class="news-card-image">
+                                <img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400" alt="Investimentos Saneamento">
+                            </div>
+                            <div class="news-card-content">
+                                <div class="news-meta">
+                                    <span class="news-category">Investimentos</span>
+                                    <span>10 Fev 2026</span>
+                                </div>
+                                <h3>BNDES aprova R$ 2,4 bilhoes para obras de saneamento no Nordeste</h3>
+                                <p>Os recursos serao destinados a ampliar redes de agua e esgoto em 48 municipios dos estados da Bahia, Pernambuco, Ceara e Piaui. O pacote inclui construcao de novas ETEs, extensao de mais de 1.200 km de redes coletoras e implantacao de 85 estacoes elevatorias. E o maior aporte ja aprovado pelo BNDES para saneamento na regiao.</p>
+                            </div>
+                        </article>
+
+                        <article class="news-card">
+                            <div class="news-card-image" style="background: linear-gradient(135deg, #10b981, #14b8a6);">
+                                <img src="https://images.unsplash.com/photo-1590069261209-f8e9b8642343?w=400" alt="Licitacoes">
+                            </div>
+                            <div class="news-card-content">
+                                <div class="news-meta">
+                                    <span class="news-category">Licitacoes</span>
+                                    <span>8 Fev 2026</span>
+                                </div>
+                                <h3>Sabesp publica edital de R$ 890 milhoes para expansao de rede em SP</h3>
+                                <p>O pregao contempla 12 lotes de obras em municipios da Grande Sao Paulo, incluindo implantacao de 340 km de redes de distribuicao de agua, 280 km de coletores de esgoto e 15 novas estacoes de bombeamento. Empresas de projetos de engenharia sanitaria devem ficar atentas: o prazo para submissao de propostas encerra em marco de 2026.</p>
+                            </div>
+                        </article>
+
+                        <article class="news-card">
+                            <div class="news-card-image" style="background: linear-gradient(135deg, #f59e0b, #eab308);">
+                                <img src="https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400" alt="Tecnologia">
+                            </div>
+                            <div class="news-card-content">
+                                <div class="news-meta">
+                                    <span class="news-category">Tecnologia</span>
+                                    <span>5 Fev 2026</span>
+                                </div>
+                                <h3>Sensores IoT reduzem perdas de agua em 35% em projeto piloto em Campinas</h3>
+                                <p>Um projeto piloto da Sanasa em Campinas-SP demonstrou que sensores acusticos de IoT instalados em pontos estrategicos da rede de distribuicao conseguem detectar vazamentos em estagios iniciais, reduzindo o indice de perdas de 38% para 24,7% em apenas 6 meses. A tecnologia utiliza machine learning para diferenciar ruidos normais de operacao de padroes de vazamento, emitindo alertas em tempo real para equipes de campo.</p>
+                            </div>
+                        </article>
+
+                        <article class="news-card">
+                            <div class="news-card-image" style="background: linear-gradient(135deg, #8b5cf6, #a855f7);">
+                                <img src="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=400" alt="Normas">
+                            </div>
+                            <div class="news-card-content">
+                                <div class="news-meta">
+                                    <span class="news-category">Normas</span>
+                                    <span>3 Fev 2026</span>
+                                </div>
+                                <h3>ABNT atualiza NBR 9649 com novos parametros para redes de esgoto</h3>
+                                <p>A nova versao da norma, publicada em janeiro de 2026, inclui criterios atualizados para materiais sustentaveis (PEAD, PRFV), sistemas de reuso de efluentes, e novos coeficientes de Manning para tubulacoes modernas. Destaque para a inclusao de parametros especificos para sistemas condominiais e a obrigatoriedade de verificacao da tensao trativa minima em todos os trechos, incluindo contribuicoes de inicio de rede.</p>
+                            </div>
+                        </article>
+                        <article class="news-card">
+                            <div class="news-card-image" style="background: linear-gradient(135deg, #0ea5e9, #06b6d4);">
+                                <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400" alt="Concurso Publico">
+                            </div>
+                            <div class="news-card-content">
+                                <div class="news-meta">
+                                    <span class="news-category">Carreira</span>
+                                    <span>1 Fev 2026</span>
+                                </div>
+                                <h3>Concursos de saneamento abrem mais de 2.500 vagas para engenheiros em 2026</h3>
+                                <p>Com a pressao do Marco do Saneamento, concessionarias publicas e privadas estao ampliando quadros tecnicos em todo o Brasil. Destaques para editais da Cagece (CE), Copasa (MG), Sanepar (PR) e Aegea, com salarios iniciais de ate R$ 14.800 para engenheiros sanitaristas. A maioria das vagas exige conhecimento em dimensionamento de redes, modelagem hidraulica e gestao de obras.</p>
+                            </div>
+                        </article>
+
+                        <article class="news-card">
+                            <div class="news-card-image" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
+                                <img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400" alt="Mudancas Climaticas">
+                            </div>
+                            <div class="news-card-content">
+                                <div class="news-meta">
+                                    <span class="news-category">Meio Ambiente</span>
+                                    <span>28 Jan 2026</span>
+                                </div>
+                                <h3>Estudo revela: 62% das redes de drenagem urbana no Brasil estao subdimensionadas</h3>
+                                <p>Pesquisa do IPT em parceria com o INPE mostra que as mudancas climaticas aumentaram a intensidade das chuvas em ate 40% em relacao aos dados historicos usados no dimensionamento original das galerias. O estudo recomenda revisao dos projetos de microdrenagem com dados pluviometricos atualizados e uso de modelos como SWMM para simulacao de cenarios criticos.</p>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- Atualizacoes Section -->
+                <section class="news-section" id="atualizacoes">
+                    <h2 class="section-title">
+                        <span class="icon">🚀</span>
+                        Atualizacoes da Plataforma
+                    </h2>
+
+                    <div class="update-card feature">
+                        <div class="update-header">
+                            <span class="update-version">v2.5.0</span>
+                            <span class="update-type feature">Nova Funcionalidade</span>
+                        </div>
+                        <h4>Novo Modulo de Integracao com EPANET 2.2</h4>
+                        <p>Agora voce pode exportar sua rede de abastecimento diretamente para o EPANET 2.2, com suporte completo a patterns de consumo (diario, semanal e sazonal), curvas de bomba personalizadas e regras de controle avancadas (nivel de reservatorio, horario, pressao). O modulo inclui validacao automatica do modelo antes da exportacao, verificando conectividade da rede, nos desconectados, diametros inconsistentes e demandas negativas. Apos a simulacao no EPANET, os resultados podem ser reimportados para visualizacao no mapa interativo com escala de cores por pressao, velocidade ou perda de carga.</p>
+                        <div class="update-date">Lancado em 10 de Fevereiro, 2026</div>
+                    </div>
+
+                    <div class="update-card improvement">
+                        <div class="update-header">
+                            <span class="update-version">v2.4.3</span>
+                            <span class="update-type improvement">Melhoria</span>
+                        </div>
+                        <h4>Performance do Mapa Interativo 3x Mais Rapida</h4>
+                        <p>Realizamos uma otimizacao profunda no renderizador Leaflet, tornando o mapa interativo ate 3 vezes mais rapido para redes com mais de 10.000 trechos. As melhorias incluem: carregamento progressivo por viewport (apenas os elementos visiveis sao renderizados), clustering automatico de PVs em niveis de zoom baixo, cache inteligente de tiles e reducao de 70% no uso de memoria do navegador. Redes que antes travavam com 15.000+ trechos agora navegam de forma fluida. Ideal para projetos municipais de grande porte que precisam visualizar toda a malha de saneamento em um unico mapa.</p>
+                        <div class="update-date">Lancado em 5 de Fevereiro, 2026</div>
+                    </div>
+
+                    <div class="update-card fix">
+                        <div class="update-header">
+                            <span class="update-version">v2.4.2</span>
+                            <span class="update-type fix">Correcao</span>
+                        </div>
+                        <h4>Corrigido Calculo de Volume de Escavacao em Curvas</h4>
+                        <p>Identificamos e corrigimos um bug no modulo de orcamento que causava superestimativa de ate 18% no volume de escavacao de trechos curvos. O problema ocorria porque o algoritmo anterior tratava trechos curvos como segmentos retos, ignorando a geometria real da vala. Agora, o calculo utiliza integracao numerica ao longo da curva, considerando largura variavel da vala, talude, profundidade e reaterro. Isso impacta diretamente a precisao dos quantitativos de terraplenagem e, consequentemente, os custos do orcamento SINAPI/SICRO.</p>
+                        <div class="update-date">Lancado em 1 de Fevereiro, 2026</div>
+                    </div>
+
+                    <div class="update-card announcement">
+                        <div class="update-header">
+                            <span class="update-version">Anuncio</span>
+                            <span class="update-type announcement">Comunicado</span>
+                        </div>
+                        <h4>Manutencao Programada: 15/02 das 02h as 06h (horario de Brasilia)</h4>
+                        <p>Realizaremos manutencao nos servidores para melhoria de infraestrutura, incluindo migracao para servidores com maior capacidade de processamento e atualizacao do banco de dados geoespacial. Durante este periodo de 4 horas, a plataforma ficara completamente indisponivel. Recomendamos fortemente que voce salve e exporte seus projetos com antecedencia. Apos a manutencao, voce notara melhorias significativas no tempo de resposta das consultas geoespaciais e no processamento de calculos hidraulicos em lote.</p>
+                        <div class="update-date">Publicado em 8 de Fevereiro, 2026</div>
+                    </div>
+
+                    <div class="update-card feature">
+                        <div class="update-header">
+                            <span class="update-version">v2.4.0</span>
+                            <span class="update-type feature">Nova Funcionalidade</span>
+                        </div>
+                        <h4>Importacao de Arquivos DWG Nativo — Sem Conversao, Sem Perda de Dados</h4>
+                        <p>Agora e possivel importar arquivos DWG diretamente na plataforma, sem a necessidade de converter para DXF ou qualquer outro formato intermediario. O modulo suporta arquivos do AutoCAD 2018 ate 2024, com reconhecimento automatico de layers — incluindo separacao inteligente de redes de agua, esgoto, drenagem, topografia e arruamento. O parser identifica polilinhas, blocos, textos e cotas, convertendo-os automaticamente em nos, trechos e PVs da rede. Isso elimina horas de trabalho manual de redesenho e reduz drasticamente o risco de erros de transcricao de dados do projeto original.</p>
+                        <div class="update-date">Lancado em 20 de Janeiro, 2026</div>
+                    </div>
+
+                    <div class="update-card improvement">
+                        <div class="update-header">
+                            <span class="update-version">v2.3.5</span>
+                            <span class="update-type improvement">Melhoria</span>
+                        </div>
+                        <h4>Orcamento Automatico com SINAPI Janeiro/2026 e Relatorio PDF Profissional</h4>
+                        <p>A base de composicoes SINAPI foi atualizada com os precos de referencia de janeiro de 2026 para todos os estados brasileiros. Alem disso, o modulo de orcamento agora gera relatorios PDF completos com capa personalizada, memorial de calculo, planilha sintetica e analitica, curva ABC de insumos e cronograma fisico-financeiro. O relatorio segue o padrao exigido por orgaos como Caixa Economica Federal e BNDES, facilitando a aprovacao de financiamentos e licitacoes publicas.</p>
+                        <div class="update-date">Lancado em 10 de Janeiro, 2026</div>
+                    </div>
+
+                    <div class="update-card feature">
+                        <div class="update-header">
+                            <span class="update-version">v2.3.0</span>
+                            <span class="update-type feature">Nova Funcionalidade</span>
+                        </div>
+                        <h4>Modulo de Drenagem Urbana com Integracao SWMM 5.2</h4>
+                        <p>Lancamos o modulo completo de drenagem urbana com dimensionamento automatico de galerias, bocas de lobo, PVs de drenagem e canais abertos. O modulo permite exportacao direta para o EPA SWMM 5.2, incluindo definicao de sub-bacias com parametros CN (Curve Number), chuvas de projeto pelo metodo de blocos alternados (IDF), e simulacao de cenarios de inundacao. Os resultados da simulacao podem ser importados de volta e visualizados no mapa interativo com animacao temporal do escoamento, facilitando a identificacao de pontos criticos de alagamento.</p>
+                        <div class="update-date">Lancado em 28 de Dezembro, 2025</div>
+                    </div>
+                </section>
+
+                <!-- Blog Section -->
+                <section class="news-section" id="blog">
+                    <h2 class="section-title">
+                        <span class="icon">📝</span>
+                        Artigos Tecnicos
+                    </h2>
+
+                    <article class="blog-card">
+                        <div class="blog-image">
+                            <img src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400" alt="Dimensionamento">
+                        </div>
+                        <div class="blog-content">
+                            <div class="blog-tags">
+                                <span class="blog-tag">Dimensionamento</span>
+                                <span class="blog-tag">NBR 9649</span>
+                            </div>
+                            <h3>Guia Completo: Dimensionamento de Redes de Esgoto pela NBR 9649</h3>
+                            <p>Neste guia pratico e detalhado, voce aprendera passo a passo como dimensionar redes coletoras de esgoto sanitario seguindo rigorosamente os criterios da NBR 9649. Abordamos desde o calculo das vazoes de contribuicao (inicio e fim de plano), passando pela verificacao de tensao trativa minima (1,0 Pa), velocidade critica, lamina maxima admissivel (75% do diametro) e declividade minima. Inclui exemplos numericos reais, tabelas de apoio e dicas de como usar a ConstruData HydroNetwork para automatizar todo o processo e gerar o memorial de calculo instantaneamente.</p>
+                            <div class="blog-author">
+                                <div class="author-avatar">JN</div>
+                                <div class="author-info">
+                                    <div class="author-name">Joao Nery</div>
+                                    <div class="author-date">8 de Fevereiro, 2026 · 15 min</div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="blog-card">
+                        <div class="blog-image" style="background: linear-gradient(135deg, #0ea5e9, #06b6d4);">
+                            <img src="https://images.unsplash.com/photo-1590069261209-f8e9b8642343?w=400" alt="Modelagem">
+                        </div>
+                        <div class="blog-content">
+                            <div class="blog-tags">
+                                <span class="blog-tag">EPANET</span>
+                                <span class="blog-tag">Simulacao</span>
+                            </div>
+                            <h3>Modelagem Hidraulica no EPANET: Erros Comuns e Como Evita-los</h3>
+                            <p>Conheca os 10 erros mais frequentes que engenheiros cometem ao modelar redes de abastecimento de agua no EPANET — e, mais importante, aprenda como evita-los. Desde nos desconectados e demandas-base zeradas ate a escolha errada da formula de perda de carga (Hazen-Williams vs. Darcy-Weisbach), cada erro e ilustrado com capturas de tela do EPANET, a causa raiz explicada e a solucao demonstrada. Ideal tanto para quem esta comecando na modelagem hidraulica quanto para profissionais experientes que querem revisar suas praticas e obter simulacoes mais confiaveis.</p>
+                            <div class="blog-author">
+                                <div class="author-avatar">MC</div>
+                                <div class="author-info">
+                                    <div class="author-name">Maria Costa</div>
+                                    <div class="author-date">3 de Fevereiro, 2026 · 12 min</div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="blog-card">
+                        <div class="blog-image" style="background: linear-gradient(135deg, #f59e0b, #eab308);">
+                            <img src="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=400" alt="Orcamento">
+                        </div>
+                        <div class="blog-content">
+                            <div class="blog-tags">
+                                <span class="blog-tag">SINAPI</span>
+                                <span class="blog-tag">Orcamento</span>
+                            </div>
+                            <h3>Como Usar o SINAPI para Orcamentos de Saneamento em 2026</h3>
+                            <p>Tutorial atualizado e completo sobre como consultar, interpretar e aplicar corretamente as composicoes SINAPI para obras de saneamento basico. Cobrimos a navegacao pelo site da Caixa Economica Federal, a diferenca entre composicoes analiticas e sinteticas, como aplicar BDI diferenciado para obras publicas, e quais sao as novas composicoes adicionadas na versao de janeiro/2026 (incluindo PEAD por eletrofusao e PRFV). Mostramos ainda como a ConstruData gera automaticamente o orcamento completo a partir do dimensionamento, eliminando a necessidade de consultas manuais ao SINAPI.</p>
+                            <div class="blog-author">
+                                <div class="author-avatar">PS</div>
+                                <div class="author-info">
+                                    <div class="author-name">Pedro Santos</div>
+                                    <div class="author-date">28 de Janeiro, 2026 · 10 min</div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="blog-card">
+                        <div class="blog-image" style="background: linear-gradient(135deg, #10b981, #14b8a6);">
+                            <img src="https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400" alt="Drenagem">
+                        </div>
+                        <div class="blog-content">
+                            <div class="blog-tags">
+                                <span class="blog-tag">Drenagem</span>
+                                <span class="blog-tag">SWMM</span>
+                            </div>
+                            <h3>Introducao a Modelagem de Drenagem Urbana com SWMM</h3>
+                            <p>Este artigo apresenta os conceitos fundamentais de modelagem hidrodinamica de sistemas de drenagem urbana utilizando o EPA SWMM 5.2. Abordamos desde a delimitacao de sub-bacias e definicao de parametros hidrologicos (CN, impermeabilidade, tempo de concentracao) ate a configuracao de condutos, juncoes e exutorios. Inclui um exemplo pratico completo: modelagem de uma micro-bacia urbana de 45 ha com galerias de aguas pluviais, simulacao de chuva de projeto com TR 25 anos pelo metodo de blocos alternados, analise de pontos de alagamento e proposta de intervencoes. Perfeito para quem quer comecar a usar o SWMM com confianca.</p>
+                            <div class="blog-author">
+                                <div class="author-avatar">AF</div>
+                                <div class="author-info">
+                                    <div class="author-name">Ana Ferreira</div>
+                                    <div class="author-date">20 de Janeiro, 2026 · 18 min</div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="blog-card">
+                        <div class="blog-image" style="background: linear-gradient(135deg, #8b5cf6, #a855f7);">
+                            <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400" alt="Perfil Longitudinal">
+                        </div>
+                        <div class="blog-content">
+                            <div class="blog-tags">
+                                <span class="blog-tag">Projeto</span>
+                                <span class="blog-tag">Perfil Longitudinal</span>
+                            </div>
+                            <h3>Perfil Longitudinal de Redes de Esgoto: Da Topografia ao Desenho Final</h3>
+                            <p>O perfil longitudinal e um dos desenhos mais importantes de um projeto de rede de esgoto — e tambem um dos mais trabalhosos de produzir manualmente. Neste artigo, explicamos como interpretar dados topograficos, definir cotas de terreno e cotas de fundo de tubo (greide), calcular profundidades de escavacao trecho a trecho, posicionar PVs e singularidades, e gerar o perfil final seguindo as convencoes da NBR 9649. Mostramos como a ConstruData HydroNetwork gera o perfil longitudinal automaticamente a partir dos dados de dimensionamento, incluindo cotas, diametros, declividades e indicacao de interferencias com outras redes.</p>
+                            <div class="blog-author">
+                                <div class="author-avatar">JN</div>
+                                <div class="author-info">
+                                    <div class="author-name">Joao Nery</div>
+                                    <div class="author-date">15 de Janeiro, 2026 · 14 min</div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="blog-card">
+                        <div class="blog-image" style="background: linear-gradient(135deg, #dc2626, #f97316);">
+                            <img src="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=400" alt="Gestao de Obras">
+                        </div>
+                        <div class="blog-content">
+                            <div class="blog-tags">
+                                <span class="blog-tag">Gestao</span>
+                                <span class="blog-tag">RDO Digital</span>
+                            </div>
+                            <h3>RDO Digital: Como Eliminar Papelada e Ganhar Controle Total da Sua Obra de Saneamento</h3>
+                            <p>O Relatorio Diario de Obra (RDO) e uma obrigacao legal em qualquer obra de engenharia no Brasil, mas ainda e feito em papel na maioria dos canteiros — gerando perda de informacao, atrasos na consolidacao de dados e dificuldade de rastreamento. Neste artigo, apresentamos como o modulo de RDO Digital da ConstruData HydroNetwork permite registrar diretamente pelo celular ou tablet: condicoes climaticas, mao de obra presente, equipamentos utilizados, servicos executados por trecho (vinculados ao mapa), registros fotograficos geolocalizados e ocorrencias. Tudo e consolidado automaticamente em relatorios semanais e mensais, com graficos de avanco fisico e comparativo planejado vs. realizado integrado ao Gantt da obra.</p>
+                            <div class="blog-author">
+                                <div class="author-avatar">RL</div>
+                                <div class="author-info">
+                                    <div class="author-name">Ricardo Lima</div>
+                                    <div class="author-date">8 de Janeiro, 2026 · 11 min</div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </section>
+            </div>
+
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <!-- Quick Links -->
+                <div class="sidebar-card">
+                    <h3 class="sidebar-title">
+                        <span>🔗</span> Acesso Rapido
+                    </h3>
+                    <!-- CUSTOMIZE: Ajuste os links rapidos abaixo -->
+                    <ul class="quick-links">
+                        <li>
+                            <a href="#">
+                                <span class="link-icon">⚙️</span>
+                                Link 1
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#">
+                                <span class="link-icon">📦</span>
+                                Link 2
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#">
+                                <span class="link-icon">🗺️</span>
+                                Link 3
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#">
+                                <span class="link-icon">📚</span>
+                                Documentacao
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#">
+                                <span class="link-icon">💬</span>
+                                Suporte
+                            </a>
+                        </li>
+                    </ul>
+                    <!-- FIM CUSTOMIZE -->
+                </div>
+
+                <!-- Stats -->
+                <div class="sidebar-card">
+                    <h3 class="sidebar-title">
+                        <span>📊</span> Estatisticas
+                    </h3>
+                    <div class="stats-mini">
+                        <div class="stat-mini-item">
+                            <div class="stat-mini-value">11</div>
+                            <div class="stat-mini-label">Modulos</div>
+                        </div>
+                        <div class="stat-mini-item">
+                            <div class="stat-mini-value">32</div>
+                            <div class="stat-mini-label">Artigos</div>
+                        </div>
+                        <div class="stat-mini-item">
+                            <div class="stat-mini-value">100%</div>
+                            <div class="stat-mini-label">Gratuito</div>
+                        </div>
+                        <div class="stat-mini-item">
+                            <div class="stat-mini-value">v2.5</div>
+                            <div class="stat-mini-label">Versao</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Newsletter -->
+                <div class="sidebar-card">
+                    <h3 class="sidebar-title">
+                        <span>📧</span> Newsletter
+                    </h3>
+                    <p style="font-size: 0.9rem; color: var(--text-gray); margin-bottom: 15px;">
+                        Receba novidades do setor e atualizacoes da plataforma diretamente no seu email.
+                    </p>
+                    <form class="newsletter-form" onsubmit="event.preventDefault(); alert('Inscricao realizada com sucesso!');">
+                        <input type="email" placeholder="Seu melhor email" required>
+                        <button type="submit">Inscrever-se</button>
+                    </form>
+                    <p class="newsletter-note">Enviamos no maximo 2 emails por mes. Sem spam.</p>
+                </div>
+
+                <!-- Social -->
+                <div class="sidebar-card">
+                    <h3 class="sidebar-title">
+                        <span>🌐</span> Redes Sociais
+                    </h3>
+                    <div class="social-links">
+                        <a href="#" class="social-link" title="LinkedIn">in</a>
+                        <a href="#" class="social-link" title="YouTube">▶</a>
+                        <a href="#" class="social-link" title="GitHub">⌨</a>
+                        <a href="#" class="social-link" title="Instagram">📷</a>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- Footer - CUSTOMIZE: Altere nome e links -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-logo">SEU PROJETO <span>| HUB</span></div>
+            <div class="footer-links">
+                <a href="#">Home</a>
+                <a href="#">Plataforma</a>
+                <a href="#">Documentacao</a>
+                <a href="#">Contato</a>
+            </div>
+            <p class="footer-copy">© 2026 Seu Projeto</p>
+        </div>
+    </footer>
+    <!-- FIM CUSTOMIZE -->
+
+    <script>
+        // Tab switching
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const sections = document.querySelectorAll('.news-section');
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.tab;
+
+                // Update active tab
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Show corresponding section
+                sections.forEach(s => s.classList.remove('active'));
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                if (href !== '#') {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
